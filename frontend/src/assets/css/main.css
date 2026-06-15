@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==================== فونت‌های فارسی ==================== */
+
+/* Vazirmatn - فونت اصلی */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Samim */
+@font-face {
+  font-family: 'Samim';
+  src: url('/fonts/Samim.eot') format('embedded-opentype');
+  src: url('/fonts/Samim.woff2') format('woff2'),
+       url('/fonts/Samim.woff') format('woff'),
+       url('/fonts/Samim.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Samim';
+  src: url('/fonts/Samim-Bold.eot') format('embedded-opentype');
+  src: url('/fonts/Samim-Bold.woff2') format('woff2'),
+       url('/fonts/Samim-Bold.woff') format('woff'),
+       url('/fonts/Samim-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Sahel */
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel.eot') format('embedded-opentype');
+  src: url('/fonts/Sahel.woff') format('woff'),
+       url('/fonts/Sahel.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel-Bold.eot') format('embedded-opentype');
+  src: url('/fonts/Sahel-Bold.woff') format('woff'),
+       url('/fonts/Sahel-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel-Black.eot') format('embedded-opentype');
+  src: url('/fonts/Sahel-Black.woff') format('woff'),
+       url('/fonts/Sahel-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Yekan */
+@font-face {
+  font-family: 'Yekan';
+  src: url('/fonts/Yekan.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Mj Neda */
+@font-face {
+  font-family: 'Mj Neda';
+  src: url('/fonts/Mj_Neda_0.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Mj Tehran */
+@font-face {
+  font-family: 'Mj Tehran';
+  src: url('/fonts/Mj_Tehran_0.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Iranian Sans */
+@font-face {
+  font-family: 'Iranian Sans';
+  src: url('/fonts/Iranian%20Sans.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==================== استایل‌های پایه ==================== */
+
+@layer base {
+  html {
+    font-family: 'Vazirmatn', 'Samim', 'Sahel', system-ui, sans-serif;
+  }
+  
+  html[dir="rtl"] {
+    direction: rtl;
+  }
+  
+  html[dir="ltr"] {
+    direction: ltr;
+  }
+  
+  /* تنظیم فونت برای زبان انگلیسی */
+  html[dir="ltr"] {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  /* اسکرول بار زیبا */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: #f3f4f6;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: #9ca3af;
+    border-radius: 9999px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+  }
+  
+  /* حالت تاریک برای اسکرول بار */
+  .dark ::-webkit-scrollbar-track {
+    background-color: #1f2937;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+  }
+  
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #6b7280;
+  }
+  
+  /* حذف اسپینرهای input number */
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+}
+
+/* ==================== کامپوننت‌های سفارشی ==================== */
+
+@layer components {
+  .input-field {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white transition-all duration-200;
+  }
+  
+  .btn-primary {
+    @apply w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-all duration-200 font-medium;
+  }
+  
+  .btn-secondary {
+    @apply w-full bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 font-medium;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 transition-all duration-300;
+  }
+  
+  .table-header {
+    @apply px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider;
+  }
+  
+  .table-cell {
+    @apply px-4 py-2 text-sm text-gray-900 dark:text-gray-200;
+  }
+}
+
+/* ==================== یوتیلیتی‌های اضافی ==================== */
+
+@layer utilities {
+  /* خط جداکننده با گرادیانت */
+  .gradient-border {
+    @apply border-b-2 border-transparent;
+    background-image: linear-gradient(to right, #22c55e, #3b82f6);
+    background-position: bottom;
+    background-repeat: no-repeat;
+    background-size: 100% 2px;
+  }
+  
+  /* انیمیشن‌های سفارشی */
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: opacity 0.3s ease;
+  }
+  
+  .fade-enter-from,
+  .fade-leave-to {
+    opacity: 0;
+  }
+}
