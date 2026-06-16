@@ -1,0 +1,35 @@
+@media print {
+  .no-print { display: none !important; }
+  
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+  
+  * {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+  
+  table th,
+  table td {
+    border: 1px solid #000 !important;
+    padding: 4px 6px !important;
+  }
+  
+  body {
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
+  }
+  
+  .page-break {
+    page-break-before: always !important;
+  }
+}

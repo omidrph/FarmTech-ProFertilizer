@@ -1,0 +1,114 @@
+/* ===== Vazirmatn ===== */
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('/fonts/Vazirmatn-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Samim ===== */
+@font-face {
+  font-family: 'Samim';
+  src: url('/fonts/Samim.eot') format('embedded-opentype'),
+       url('/fonts/Samim.woff2') format('woff2'),
+       url('/fonts/Samim.woff') format('woff'),
+       url('/fonts/Samim.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Samim';
+  src: url('/fonts/Samim-Bold.eot') format('embedded-opentype'),
+       url('/fonts/Samim-Bold.woff2') format('woff2'),
+       url('/fonts/Samim-Bold.woff') format('woff'),
+       url('/fonts/Samim-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Sahel ===== */
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel.eot') format('embedded-opentype'),
+       url('/fonts/Sahel.woff') format('woff'),
+       url('/fonts/Sahel.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel-Black.eot') format('embedded-opentype'),
+       url('/fonts/Sahel-Black.woff') format('woff'),
+       url('/fonts/Sahel-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sahel';
+  src: url('/fonts/Sahel-Bold.eot') format('embedded-opentype'),
+       url('/fonts/Sahel-Bold.woff') format('woff'),
+       url('/fonts/Sahel-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Iranian Sans ===== */
+@font-face {
+  font-family: 'Iranian Sans';
+  src: url('/fonts/Iranian Sans.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Yekan ===== */
+@font-face {
+  font-family: 'Yekan';
+  src: url('/fonts/Yekan.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Mj_Neda ===== */
+@font-face {
+  font-family: 'Mj_Neda';
+  src: url('/fonts/Mj_Neda_0.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Mj_Neda';
+  src: url('/fonts/Mj_Neda Outline_0.TTF') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Mj_Tehran ===== */
+@font-face {
+  font-family: 'Mj_Tehran';
+  src: url('/fonts/Mj_Tehran_0.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
