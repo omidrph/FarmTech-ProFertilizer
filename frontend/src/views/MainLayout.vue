@@ -1,32 +1,32 @@
 <template>
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200">
+  <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200 flex flex-col">
     <!-- Header -->
     <AppHeader v-model:activeTab="activeTab" />
 
     <!-- Sub Navigation (تب‌های صفحه اصلی) -->
-    <nav v-if="activeTab === 'home'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-16 z-40">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex gap-1 overflow-x-auto py-2">
+    <nav v-if="activeTab === 'home'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky z-40 shadow-sm" :style="{ top: headerHeight + 'px' }">
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+        <div class="flex gap-1 overflow-x-auto py-2 scrollbar-hide snap-x snap-mandatory">
           <button
             v-for="subTab in subTabs"
             :key="subTab.id"
             @click="activeSubTab = subTab.id"
-            class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all duration-200"
+            class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 snap-start flex-shrink-0"
             :class="activeSubTab === subTab.id
-              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 border-b-2 border-primary-500'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'"
+              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'"
           >
-            <span v-html="subTab.icon"></span>
-            {{ subTab.label }}
+            <span v-html="subTab.icon" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"></span>
+            <span class="text-xs sm:text-sm">{{ subTab.label }}</span>
           </button>
         </div>
       </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <main class="flex-1 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 w-full">
       <!-- Home Tab -->
-      <div v-if="activeTab === 'home'" class="space-y-6">
+      <div v-if="activeTab === 'home'" class="space-y-4 sm:space-y-6">
         <!-- Report Header -->
         <ReportHeader
           v-model:reportName="reportName"
@@ -96,27 +96,47 @@
       </div>
 
       <!-- Education Tab -->
-      <div v-else-if="activeTab === 'education'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">📚 آموزش</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div v-else-if="activeTab === 'education'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
+          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+          </svg>
+          آموزش
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <h3 class="font-semibold text-gray-900 dark:text-white mb-2">راهنمای شروع سریع</h3>
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+              <h3 class="font-semibold text-gray-900 dark:text-white">راهنمای شروع سریع</h3>
+            </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">با این راهنما در کمتر از 5 دقیقه با نرم‌افزار آشنا شوید.</p>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
               مشاهده
             </button>
           </div>
           <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <h3 class="font-semibold text-gray-900 dark:text-white mb-2">فیلم‌های آموزشی</h3>
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              <h3 class="font-semibold text-gray-900 dark:text-white">فیلم‌های آموزشی</h3>
+            </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">مجموعه کامل فیلم‌های آموزشی برای تمام بخش‌ها.</p>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
               مشاهده
             </button>
           </div>
           <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <h3 class="font-semibold text-gray-900 dark:text-white mb-2">سوالات متداول</h3>
+            <div class="flex items-center gap-2 mb-2">
+              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <h3 class="font-semibold text-gray-900 dark:text-white">سوالات متداول</h3>
+            </div>
             <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">پاسخ به سوالات رایج کاربران.</p>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
               مشاهده
             </button>
           </div>
@@ -124,31 +144,53 @@
       </div>
 
       <!-- Contact Tab -->
-      <div v-else-if="activeTab === 'contact'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">📧 ارتباط با ما</h2>
+      <div v-else-if="activeTab === 'contact'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
+          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          ارتباط با ما
+        </h2>
         <div class="space-y-3">
-          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <span class="text-2xl">📞</span>
+          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            </svg>
             <span>تلفن: ۰۲۱-۱۲۳۴۵۶۷۸</span>
           </div>
-          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <span class="text-2xl">📧</span>
+          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
             <span>ایمیل: info@farmtech.ir</span>
           </div>
-          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300">
-            <span class="text-2xl">📍</span>
+          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
             <span>آدرس: تهران، خیابان انقلاب، پلاک ۱۲۳</span>
           </div>
         </div>
       </div>
 
       <!-- About Tab -->
-      <div v-else-if="activeTab === 'about'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">ℹ️ درباره</h2>
+      <div v-else-if="activeTab === 'about'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
+          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          درباره
+        </h2>
         <div class="space-y-4 text-gray-700 dark:text-gray-300 leading-relaxed">
           <p><strong>تغذیه سبز</strong> یک نرم‌افزار تخصصی برای محاسبه، تحلیل و مدیریت فرمول‌های تغذیه گیاهان در سیستم‌های کشت بدون خاک، هیدروپونیک و گلخانه‌ای است.</p>
           <p>این نرم‌افزار قابلیت تحلیل آب و پساب، تعیین عناصر هدف، محاسبه خودکار مقدار کود مصرفی، مدیریت پایگاه داده کودها و ارائه تفسیر هوشمند از داده‌ها را دارد.</p>
-          <p class="text-sm text-gray-500 dark:text-gray-400">نسخه: ۰.۱.۰</p>
+          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
+            </svg>
+            <span>نسخه: ۰.۱.۰</span>
+          </div>
         </div>
       </div>
     </main>
@@ -157,21 +199,33 @@
     <AppFooter @navigate="activeTab = $event" />
 
     <!-- Modal Add Fertilizer -->
-    <div v-if="showAddFertilizerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">افزودن کود جدید</h3>
+    <div v-if="showAddFertilizerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAddFertilizerModal = false">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 animate-slide-up">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">افزودن کود جدید</h3>
+          <button @click="showAddFertilizerModal = false" class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام کود</label>
-            <input type="text" v-model="newFertilizer.name" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+            <input type="text" v-model="newFertilizer.name" placeholder="مثال: نیترات پتاسیم" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">قیمت هر کیلوگرم (تومان)</label>
-            <input type="number" v-model="newFertilizer.pricePerKg" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+            <input type="number" v-model="newFertilizer.pricePerKg" placeholder="مثال: ۲۵۰۰۰" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
           </div>
-          <div v-for="el in elements" :key="el" class="grid grid-cols-2 gap-2">
-            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ el }} (%)</label>
-            <input type="number" v-model="newFertilizer.elements[el]" step="0.01" class="w-full px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">درصد عناصر</label>
+            <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+              <div v-for="el in elements" :key="el" class="flex items-center gap-2">
+                <label class="text-xs font-medium text-gray-600 dark:text-gray-400 w-12">{{ el }}</label>
+                <input type="number" v-model="newFertilizer.elements[el]" step="0.01" placeholder="۰" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+              </div>
+            </div>
           </div>
         </div>
         <div class="flex gap-3 mt-6">
@@ -188,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
 
 // ===== Import Components =====
 import AppHeader from '@/components/layout/AppHeader.vue';
@@ -205,6 +259,7 @@ import InterpretationTab from '@/components/features/InterpretationTab.vue';
 const activeTab = ref('home');
 const activeSubTab = ref('home');
 const showAddFertilizerModal = ref(false);
+const headerHeight = ref(56); // مقدار پیش‌فرض
 
 // ===== Report Fields =====
 const reportName = ref('');
@@ -221,32 +276,32 @@ const subTabs = [
   {
     id: 'home',
     label: 'خانه',
-    icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>'
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`
   },
   {
     id: 'water-analysis',
     label: 'آنالیز آب',
-    icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2C8 6 4 10 4 14c0 4 8 8 8 8s8-4 8-8c0-4-4-8-8-12z"/><path d="M12 6v2"/><path d="M12 10v2"/></svg>'
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>`
   },
   {
     id: 'target-elements',
     label: 'عناصر هدف',
-    icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`
   },
   {
     id: 'fertilizer-calc',
     label: 'محاسبه کود',
-    icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>'
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>`
   },
   {
     id: 'fertilizer-db',
     label: 'پایگاه داده کودها',
-    icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>'
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
   },
   {
     id: 'interpretation',
     label: 'تفسیر داده‌ها',
-    icon: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 12v-2a5 5 0 00-5-5H8a5 5 0 00-5 5v2"/><path d="M3 12v6a5 5 0 005 5h8a5 5 0 005-5v-6"/></svg>'
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`
   }
 ];
 
@@ -284,7 +339,6 @@ const interpretationResult = ref<any>(null);
 
 // ===== Methods =====
 const generateInterpretation = () => {
-  // Simulate interpretation generation
   interpretationResult.value = {
     summary: 'گزارش تفسیر تغذیه گیاه:\n- تعادل یونی: برقرار ✅\n- عناصر دارای مشکل: هیچکدام\n- کیفیت آب: مناسب\n- تعداد توصیه‌ها: 0',
     ionBalance: {
@@ -325,7 +379,6 @@ const saveFertilizer = () => {
   newFertilizer.elements = {};
 };
 
-// ===== Load Sample Data =====
 const loadSampleData = () => {
   fertilizers.value = [
     {
@@ -355,8 +408,76 @@ const loadSampleData = () => {
   ];
 };
 
+// ===== محاسبه ارتفاع هدر =====
+const updateHeaderHeight = () => {
+  const header = document.querySelector('header');
+  if (header) {
+    headerHeight.value = header.offsetHeight;
+  }
+};
+
 // ===== Lifecycle =====
 onMounted(() => {
   loadSampleData();
+  updateHeaderHeight();
+  window.addEventListener('resize', updateHeaderHeight);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateHeaderHeight);
 });
 </script>
+
+<style scoped>
+/* Custom scrollbar hide for sub navigation */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Slide up animation for modal */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Snap scrolling for mobile */
+.snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.snap-start {
+  scroll-snap-align: start;
+}
+
+/* اطمینان از چسبیدن فوتر به پایین */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+</style>
