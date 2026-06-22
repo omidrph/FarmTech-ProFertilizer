@@ -8,14 +8,23 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">وارد حساب کاربری خود شوید</p>
       </div>
 
+      <!-- Connection Status -->
+      <div v-if="!isConnected" class="bg-yellow-50 dark:bg-yellow-900/20 border-r-4 border-yellow-500 rounded-lg p-3 mb-4">
+        <p class="text-yellow-700 dark:text-yellow-400 text-sm flex items-center gap-2">
+          <span>⚠️</span>
+          <span>در حال اتصال به سرور... لطفاً مطمئن شوید بک‌اند در حال اجراست.</span>
+        </p>
+      </div>
+
       <!-- Error Message -->
       <div v-if="authError" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-3 mb-4">
         <p class="text-danger-700 dark:text-danger-400 text-sm">{{ authError }}</p>
+        <button @click="authError = null" class="text-xs text-danger-600 hover:text-danger-800 mt-1">بستن</button>
       </div>
 
       <!-- Success Message -->
       <div v-if="loginSuccess" class="bg-success-50 dark:bg-success-900/20 border-r-4 border-success-500 rounded-lg p-3 mb-4">
-        <p class="text-success-700 dark:text-success-400 text-sm">ورود با موفقیت انجام شد!</p>
+        <p class="text-success-700 dark:text-success-400 text-sm">✅ ورود با موفقیت انجام شد!</p>
       </div>
 
       <!-- Form -->
@@ -78,7 +87,7 @@
         <!-- دکمه ورود -->
         <button
           type="submit"
-          :disabled="isLoading"
+          :disabled="isLoading || !isConnected"
           class="w-full py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-2"
         >
           <span v-if="!isLoading">ورود</span>
@@ -106,12 +115,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
+import { useApi } from '@/composables/useApi';
 
 const router = useRouter();
 const { login, isLoading, error: authError } = useAuth();
+const { checkConnection, isConnected } = useApi();
 
 const phoneNumber = ref('');
 const password = ref('');
@@ -119,6 +130,15 @@ const showPassword = ref(false);
 const loginSuccess = ref(false);
 
 const handleLogin = async () => {
+  // ابتدا اتصال را بررسی کن
+  if (!isConnected.value) {
+    const connected = await checkConnection();
+    if (!connected) {
+      alert('❌ اتصال به سرور برقرار نیست. لطفاً ابتدا بک‌اند را اجرا کنید.');
+      return;
+    }
+  }
+  
   const success = await login(phoneNumber.value, password.value);
   if (success) {
     loginSuccess.value = true;
@@ -127,4 +147,9 @@ const handleLogin = async () => {
     }, 500);
   }
 };
+
+onMounted(async () => {
+  // بررسی اتصال در هنگام بارگذاری
+  await checkConnection();
+});
 </script>
