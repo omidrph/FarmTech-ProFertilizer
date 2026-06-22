@@ -2,7 +2,7 @@
 """همه مسیرهای API در یک فایل"""
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
@@ -12,10 +12,12 @@ from app.models import User
 from app.schemas import *
 from app.crud import *
 from app.security import (
-    create_access_token,
-    verify_password,
+    create_session_token,
+    delete_session,
     get_current_user,
-    get_current_active_user
+    get_current_active_user,
+    get_password_hash,
+    verify_password
 )
 from app.services import (
     calculate_ion_balance,
@@ -51,7 +53,6 @@ async def register(
     """
     ثبت‌نام کاربر جدید
     """
-    # بررسی وجود کاربر با شماره تلفن
     existing_user = get_user_by_phone(db, user_data.phone_number)
     if existing_user:
         raise HTTPException(
@@ -59,9 +60,7 @@ async def register(
             detail="این شماره تلفن قبلاً ثبت شده است"
         )
     
-    # ایجاد کاربر
     user = create_user(db, user_data)
-    
     return user
 
 
@@ -71,9 +70,8 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """
-    ورود کاربر و دریافت توکن
+    ورود کاربر و دریافت توکن تصادفی
     """
-    # پیدا کردن کاربر
     user = get_user_by_phone(db, login_data.phone_number)
     
     if not user:
@@ -82,7 +80,6 @@ async def login(
             detail="شماره تلفن یا رمز عبور اشتباه است"
         )
     
-    # بررسی رمز عبور
     if not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -95,20 +92,34 @@ async def login(
             detail="حساب کاربری غیرفعال است"
         )
     
-    # ایجاد توکن
-    access_token = create_access_token(
-        data={
-            "sub": user.id,
-            "phone": user.phone_number
-        },
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    )
+    # ایجاد توکن تصادفی در دیتابیس
+    access_token = create_session_token(user.id, db, expires_in_hours=24)
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        "expires_in": 86400  # 24 ساعت
     }
+
+
+@auth_router.post("/logout")
+async def logout(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    خروج از حساب (غیرفعال کردن توکن)
+    """
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        if delete_session(token, db):
+            return {"message": "خروج با موفقیت انجام شد", "success": True}
+    
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="توکن پیدا نشد"
+    )
 
 
 @auth_router.get("/me", response_model=UserResponse)
@@ -119,6 +130,23 @@ async def get_me(
     دریافت اطلاعات کاربر فعلی
     """
     return current_user
+
+
+@auth_router.get("/test")
+async def test_auth(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    تست احراز هویت
+    """
+    return {
+        "message": "✅ احراز هویت موفق",
+        "user": {
+            "id": current_user.id,
+            "phone": current_user.phone_number,
+            "full_name": current_user.full_name
+        }
+    }
 
 
 # ============================================================
@@ -135,7 +163,6 @@ async def get_users(
     """
     دریافت لیست کاربران (فقط برای ادمین)
     """
-    # TODO: اضافه کردن نقش ادمین
     return get_users(db, skip, limit)
 
 
@@ -397,7 +424,6 @@ async def create_water_analysis(
     """
     ایجاد آنالیز آب برای یک گزارش
     """
-    # بررسی وجود گزارش
     report = get_report_by_id(db, report_id)
     
     if not report:
@@ -412,7 +438,6 @@ async def create_water_analysis(
             detail="شما دسترسی به این گزارش ندارید"
         )
     
-    # بررسی اینکه آیا آنالیز قبلاً وجود دارد
     existing = get_water_analysis_by_report(db, report_id)
     if existing:
         raise HTTPException(
@@ -476,7 +501,6 @@ async def update_water_analysis(
             detail="آنالیز آب پیدا نشد"
         )
     
-    # بررسی دسترسی از طریق گزارش
     report = get_report_by_id(db, analysis.report_id)
     if report.user_id != current_user.id:
         raise HTTPException(
@@ -502,7 +526,6 @@ async def create_calculation(
     """
     ایجاد محاسبات برای یک گزارش
     """
-    # بررسی وجود گزارش
     report = get_report_by_id(db, report_id)
     
     if not report:
@@ -517,7 +540,6 @@ async def create_calculation(
             detail="شما دسترسی به این گزارش ندارید"
         )
     
-    # بررسی اینکه آیا محاسبات قبلاً وجود دارد
     existing = get_calculation_by_report(db, report_id)
     if existing:
         raise HTTPException(
@@ -581,7 +603,6 @@ async def update_calculation(
             detail="محاسبات پیدا نشد"
         )
     
-    # بررسی دسترسی از طریق گزارش
     report = get_report_by_id(db, calculation.report_id)
     if report.user_id != current_user.id:
         raise HTTPException(
@@ -593,10 +614,6 @@ async def update_calculation(
     return updated_calculation
 
 
-# ============================================================
-# مسیرهای محاسبات تخصصی
-# ============================================================
-
 @calculations_router.post("/{report_id}/calculate", response_model=InterpretationResponse)
 async def calculate_and_interpret(
     report_id: int,
@@ -606,7 +623,6 @@ async def calculate_and_interpret(
     """
     انجام محاسبات کامل و تولید تفسیر برای یک گزارش
     """
-    # دریافت گزارش
     report = get_report_by_id(db, report_id)
     
     if not report:
@@ -621,7 +637,6 @@ async def calculate_and_interpret(
             detail="شما دسترسی به این گزارش ندارید"
         )
     
-    # دریافت آنالیز آب
     water_analysis = get_water_analysis_by_report(db, report_id)
     
     if not water_analysis:
@@ -630,7 +645,6 @@ async def calculate_and_interpret(
             detail="لطفاً ابتدا آنالیز آب را وارد کنید"
         )
     
-    # دریافت محاسبات
     calculation = get_calculation_by_report(db, report_id)
     
     if not calculation:
@@ -639,7 +653,6 @@ async def calculate_and_interpret(
             detail="لطفاً ابتدا محاسبات را انجام دهید"
         )
     
-    # انجام محاسبات
     target_values = calculation.target_values or {}
     final_values = calculation.final_values or {}
     water_data = {
@@ -648,10 +661,8 @@ async def calculate_and_interpret(
         'wastewater_percentage': water_analysis.wastewater_percentage
     }
     
-    # محاسبه تعادل یونی
     cation, anion, is_balanced = calculate_ion_balance(target_values)
     
-    # تولید تفسیر
     interpretation = generate_interpretation(
         target_values=target_values,
         final_values=final_values,
@@ -659,7 +670,6 @@ async def calculate_and_interpret(
         ion_balance=(cation, anion, is_balanced)
     )
     
-    # ذخیره تفسیر
     calculation.interpretation = interpretation['summary']
     db.commit()
     

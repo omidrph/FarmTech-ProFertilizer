@@ -1,11 +1,11 @@
 # backend/app/crud.py
 """عملیات پایه دیتابیس (CRUD) برای همه مدل‌ها"""
 
-from typing import Optional, List, Dict, Any, TypeVar, Generic, Type
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
 
-from app.models import User, Report, Fertilizer, WaterAnalysis, Calculation
+from app.models import User, Report, Fertilizer, WaterAnalysis, Calculation, UserSession
 from app.schemas import (
     UserCreate, UserUpdate,
     ReportCreate, ReportUpdate,
@@ -13,7 +13,7 @@ from app.schemas import (
     WaterAnalysisCreate, WaterAnalysisUpdate,
     CalculationCreate, CalculationUpdate
 )
-from app.security import get_password_hash
+from app.security import get_password_hash, delete_user_sessions
 
 
 # ============================================================
@@ -72,11 +72,14 @@ def update_user(db: Session, user_id: int, user_data: UserUpdate) -> Optional[Us
 
 
 def delete_user(db: Session, user_id: int) -> bool:
-    """حذف کاربر"""
+    """حذف کاربر (همراه با حذف نشست‌ها)"""
     db_user = get_user_by_id(db, user_id)
     
     if db_user is None:
         return False
+    
+    # حذف نشست‌های کاربر
+    delete_user_sessions(user_id, db)
     
     db.delete(db_user)
     db.commit()

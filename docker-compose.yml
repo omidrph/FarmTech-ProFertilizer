@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    container_name: farmtech-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/farmtech.db:/app/farmtech.db
+    environment:
+      - DATABASE_URL=sqlite:///./farmtech.db
+      - DEBUG=True
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    networks:
+      - farmtech-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    container_name: farmtech-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    depends_on:
+      - backend
+    networks:
+      - farmtech-network
+
+networks:
+  farmtech-network:
+    driver: bridge

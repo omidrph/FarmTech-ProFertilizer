@@ -30,6 +30,7 @@ class User(Base):
     # ===== روابط =====
     reports = relationship("Report", back_populates="user", cascade="all, delete-orphan")
     fertilizers = relationship("Fertilizer", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     
     @property
     def full_name(self) -> str:
@@ -38,6 +39,28 @@ class User(Base):
     
     def __repr__(self):
         return f"<User {self.phone_number}>"
+
+
+# ============================================================
+# مدل UserSession (نشست کاربر - توکن تصادفی)
+# ============================================================
+class UserSession(Base):
+    """مدل نشست‌های کاربر (توکن‌های تصادفی)"""
+    
+    __tablename__ = "user_sessions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    is_active = Column(Boolean, default=True)
+    
+    # ===== روابط =====
+    user = relationship("User", back_populates="sessions")
+    
+    def __repr__(self):
+        return f"<UserSession {self.user_id} - {self.token[:10]}...>"
 
 
 # ============================================================

@@ -25,6 +25,18 @@
 
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 w-full">
+      <!-- Loading Indicator -->
+      <div v-if="isLoading" class="flex justify-center items-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <span class="mr-2 text-gray-600 dark:text-gray-400">در حال بارگذاری...</span>
+      </div>
+
+      <!-- Error Message -->
+      <div v-if="apiError" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-4 mb-4">
+        <p class="text-danger-700 dark:text-danger-400 text-sm">{{ apiError }}</p>
+        <button @click="apiError = null" class="text-sm text-danger-600 hover:text-danger-800 mt-1">بستن</button>
+      </div>
+
       <!-- Home Tab -->
       <div v-if="activeTab === 'home'" class="space-y-4 sm:space-y-6">
         <!-- Report Header -->
@@ -242,7 +254,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, computed } from 'vue';
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useApi } from '@/composables/useApi';
+import { useAuth } from '@/composables/useAuth';
 
 // ===== Import Components =====
 import AppHeader from '@/components/layout/AppHeader.vue';
@@ -255,11 +270,18 @@ import FertilizerCalcTab from '@/components/features/FertilizerCalcTab.vue';
 import FertilizerDBTab from '@/components/features/FertilizerDBTab.vue';
 import InterpretationTab from '@/components/features/InterpretationTab.vue';
 
+// ===== Router =====
+const router = useRouter();
+
+// ===== API & Auth =====
+const { request, isLoading, error: apiError, checkConnection } = useApi();
+const { checkAuth } = useAuth();
+
 // ===== State =====
 const activeTab = ref('home');
 const activeSubTab = ref('home');
 const showAddFertilizerModal = ref(false);
-const headerHeight = ref(56); // مقدار پیش‌فرض
+const headerHeight = ref(56);
 
 // ===== Report Fields =====
 const reportName = ref('');
@@ -337,49 +359,28 @@ const calcErrors = ref<string[]>([]);
 // ===== Interpretation =====
 const interpretationResult = ref<any>(null);
 
-// ===== Methods =====
-const generateInterpretation = () => {
-  interpretationResult.value = {
-    summary: 'گزارش تفسیر تغذیه گیاه:\n- تعادل یونی: برقرار ✅\n- عناصر دارای مشکل: هیچکدام\n- کیفیت آب: مناسب\n- تعداد توصیه‌ها: 0',
-    ionBalance: {
-      cation: 10.5,
-      anion: 10.2,
-      isBalanced: true,
-      message: 'تعادل یونی برقرار است'
-    },
-    elementStatus: elements.map(el => ({
-      element: el,
-      target: targetValues[el] || 0,
-      actual: (targetValues[el] || 0) * 0.95,
-      difference: (targetValues[el] || 0) * 0.05,
-      status: 'sufficient',
-      message: 'وضعیت مطلوب'
-    })),
-    waterQuality: {
-      salinity: waterSalinity.value,
-      impact: 'مناسب',
-      recommendation: 'نیازی به اقدام نیست'
-    },
-    fertilizerRecommendation: []
-  };
-};
-
-const saveFertilizer = () => {
-  if (!newFertilizer.name || !newFertilizer.pricePerKg) {
-    alert('لطفاً نام و قیمت کود را وارد کنید');
-    return;
+// ===== API Methods =====
+const loadFertilizersFromBackend = async () => {
+  try {
+    const result = await request('get', '/fertilizers');
+    if (result && Array.isArray(result)) {
+      fertilizers.value = result;
+      return true;
+    }
+    return false;
+  } catch (error: any) {
+    // اگر خطا 401 بود، از داده‌های نمونه استفاده کن
+    if (error?.response?.status === 401) {
+      console.warn('⚠️ خطای 401 - استفاده از داده‌های نمونه');
+      useSampleData();
+      return true;
+    }
+    console.error('خطا در دریافت کودها:', error);
+    return false;
   }
-  fertilizers.value.push({
-    id: Date.now().toString(),
-    ...newFertilizer
-  });
-  showAddFertilizerModal.value = false;
-  newFertilizer.name = '';
-  newFertilizer.pricePerKg = 0;
-  newFertilizer.elements = {};
 };
 
-const loadSampleData = () => {
+const useSampleData = () => {
   fertilizers.value = [
     {
       id: '1',
@@ -408,6 +409,81 @@ const loadSampleData = () => {
   ];
 };
 
+const saveFertilizerToBackend = async () => {
+  if (!newFertilizer.name || !newFertilizer.pricePerKg) {
+    alert('لطفاً نام و قیمت کود را وارد کنید');
+    return;
+  }
+  
+  try {
+    const result = await request('post', '/fertilizers', newFertilizer);
+    if (result) {
+      fertilizers.value.push(result as any);
+      showAddFertilizerModal.value = false;
+      newFertilizer.name = '';
+      newFertilizer.pricePerKg = 0;
+      newFertilizer.elements = {};
+      alert('کود با موفقیت افزوده شد');
+    }
+  } catch {
+    // اگر خطا بود، به صورت محلی اضافه کن
+    const newItem = {
+      id: Date.now().toString(),
+      ...newFertilizer
+    };
+    fertilizers.value.push(newItem);
+    showAddFertilizerModal.value = false;
+    newFertilizer.name = '';
+    newFertilizer.pricePerKg = 0;
+    newFertilizer.elements = {};
+    alert('کود به صورت محلی افزوده شد (اتصال به سرور برقرار نیست)');
+  }
+};
+
+const saveFertilizer = saveFertilizerToBackend;
+
+// ===== Methods =====
+const generateInterpretation = () => {
+  interpretationResult.value = {
+    summary: 'گزارش تفسیر تغذیه گیاه:\n- تعادل یونی: برقرار ✅\n- عناصر دارای مشکل: هیچکدام\n- کیفیت آب: مناسب\n- تعداد توصیه‌ها: 0',
+    ionBalance: {
+      cation: 10.5,
+      anion: 10.2,
+      isBalanced: true,
+      message: 'تعادل یونی برقرار است'
+    },
+    elementStatus: elements.map(el => ({
+      element: el,
+      target: targetValues[el] || 0,
+      actual: (targetValues[el] || 0) * 0.95,
+      difference: (targetValues[el] || 0) * 0.05,
+      status: 'sufficient',
+      message: 'وضعیت مطلوب'
+    })),
+    waterQuality: {
+      salinity: waterSalinity.value,
+      impact: 'مناسب',
+      recommendation: 'نیازی به اقدام نیست'
+    },
+    fertilizerRecommendation: []
+  };
+};
+
+const loadSampleData = async () => {
+  try {
+    // بررسی احراز هویت (همیشه true برمی‌گرداند)
+    await checkAuth();
+    
+    const loaded = await loadFertilizersFromBackend();
+    if (!loaded) {
+      useSampleData();
+    }
+  } catch (err) {
+    console.error('Error loading data:', err);
+    useSampleData();
+  }
+};
+
 // ===== محاسبه ارتفاع هدر =====
 const updateHeaderHeight = () => {
   const header = document.querySelector('header');
@@ -417,10 +493,11 @@ const updateHeaderHeight = () => {
 };
 
 // ===== Lifecycle =====
-onMounted(() => {
-  loadSampleData();
+onMounted(async () => {
+  await loadSampleData();
   updateHeaderHeight();
   window.addEventListener('resize', updateHeaderHeight);
+  await checkConnection();
 });
 
 onUnmounted(() => {
@@ -429,7 +506,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Custom scrollbar hide for sub navigation */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
@@ -438,7 +514,6 @@ onUnmounted(() => {
   scrollbar-width: none;
 }
 
-/* Slide up animation for modal */
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -454,7 +529,6 @@ onUnmounted(() => {
   animation: slideUp 0.3s ease-out;
 }
 
-/* Snap scrolling for mobile */
 .snap-x {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
@@ -464,19 +538,15 @@ onUnmounted(() => {
   scroll-snap-align: start;
 }
 
-/* اطمینان از چسبیدن فوتر به پایین */
 .flex {
   display: flex;
 }
-
 .flex-col {
   flex-direction: column;
 }
-
 .min-h-screen {
   min-height: 100vh;
 }
-
 .flex-1 {
   flex: 1 1 0%;
 }

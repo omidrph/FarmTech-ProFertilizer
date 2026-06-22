@@ -44,7 +44,7 @@ export enum TabType {
 }
 
 // ============================================================
-// INTERFACES
+// INTERFACES - بخش قبلی
 // ============================================================
 
 export interface ElementRow {
@@ -65,7 +65,7 @@ export interface Fertilizer {
   name: string;
   pricePerKg: number;
   elements: {
-    [key in ElementName]?: number; // درصد عناصر
+    [key in ElementName]?: number;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -92,11 +92,11 @@ export interface CalculationRow {
   };
   isAcid?: boolean;
   acidType?: 'H3PO4' | 'HNO3' | 'H2SO4';
-  isFixedRow?: boolean; // برای ردیف‌های ثابت (H3PO4, HNO3, H2SO4)
+  isFixedRow?: boolean;
 }
 
 export interface CalculationInputs {
-  tankVolume: number; // لیتر
+  tankVolume: number;
   dilutionFactor: number;
   totalLiter: number;
 }
@@ -112,7 +112,7 @@ export interface ReportData {
   plantName: string;
   season: string;
   growthStage: string;
-  date: string; // تاریخ شمسی
+  date: string;
 }
 
 export interface WaterMixData {
@@ -157,7 +157,7 @@ export interface InterpretationResult {
 }
 
 // ============================================================
-// TYPE ALIASES
+// TYPE ALIASES - بخش قبلی
 // ============================================================
 
 export type ElementValues = {
@@ -173,7 +173,7 @@ export type ThemeType = 'light' | 'dark';
 export type LanguageType = 'fa' | 'en';
 
 // ============================================================
-// CONSTANTS AS TYPES
+// CONSTANTS AS TYPES - بخش قبلی
 // ============================================================
 
 export const ELEMENTS_LIST: ElementName[] = [
@@ -205,3 +205,36 @@ export const RESERVOIR_TYPES: ReservoirType[] = [
   ReservoirType.B,
   ReservoirType.C
 ];
+
+// ============================================================
+// ✅ بخش جدید: نوع‌های مربوط به احراز هویت (Auth)
+// ============================================================
+
+export interface LoginCredentials {
+  phone_number: string;
+  password: string;
+}
+
+export interface RegisterData {
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+  full_name: string;
+}

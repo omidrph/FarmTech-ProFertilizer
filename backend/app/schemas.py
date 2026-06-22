@@ -19,7 +19,6 @@ class UserCreate(BaseModel):
     
     @validator('phone_number')
     def validate_phone(cls, v):
-        """اعتبارسنجی شماره تلفن ایران"""
         import re
         if not re.match(r'^09[0-9]{9}$', v):
             raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
@@ -54,7 +53,7 @@ class UserUpdate(BaseModel):
 
 
 # ============================================================
-# طرح‌های مربوط به Token (JWT)
+# طرح‌های مربوط به Token (توکن تصادفی)
 # ============================================================
 
 class Token(BaseModel):
