@@ -47,13 +47,16 @@
         </p>
 
         <!-- اسلایدر توضیحات -->
-        <div class="relative w-full max-w-md min-h-[180px]">
+        <div class="relative w-full max-w-md min-h-[200px]">
+          <!-- باک شیشه‌ای ثابت در پشت اسلایدها -->
+          <div class="absolute inset-0 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl"></div>
+          
           <TransitionGroup name="slide-fade" tag="div" class="relative">
             <div
               v-for="(slide, index) in slides"
               :key="slide.id"
               v-show="currentSlide === index"
-              class="absolute inset-0 bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 shadow-2xl"
+              class="absolute inset-0 p-5"
             >
               <div class="flex items-start gap-4">
                 <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">

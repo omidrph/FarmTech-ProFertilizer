@@ -12,10 +12,10 @@
           />
           <div class="flex flex-col leading-tight">
             <h1 class="text-sm sm:text-base lg:text-xl font-bold text-gray-800 dark:text-white tracking-tight">
-              FarmTech
+              سیستم هوشمند نسخه‌نویسی کود
             </h1>
             <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-              ProFertilizer
+              فارم تک
             </p>
           </div>
         </div>
