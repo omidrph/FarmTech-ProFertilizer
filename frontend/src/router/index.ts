@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/views/MainLayout.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
+import Profile from '@/views/Profile.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +19,12 @@ const router = createRouter({
       name: 'register',
       component: Register,
       meta: { requiresAuth: false }
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: Profile,
+      meta: { requiresAuth: true }
     },
     {
       path: '/',
