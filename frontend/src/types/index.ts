@@ -44,7 +44,7 @@ export enum TabType {
 }
 
 // ============================================================
-// INTERFACES - بخش قبلی
+// INTERFACES
 // ============================================================
 
 export interface ElementRow {
@@ -64,9 +64,9 @@ export interface Fertilizer {
   id: string;
   name: string;
   pricePerKg: number;
-  elements: {
-    [key in ElementName]?: number;
-  };
+  elements: Partial<Record<ElementName, number>>;
+  isAcid?: boolean;
+  acidType?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,11 +74,13 @@ export interface Fertilizer {
 export interface ReservoirItem {
   name: string;
   amount: number;
+  purity?: number;
 }
 
 export interface ReservoirData {
-  type: ReservoirType;
-  items: ReservoirItem[];
+  A: ReservoirItem[];
+  B: ReservoirItem[];
+  C: ReservoirItem[];
 }
 
 export interface CalculationRow {
@@ -87,12 +89,11 @@ export interface CalculationRow {
   weight: number;
   purity: number;
   cost: number;
-  elements: {
-    [key in ElementName]?: number;
-  };
+  elements: Partial<Record<ElementName, number>>;
   isAcid?: boolean;
-  acidType?: 'H3PO4' | 'HNO3' | 'H2SO4';
+  acidType?: string;
   isFixedRow?: boolean;
+  fertilizerId?: string;
 }
 
 export interface CalculationInputs {
@@ -122,10 +123,17 @@ export interface WaterMixData {
 }
 
 export interface TargetElementData {
-  elements: {
-    [key in ElementName]?: number;
-  };
+  elements: Partial<Record<ElementName, number>>;
   unit: Unit;
+}
+
+export interface ElementStatus {
+  element: ElementName;
+  target: number;
+  actual: number;
+  difference: number;
+  status: 'deficient' | 'sufficient' | 'excessive' | 'toxic';
+  message: string;
 }
 
 export interface InterpretationResult {
@@ -135,14 +143,7 @@ export interface InterpretationResult {
     isBalanced: boolean;
     message: string;
   };
-  elementStatus: {
-    element: ElementName;
-    target: number;
-    actual: number;
-    difference: number;
-    status: 'deficient' | 'sufficient' | 'excessive' | 'toxic';
-    message: string;
-  }[];
+  elementStatus: ElementStatus[];
   waterQuality: {
     salinity: number;
     impact: string;
@@ -157,43 +158,10 @@ export interface InterpretationResult {
 }
 
 // ============================================================
-// ✅ بخش جدید: نوع‌های مربوط به آموزش (Education)
+// TYPE ALIASES
 // ============================================================
 
-export interface FAQItem {
-  id: string;
-  question: string;
-  answer: string;
-  category: string;
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface QuickStartStep {
-  id: string;
-  title: string;
-  description: string;
-  details: string[];
-  tips: string[];
-  warnings: string[];
-  order: number;
-}
-
-export interface EducationState {
-  faqItems: FAQItem[];
-  quickStartSteps: QuickStartStep[];
-  searchQuery: string;
-  activeCategory: string;
-}
-
-// ============================================================
-// TYPE ALIASES - بخش قبلی
-// ============================================================
-
-export type ElementValues = {
-  [key in ElementName]?: number;
-};
+export type ElementValues = Partial<Record<ElementName, number>>;
 
 export type ElementList = ElementName[];
 
@@ -204,7 +172,7 @@ export type ThemeType = 'light' | 'dark';
 export type LanguageType = 'fa' | 'en';
 
 // ============================================================
-// CONSTANTS AS TYPES - بخش قبلی
+// CONSTANTS AS TYPES
 // ============================================================
 
 export const ELEMENTS_LIST: ElementName[] = [
@@ -238,8 +206,35 @@ export const RESERVOIR_TYPES: ReservoirType[] = [
 ];
 
 // ============================================================
-// ✅ بخش جدید: ثابت‌های آموزش
+// EDUCATION TYPES
 // ============================================================
+
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuickStartStep {
+  id: string;
+  title: string;
+  description: string;
+  details: string[];
+  tips: string[];
+  warnings: string[];
+  order: number;
+}
+
+export interface EducationState {
+  faqItems: FAQItem[];
+  quickStartSteps: QuickStartStep[];
+  searchQuery: string;
+  activeCategory: string;
+}
 
 export const FAQ_CATEGORIES = [
   'همه',
@@ -255,7 +250,7 @@ export const FAQ_CATEGORIES = [
 export const QUICK_START_TOTAL_STEPS = 6;
 
 // ============================================================
-// ✅ بخش جدید: نوع‌های مربوط به احراز هویت (Auth)
+// AUTH TYPES
 // ============================================================
 
 export interface LoginCredentials {

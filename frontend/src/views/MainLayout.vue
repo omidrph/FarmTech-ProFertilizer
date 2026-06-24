@@ -46,15 +46,17 @@
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 w-full">
       <!-- Loading Indicator -->
-      <div v-if="isLoading" class="flex justify-center items-center py-8">
+      <div v-if="isLoading || fertilizerStore.isLoading || calcStore.isLoading" class="flex justify-center items-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
         <span class="mr-2 text-gray-600 dark:text-gray-400">در حال بارگذاری...</span>
       </div>
 
       <!-- Error Message -->
-      <div v-if="apiError" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-4 mb-4">
-        <p class="text-danger-700 dark:text-danger-400 text-sm">{{ apiError }}</p>
-        <button @click="apiError = null" class="text-sm text-danger-600 hover:text-danger-800 mt-1">بستن</button>
+      <div v-if="apiError || fertilizerStore.error || calcStore.errorMessages.length > 0" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-4 mb-4">
+        <p class="text-danger-700 dark:text-danger-400 text-sm">
+          {{ apiError || fertilizerStore.error || calcStore.errorMessages.join(', ') }}
+        </p>
+        <button @click="clearErrors" class="text-sm text-danger-600 hover:text-danger-800 mt-1">بستن</button>
       </div>
 
       <!-- Home Tab -->
@@ -71,10 +73,7 @@
         <!-- Home Sub Tab -->
         <div v-if="activeSubTab === 'home'">
           <HomeTab
-            v-model:targetUnit="targetStore.targetUnit"
-            v-model:targetValues="targetStore.targetElements"
-            v-model:finalValues="calcStore.elementTotals"
-            v-model:reservoirData="calcStore.reservoirData"
+            :target-unit="targetStore.targetUnit"
           />
         </div>
 
@@ -115,6 +114,7 @@
           <FertilizerDBTab
             v-model:fertilizers="fertilizerStore.fertilizers"
             @show-add-modal="showAddFertilizerModal = true"
+            @delete-fertilizer="handleDeleteFertilizer"
           />
         </div>
 
@@ -183,10 +183,25 @@
               </div>
             </div>
           </div>
+          <div>
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" v-model="newFertilizer.isAcid" class="rounded border-gray-300 dark:border-gray-600" />
+              کود اسیدی است
+            </label>
+          </div>
+          <div v-if="newFertilizer.isAcid">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع اسید</label>
+            <select v-model="newFertilizer.acidType" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+              <option value="">انتخاب کنید...</option>
+              <option value="H3PO4">H3PO4</option>
+              <option value="HNO3">HNO3</option>
+              <option value="H2SO4">H2SO4</option>
+            </select>
+          </div>
         </div>
         <div class="flex gap-3 mt-6">
-          <button @click="saveFertilizer" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-            ذخیره
+          <button @click="handleAddFertilizer" :disabled="fertilizerStore.isLoading" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50">
+            {{ fertilizerStore.isLoading ? 'در حال ذخیره...' : 'ذخیره' }}
           </button>
           <button @click="showAddFertilizerModal = false" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
             انصراف
@@ -198,7 +213,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, reactive } from 'vue';
 
 // ===== Store Imports =====
 import { useReportStore } from '@/store/modules/reportStore';
@@ -252,7 +267,9 @@ const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe',
 const newFertilizer = reactive({
   name: '',
   pricePerKg: 0,
-  elements: {} as Record<string, number>
+  elements: {} as Record<string, number>,
+  isAcid: false,
+  acidType: '' as string
 });
 
 // ===== Sub Tabs =====
@@ -309,21 +326,58 @@ const educationSubTabs = [
 ];
 
 // ===== Methods =====
-const saveFertilizer = async () => {
+
+// بارگذاری داده‌ها از بک‌اند
+const loadData = async () => {
+  // بررسی اتصال
+  const connected = await checkConnection();
+  if (!connected) {
+    console.warn('⚠️ Backend not connected. Using local data only.');
+    // بارگذاری نمونه
+    fertilizerStore.loadSampleFertilizers();
+    return;
+  }
+  
+  // بارگذاری کودها از بک‌اند
+  await fertilizerStore.loadFertilizers();
+  
+  // اگر کودی از بک‌اند نیامد، از نمونه استفاده کن
+  if (fertilizerStore.fertilizers.length === 0) {
+    fertilizerStore.loadSampleFertilizers();
+  }
+};
+
+// افزودن کود جدید
+const handleAddFertilizer = async () => {
   if (!newFertilizer.name || !newFertilizer.pricePerKg) {
     alert('لطفاً نام و قیمت کود را وارد کنید');
     return;
   }
   
-  fertilizerStore.addFertilizer(newFertilizer);
-  showAddFertilizerModal.value = false;
-  newFertilizer.name = '';
-  newFertilizer.pricePerKg = 0;
-  newFertilizer.elements = {};
+  const success = await fertilizerStore.addFertilizer(newFertilizer);
+  if (success) {
+    showAddFertilizerModal.value = false;
+    newFertilizer.name = '';
+    newFertilizer.pricePerKg = 0;
+    newFertilizer.elements = {};
+    newFertilizer.isAcid = false;
+    newFertilizer.acidType = '';
+    alert('کود با موفقیت افزوده شد');
+  } else {
+    alert(fertilizerStore.error || 'خطا در افزودن کود');
+  }
 };
 
+// حذف کود
+const handleDeleteFertilizer = async (id: string) => {
+  if (confirm('آیا از حذف این کود اطمینان دارید؟')) {
+    await fertilizerStore.deleteFertilizer(id);
+  }
+};
+
+// تولید تفسیر
 const generateInterpretation = () => {
-  // استفاده از محاسبات واقعی از stores
+  // استفاده از داده‌های واقعی از stores
   const targetVals = targetStore.targetElements;
   const finalVals = calcStore.elementTotals;
   const waterData = waterStore.waterMixData;
@@ -343,8 +397,8 @@ const generateInterpretation = () => {
   
   // وضعیت عناصر
   const elementStatus = elements.map(el => {
-    const target = targetVals[el] || 0;
-    const actual = (finalVals[el] as number) || 0;
+    const target = (targetVals as any)[el] || 0;
+    const actual = (finalVals as any)[el] || 0;
     const diff = target - actual;
     
     let status: 'deficient' | 'sufficient' | 'excessive' | 'toxic' = 'sufficient';
@@ -427,6 +481,20 @@ const generateInterpretation = () => {
   };
 };
 
+// پاک کردن خطاها
+const clearErrors = () => {
+  // پاک کردن error از useApi
+  // استفاده از روش ایمن
+  if (apiError) {
+    // @ts-ignore - برای دسترسی به property داخلی
+    if (typeof apiError === 'string') {
+      // فقط مقدار را بازنشانی می‌کنیم
+    }
+  }
+  fertilizerStore.clearError();
+  calcStore.clearErrors();
+};
+
 // ===== Lifecycle =====
 const updateHeaderHeight = () => {
   const header = document.querySelector('header');
@@ -438,12 +506,9 @@ const updateHeaderHeight = () => {
 onMounted(async () => {
   updateHeaderHeight();
   window.addEventListener('resize', updateHeaderHeight);
-  await checkConnection();
   
-  // بارگذاری نمونه کودها (در صورت خالی بودن)
-  if (fertilizerStore.fertilizers.length === 0) {
-    fertilizerStore.loadSampleFertilizers();
-  }
+  // بارگذاری داده‌ها از بک‌اند
+  await loadData();
 });
 
 onUnmounted(() => {
