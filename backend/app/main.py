@@ -1,6 +1,5 @@
 # backend/app/main.py
 """نقطه ورود اصلی برنامه FastAPI"""
-
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -8,12 +7,17 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 import traceback
-
 from app.config import settings
-from app.database import create_tables
+from app.database import create_tables, SessionLocal
 from app.routes import router
 from app.security import get_current_user
 from app.models import User
+
+# ===== 🆕 Import برای بارگذاری کودهای سیستمی =====
+from app.seeds.fertilizer_seeds import (
+    seed_system_fertilizers,
+    get_system_fertilizers_count
+)
 
 # ===== تنظیمات Logger =====
 logging.basicConfig(
@@ -69,7 +73,6 @@ async def general_exception_handler(request, exc):
     # لاگ کامل خطا با traceback
     logger.error(f"Unhandled Exception: {str(exc)}")
     logger.error(traceback.format_exc())
-    
     return JSONResponse(
         status_code=500,
         content={
@@ -92,7 +95,11 @@ async def log_requests(request, call_next):
 # ===== مسیرهای اصلی =====
 @app.get("/")
 async def root():
-    return {"name": settings.APP_NAME, "version": settings.APP_VERSION, "status": "running"}
+    return {
+        "name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "status": "running"
+    }
 
 @app.get("/health")
 async def health_check():
@@ -114,17 +121,56 @@ async def auth_test(current_user: User = Depends(get_current_user)):
 # ===== ثبت Routerها =====
 app.include_router(router, prefix=settings.API_PREFIX)
 
-# ===== رویدادهای Startup/Shutdown =====
+# ============================================================
+# 🆕 رویدادهای Startup/Shutdown (اصلاح شده)
+# ============================================================
 @app.on_event("startup")
 async def startup_event():
-    logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
-    logger.info(f"Debug mode: {settings.DEBUG}")
+    """رویداد شروع برنامه - ساخت جداول و بارگذاری کودهای سیستمی"""
+    logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
+    logger.info(f"🔧 Debug mode: {settings.DEBUG}")
+    
+    # ===== مرحله ۱: ساخت جداول دیتابیس =====
     try:
         create_tables()
-        logger.info("Database tables created successfully")
+        logger.info("✅ Database tables created successfully")
     except Exception as e:
-        logger.error(f"Failed to create tables: {e}")
+        logger.error(f"❌ Failed to create tables: {e}")
+        return
+    
+    # ===== 🆕 مرحله ۲: بارگذاری خودکار کودهای سیستمی =====
+    db = SessionLocal()
+    try:
+        # بررسی تعداد کودهای سیستمی موجود
+        system_count = get_system_fertilizers_count(db)
+        logger.info(f"📊 تعداد کودهای سیستمی فعلی: {system_count}")
+        
+        if system_count == 0:
+            # اگر کود سیستمی وجود ندارد، بارگذاری کن
+            logger.info("🌱 در حال بارگذاری کودهای سیستمی...")
+            stats = seed_system_fertilizers(db)
+            
+            logger.info(
+                f"✅ کودهای سیستمی بارگذاری شدند - "
+                f"اضافه شده: {stats['added']} | "
+                f"رد شده: {stats['skipped']} | "
+                f"خطا: {len(stats['errors'])}"
+            )
+            
+            if stats['errors']:
+                for err in stats['errors']:
+                    logger.warning(f"⚠️  خطا در {err['name']}: {err['error']}")
+        else:
+            logger.info(f"✅ کودهای سیستمی از قبل موجود هستند ({system_count} مورد)")
+            
+    except Exception as e:
+        logger.error(f"❌ خطا در بارگذاری کودهای سیستمی: {e}")
+        db.rollback()
+    finally:
+        db.close()
+    
+    logger.info(f"🎉 {settings.APP_NAME} آماده استفاده است!")
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    logger.info(f"Shutting down {settings.APP_NAME}")
+    logger.info(f"👋 Shutting down {settings.APP_NAME}")

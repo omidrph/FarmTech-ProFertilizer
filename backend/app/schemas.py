@@ -1,5 +1,5 @@
 # backend/app/schemas.py
-"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه نهایی"""
+"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه اصلاح شده"""
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -85,30 +85,85 @@ class ReportResponse(BaseModel):
         from_attributes = True
 
 # ============================================================
-# طرح‌های مربوط به Fertilizer (کود)
+# طرح‌های مربوط به Fertilizer (کود) - اصلاح شده
 # ============================================================
 class FertilizerCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    price_per_kg: float = Field(0.0, ge=0)
-    elements: Optional[Dict[str, float]] = Field(default_factory=dict)
-    is_acid: bool = False
-    acid_type: Optional[str] = Field(None, max_length=10)
+    """طرح ایجاد کود جدید - فقط name اجباری است"""
+    # ===== فیلد اجباری =====
+    name: str = Field(..., min_length=1, max_length=100, description="نام کود (اجباری)")
+    
+    # ===== فیلدهای اصلی - اختیاری =====
+    price_per_kg: Optional[float] = Field(None, ge=0, description="قیمت هر کیلوگرم")
+    elements: Optional[Dict[str, float]] = Field(default_factory=dict, description="درصد عناصر")
+    is_acid: bool = Field(False, description="آیا اسید است؟")
+    acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید")
+    
+    # ===== 🆕 فیلدهای جدید - همه اختیاری =====
+    is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
+    brand: Optional[str] = Field(None, max_length=100, description="برند/شرکت")
+    category: Optional[str] = Field(None, max_length=50, description="دسته‌بندی")
+    form: Optional[str] = Field(None, max_length=20, description="حالت فیزیکی")
+    solubility: Optional[str] = Field(None, max_length=50, description="حلالیت")
+    ph_level: Optional[str] = Field(None, max_length=20, description="pH محلول")
+    description: Optional[str] = Field(None, description="توضیحات")
+    application_method: Optional[str] = Field(None, max_length=100, description="روش مصرف")
+    packaging: Optional[str] = Field(None, max_length=50, description="بسته‌بندی")
+    registration_code: Optional[str] = Field(None, max_length=20, description="کد ثبت")
+    npk_ratio: Optional[str] = Field(None, max_length=20, description="نسبت NPK")
+    organic_matter: Optional[float] = Field(None, ge=0, le=100, description="درصد مواد آلی")
+    chelating_agent: Optional[str] = Field(None, max_length=20, description="عامل کلات‌کننده")
 
 class FertilizerUpdate(BaseModel):
+    """طرح به‌روزرسانی کود - همه فیلدها اختیاری"""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     price_per_kg: Optional[float] = Field(None, ge=0)
     elements: Optional[Dict[str, float]] = None
     is_acid: Optional[bool] = None
     acid_type: Optional[str] = Field(None, max_length=10)
+    
+    # 🆕 فیلدهای جدید
+    is_system_default: Optional[bool] = None
+    brand: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=50)
+    form: Optional[str] = Field(None, max_length=20)
+    solubility: Optional[str] = Field(None, max_length=50)
+    ph_level: Optional[str] = Field(None, max_length=20)
+    description: Optional[str] = None
+    application_method: Optional[str] = Field(None, max_length=100)
+    packaging: Optional[str] = Field(None, max_length=50)
+    registration_code: Optional[str] = Field(None, max_length=20)
+    npk_ratio: Optional[str] = Field(None, max_length=20)
+    organic_matter: Optional[float] = Field(None, ge=0, le=100)
+    chelating_agent: Optional[str] = Field(None, max_length=20)
 
 class FertilizerResponse(BaseModel):
+    """طرح پاسخ کود - شامل همه فیلدها"""
     id: int
-    user_id: int
+    user_id: Optional[int] = None  # ✅ nullable شد
     name: str
-    price_per_kg: float
+    
+    # فیلدهای اصلی
+    price_per_kg: Optional[float] = None
     elements: Optional[Dict[str, float]] = None
     is_acid: bool = False
     acid_type: Optional[str] = None
+    
+    # 🆕 فیلدهای جدید
+    is_system_default: bool = False
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    form: Optional[str] = None
+    solubility: Optional[str] = None
+    ph_level: Optional[str] = None
+    description: Optional[str] = None
+    application_method: Optional[str] = None
+    packaging: Optional[str] = None
+    registration_code: Optional[str] = None
+    npk_ratio: Optional[str] = None
+    organic_matter: Optional[float] = None
+    chelating_agent: Optional[str] = None
+    
+    # تاریخ‌ها
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -176,50 +231,50 @@ class CalculationResponse(BaseModel):
         from_attributes = True
 
 # ============================================================
-# 🆕 طرح‌های جدید برای APIهای محاسباتی
+# طرح‌های مربوط به APIهای محاسباتی
 # ============================================================
 
 class IonBalanceRequest(BaseModel):
-    """🆕 درخواست محاسبه تعادل یونی"""
+    """درخواست محاسبه تعادل یونی"""
     elements: Dict[str, float] = Field(..., description="مقادیر عناصر")
     unit: str = Field("ppm", description="واحد (ppm, meq, mmol)")
 
 class IonBalanceResponse(BaseModel):
-    """🆕 پاسخ محاسبه تعادل یونی"""
+    """پاسخ محاسبه تعادل یونی"""
     cation: float
     anion: float
     is_balanced: bool
     message: str
 
 class FinalSolutionRequest(BaseModel):
-    """🆕 درخواست محاسبه محلول نهایی"""
+    """درخواست محاسبه محلول نهایی"""
     target_values: Dict[str, float] = Field(..., description="مقادیر هدف")
     water_values: Dict[str, float] = Field(..., description="مقادیر موجود در آب")
     fertilizer_contributions: Dict[str, float] = Field(..., description="سهم کودها")
 
 class FinalSolutionResponse(BaseModel):
-    """🆕 پاسخ محاسبه محلول نهایی"""
+    """پاسخ محاسبه محلول نهایی"""
     final_values: Dict[str, float]
     ion_balance: IonBalanceResponse
 
 class ReservoirRequest(BaseModel):
-    """🆕 درخواست محاسبه مخازن"""
+    """درخواست محاسبه مخازن"""
     fertilizers: List[Dict[str, Any]] = Field(..., description="لیست کودها با وزن و خلوص")
 
 class ReservoirResponse(BaseModel):
-    """🆕 پاسخ محاسبه مخازن"""
+    """پاسخ محاسبه مخازن"""
     reservoir_data: Dict[str, List[Dict[str, Any]]]
     totals: Dict[str, float]
 
 class UnitConversionRequest(BaseModel):
-    """🆕 درخواست تبدیل واحد"""
+    """درخواست تبدیل واحد"""
     value: float = Field(..., description="مقدار")
     from_unit: str = Field(..., description="واحد مبدا (ppm, meq, mmol)")
     to_unit: str = Field(..., description="واحد مقصد (ppm, meq, mmol)")
     element: str = Field(..., description="نام عنصر")
 
 class UnitConversionResponse(BaseModel):
-    """🆕 پاسخ تبدیل واحد"""
+    """پاسخ تبدیل واحد"""
     original_value: float
     converted_value: float
     from_unit: str
@@ -227,7 +282,7 @@ class UnitConversionResponse(BaseModel):
     element: str
 
 # ============================================================
-# 🆕 طرح‌های جدید برای Home Summary
+# طرح‌های مربوط به Home Summary
 # ============================================================
 
 class HomeSummaryElementData(BaseModel):

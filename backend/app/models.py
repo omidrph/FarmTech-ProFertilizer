@@ -1,5 +1,5 @@
 # backend/app/models.py
-"""همه مدل‌های دیتابیس (SQLAlchemy)"""
+"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه اصلاح شده"""
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
@@ -91,20 +91,44 @@ class Report(Base):
 
 
 # ============================================================
-# مدل Fertilizer (کود)
+# مدل Fertilizer (کود) - اصلاح شده با فیلدهای جدید
 # ============================================================
 class Fertilizer(Base):
-    """مدل کودها و اسیدها"""
+    """مدل کودها و اسیدها - نسخه کامل"""
     
     __tablename__ = "fertilizers"
     
+    # ===== فیلدهای اصلی =====
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(100), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # ✅ nullable شد
+    name = Column(String(100), nullable=False)  # ✅ تنها فیلد اجباری
+    
+    # ===== فیلدهای مالی =====
     price_per_kg = Column(Float, default=0.0)
-    elements = Column(JSON, nullable=True)
+    
+    # ===== فیلدهای عناصر =====
+    elements = Column(JSON, nullable=True)  # {"N-NO3": 15.5, "Ca": 19, ...}
+    
+    # ===== فیلدهای اسیدی =====
     is_acid = Column(Boolean, default=False)
-    acid_type = Column(String(10), nullable=True)
+    acid_type = Column(String(10), nullable=True)  # H3PO4, HNO3, H2SO4
+    
+    # ===== 🆕 فیلدهای جدید - همه اختیاری =====
+    is_system_default = Column(Boolean, default=False)  # آیا کود سیستمی است؟
+    brand = Column(String(100), nullable=True)  # برند/شرکت (مثلاً: اطلس، رازاک شیمی)
+    category = Column(String(50), nullable=True)  # دسته‌بندی (NPK, کلات, سولفات, ...)
+    form = Column(String(20), nullable=True)  # حالت فیزیکی (powder, liquid, crystal)
+    solubility = Column(String(50), nullable=True)  # حلالیت (مثلاً: 250 g/L)
+    ph_level = Column(String(20), nullable=True)  # pH محلول (مثلاً: 6-7)
+    description = Column(Text, nullable=True)  # توضیحات کامل
+    application_method = Column(String(100), nullable=True)  # روش مصرف (محلول‌پاشی، آبیاری)
+    packaging = Column(String(50), nullable=True)  # بسته‌بندی (1 کیلویی، 10 کیلویی)
+    registration_code = Column(String(20), nullable=True)  # کد ثبت ماده کودی
+    npk_ratio = Column(String(20), nullable=True)  # نسبت NPK (مثلاً: 20-20-20)
+    organic_matter = Column(Float, nullable=True)  # درصد مواد آلی
+    chelating_agent = Column(String(20), nullable=True)  # عامل کلات‌کننده (EDTA, EDDHA, ...)
+    
+    # ===== تاریخ‌ها =====
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
