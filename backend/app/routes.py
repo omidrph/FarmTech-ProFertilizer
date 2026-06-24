@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 # ایجاد Routerها
 # ============================================================
 router = APIRouter()
+
 auth_router = APIRouter(prefix="/auth", tags=["Authentication"])
 users_router = APIRouter(prefix="/users", tags=["Users"])
 reports_router = APIRouter(prefix="/reports", tags=["Reports"])
@@ -69,7 +70,6 @@ def register(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در ثبت‌نام: {str(e)}"
         )
-
 
 @auth_router.post("/login", response_model=Token)
 def login(
@@ -109,7 +109,6 @@ def login(
             detail=f"خطا در ورود: {str(e)}"
         )
 
-
 @auth_router.post("/logout")
 def logout(
     request: Request,
@@ -135,7 +134,6 @@ def logout(
             detail=f"خطا در خروج: {str(e)}"
         )
 
-
 @auth_router.get("/me", response_model=UserResponse)
 def get_me(
     current_user: User = Depends(get_current_user)
@@ -149,7 +147,6 @@ def get_me(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در دریافت اطلاعات کاربر: {str(e)}"
         )
-
 
 @auth_router.get("/test")
 def test_auth(
@@ -172,7 +169,6 @@ def test_auth(
             detail=f"خطا در تست احراز هویت: {str(e)}"
         )
 
-
 # ============================================================
 # مسیرهای کاربران (Users)
 # ============================================================
@@ -192,7 +188,6 @@ def get_users(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در دریافت کاربران: {str(e)}"
         )
-
 
 @users_router.put("/me", response_model=UserResponse)
 def update_me(
@@ -218,7 +213,6 @@ def update_me(
             detail=f"خطا در به‌روزرسانی کاربر: {str(e)}"
         )
 
-
 # ============================================================
 # مسیرهای گزارش‌ها (Reports)
 # ============================================================
@@ -241,7 +235,6 @@ def create_report(
             detail=f"خطا در ایجاد گزارش: {str(e)}"
         )
 
-
 @reports_router.get("/", response_model=List[ReportResponse])
 def get_reports(
     skip: int = Query(0, ge=0),
@@ -260,7 +253,6 @@ def get_reports(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در دریافت گزارش‌ها: {str(e)}"
         )
-
 
 @reports_router.get("/{report_id}", response_model=ReportResponse)
 def get_report(
@@ -290,7 +282,6 @@ def get_report(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در دریافت گزارش: {str(e)}"
         )
-
 
 @reports_router.put("/{report_id}", response_model=ReportResponse)
 def update_report(
@@ -323,7 +314,6 @@ def update_report(
             detail=f"خطا در به‌روزرسانی گزارش: {str(e)}"
         )
 
-
 @reports_router.delete("/{report_id}")
 def delete_report(
     report_id: int,
@@ -354,10 +344,51 @@ def delete_report(
             detail=f"خطا در حذف گزارش: {str(e)}"
         )
 
-
 # ============================================================
 # مسیرهای کودها (Fertilizers)
+# ⚠️ ترتیب endpoint ها مهم است!
+# endpoint های ثابت (بدون پارامتر) باید قبل از endpoint های پارامتری باشند
 # ============================================================
+
+# 🆕 endpoint ثابت - بارگذاری کودهای سیستمی (قبل از /{fertilizer_id})
+@fertilizers_router.post("/load-system-fertilizers")
+def load_system_fertilizers_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """🆕 بارگذاری کودهای سیستمی از seed - برای شروع سریع کاربر"""
+    try:
+        from app.seeds.fertilizer_seeds import seed_system_fertilizers, get_system_fertilizers_count
+        
+        # بررسی تعداد کودهای سیستمی موجود
+        count = get_system_fertilizers_count(db)
+        
+        if count > 0:
+            return {
+                "message": f"کودهای سیستمی قبلاً بارگذاری شده‌اند ({count} مورد)",
+                "count": count,
+                "already_loaded": True,
+                "success": True
+            }
+        
+        # اجرای seed
+        logger.info(f"🌱 کاربر {current_user.id} در حال بارگذاری کودهای سیستمی...")
+        stats = seed_system_fertilizers(db)
+        
+        return {
+            "message": "کودهای سیستمی با موفقیت بارگذاری شدند",
+            "stats": stats,
+            "already_loaded": False,
+            "success": True
+        }
+    except Exception as e:
+        logger.error(f"Error loading system fertilizers: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در بارگذاری کودهای سیستمی: {str(e)}"
+        )
+
+# endpoint های پارامتری - باید بعد از endpoint های ثابت باشند
 @fertilizers_router.post("/", response_model=FertilizerResponse)
 def create_fertilizer(
     fertilizer_data: FertilizerCreate,
@@ -384,7 +415,6 @@ def create_fertilizer(
             detail=f"خطا در ایجاد کود: {str(e)}"
         )
 
-
 @fertilizers_router.get("/", response_model=List[FertilizerResponse])
 def get_fertilizers(
     skip: int = Query(0, ge=0),
@@ -392,18 +422,29 @@ def get_fertilizers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """دریافت کودهای کاربر فعلی"""
+    """دریافت کودهای کاربر فعلی + کودهای سیستمی"""
     try:
-        fertilizers = crud.get_fertilizers_by_user(db, current_user.id, skip, limit)
-        logger.info(f"Found {len(fertilizers)} fertilizers for user {current_user.id}")
-        return fertilizers
+        # دریافت کودهای کاربر
+        user_fertilizers = crud.get_fertilizers_by_user(db, current_user.id, skip, limit)
+        
+        # دریافت کودهای سیستمی (user_id = None)
+        system_fertilizers = db.query(
+            __import__('app.models', fromlist=['Fertilizer']).Fertilizer
+        ).filter(
+            __import__('app.models', fromlist=['Fertilizer']).Fertilizer.is_system_default == True
+        ).all()
+        
+        # ترکیب لیست‌ها (کودهای کاربر + کودهای سیستمی)
+        all_fertilizers = user_fertilizers + system_fertilizers
+        
+        logger.info(f"Found {len(all_fertilizers)} fertilizers for user {current_user.id} (user: {len(user_fertilizers)}, system: {len(system_fertilizers)})")
+        return all_fertilizers
     except Exception as e:
         logger.error(f"Error in get_fertilizers: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در دریافت کودها: {str(e)}"
         )
-
 
 @fertilizers_router.get("/{fertilizer_id}", response_model=FertilizerResponse)
 def get_fertilizer(
@@ -419,7 +460,8 @@ def get_fertilizer(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="کود پیدا نشد"
             )
-        if fertilizer.user_id != current_user.id:
+        # کاربر می‌تواند کود سیستمی یا کود خودش را ببیند
+        if fertilizer.user_id is not None and fertilizer.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="شما دسترسی به این کود ندارید"
@@ -434,7 +476,6 @@ def get_fertilizer(
             detail=f"خطا در دریافت کود: {str(e)}"
         )
 
-
 @fertilizers_router.put("/{fertilizer_id}", response_model=FertilizerResponse)
 def update_fertilizer(
     fertilizer_id: int,
@@ -442,7 +483,7 @@ def update_fertilizer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """به‌روزرسانی کود"""
+    """به‌روزرسانی کود - کاربر می‌تواند کود سیستمی را برای خودش شخصی‌سازی کند"""
     try:
         fertilizer = crud.get_fertilizer_by_id(db, fertilizer_id)
         if not fertilizer:
@@ -450,11 +491,51 @@ def update_fertilizer(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="کود پیدا نشد"
             )
+        # اگر کود سیستمی است، یک کپی برای کاربر بساز
+        if fertilizer.is_system_default and fertilizer.user_id is None:
+            # ایجاد کپی از کود سیستمی برای کاربر
+            from app.models import Fertilizer as FertilizerModel
+            new_fertilizer = FertilizerModel(
+                user_id=current_user.id,
+                name=fertilizer.name,
+                brand=fertilizer.brand,
+                category=fertilizer.category,
+                form=fertilizer.form,
+                price_per_kg=fertilizer.price_per_kg,
+                elements=fertilizer.elements,
+                is_acid=fertilizer.is_acid,
+                acid_type=fertilizer.acid_type,
+                description=fertilizer.description,
+                is_system_default=False,
+                solubility=fertilizer.solubility,
+                ph_level=fertilizer.ph_level,
+                application_method=fertilizer.application_method,
+                packaging=fertilizer.packaging,
+                registration_code=fertilizer.registration_code,
+                npk_ratio=fertilizer.npk_ratio,
+                organic_matter=fertilizer.organic_matter,
+                chelating_agent=fertilizer.chelating_agent
+            )
+            db.add(new_fertilizer)
+            db.commit()
+            db.refresh(new_fertilizer)
+            
+            # حالا تغییرات را روی کپی اعمال کن
+            update_data = fertilizer_data.model_dump(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(new_fertilizer, key, value)
+            db.commit()
+            db.refresh(new_fertilizer)
+            logger.info(f"Fertilizer {fertilizer_id} copied and updated as user fertilizer: {new_fertilizer.id}")
+            return new_fertilizer
+        
+        # اگر کود متعلق به کاربر است، مستقیم به‌روزرسانی کن
         if fertilizer.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="شما دسترسی به این کود ندارید"
             )
+        
         updated_fertilizer = crud.update_fertilizer(db, fertilizer_id, fertilizer_data)
         return updated_fertilizer
     except HTTPException:
@@ -466,14 +547,13 @@ def update_fertilizer(
             detail=f"خطا در به‌روزرسانی کود: {str(e)}"
         )
 
-
 @fertilizers_router.delete("/{fertilizer_id}")
 def delete_fertilizer(
     fertilizer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """حذف کود"""
+    """حذف کود - فقط کودهای کاربر قابل حذف است، کود سیستمی فقط مخفی می‌شود"""
     try:
         fertilizer = crud.get_fertilizer_by_id(db, fertilizer_id)
         if not fertilizer:
@@ -481,11 +561,20 @@ def delete_fertilizer(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="کود پیدا نشد"
             )
+        
+        # اگر کود سیستمی است، آن را حذف نکن (فقط اگر کپی کاربر است)
+        if fertilizer.is_system_default and fertilizer.user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="کودهای سیستمی قابل حذف نیستند. می‌توانید آن‌ها را ویرایش کنید تا یک کپی شخصی بسازید."
+            )
+        
         if fertilizer.user_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="شما دسترسی به این کود ندارید"
             )
+        
         crud.delete_fertilizer(db, fertilizer_id)
         return {"message": "کود با موفقیت حذف شد", "success": True}
     except HTTPException:
@@ -496,7 +585,6 @@ def delete_fertilizer(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در حذف کود: {str(e)}"
         )
-
 
 # ============================================================
 # مسیرهای آنالیز آب (Water Analysis)
@@ -538,7 +626,6 @@ def create_water_analysis(
             detail=f"خطا در ایجاد آنالیز آب: {str(e)}"
         )
 
-
 @water_analysis_router.get("/{report_id}", response_model=WaterAnalysisResponse)
 def get_water_analysis(
     report_id: int,
@@ -574,7 +661,6 @@ def get_water_analysis(
             detail=f"خطا در دریافت آنالیز آب: {str(e)}"
         )
 
-
 @water_analysis_router.put("/{analysis_id}", response_model=WaterAnalysisResponse)
 def update_water_analysis(
     analysis_id: int,
@@ -606,7 +692,6 @@ def update_water_analysis(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در به‌روزرسانی آنالیز آب: {str(e)}"
         )
-
 
 # ============================================================
 # مسیرهای محاسبات (Calculations)
@@ -688,13 +773,11 @@ def get_home_summary(
         
         deficient_elements = []
         excessive_elements = []
-        
         for element in ELEMENTS:
             target = target_values.get(element, 0)
             actual = final_values.get(element, 0)
             if target == 0:
                 continue
-            
             percent = (actual / target) * 100 if target > 0 else 0
             if percent < 70:
                 deficient_elements.append(element)
@@ -742,7 +825,6 @@ def get_home_summary(
             actual = final_values.get(element, 0)
             diff = actual - target
             percent = (actual / target * 100) if target > 0 else 0
-            
             elements_data.append({
                 'element': element,
                 'target': target,
@@ -769,14 +851,12 @@ def get_home_summary(
             recommendations=recommendations,
             water_salinity=water_salinity
         )
-    
     except Exception as e:
         logger.error(f"Error in get_home_summary: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در دریافت خلاصه: {str(e)}"
         )
-
 
 @calculations_router.post("/calculate-ion-balance", response_model=IonBalanceResponse)
 def api_calculate_ion_balance(
@@ -799,7 +879,6 @@ def api_calculate_ion_balance(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در محاسبه تعادل یونی: {str(e)}"
         )
-
 
 @calculations_router.post("/calculate-final-solution", response_model=FinalSolutionResponse)
 def api_calculate_final_solution(
@@ -830,7 +909,6 @@ def api_calculate_final_solution(
             detail=f"خطا در محاسبه محلول نهایی: {str(e)}"
         )
 
-
 @calculations_router.post("/calculate-reservoir", response_model=ReservoirResponse)
 def api_calculate_reservoir(
     data: ReservoirRequest,
@@ -854,7 +932,6 @@ def api_calculate_reservoir(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در محاسبه مخازن: {str(e)}"
         )
-
 
 @calculations_router.post("/convert-unit", response_model=UnitConversionResponse)
 def api_convert_unit(
@@ -882,7 +959,6 @@ def api_convert_unit(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در تبدیل واحد: {str(e)}"
         )
-
 
 # ⚠️ endpoint های پارامتری (با پارامتر) - باید بعد از endpoint های ثابت باشند
 @calculations_router.post("/{report_id}", response_model=CalculationResponse)
@@ -922,7 +998,6 @@ def create_calculation(
             detail=f"خطا در ایجاد محاسبات: {str(e)}"
         )
 
-
 @calculations_router.get("/{report_id}", response_model=CalculationResponse)
 def get_calculation(
     report_id: int,
@@ -958,7 +1033,6 @@ def get_calculation(
             detail=f"خطا در دریافت محاسبات: {str(e)}"
         )
 
-
 @calculations_router.put("/{calc_id}", response_model=CalculationResponse)
 def update_calculation(
     calc_id: int,
@@ -991,7 +1065,6 @@ def update_calculation(
             detail=f"خطا در به‌روزرسانی محاسبات: {str(e)}"
         )
 
-
 @calculations_router.post("/{report_id}/calculate", response_model=InterpretationResponse)
 def calculate_and_interpret(
     report_id: int,
@@ -1023,7 +1096,6 @@ def calculate_and_interpret(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="لطفاً ابتدا محاسبات را انجام دهید"
             )
-        
         target_values = calculation.target_values or {}
         final_values = calculation.final_values or {}
         water_data = {
@@ -1049,7 +1121,6 @@ def calculate_and_interpret(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در تولید تفسیر: {str(e)}"
         )
-
 
 # ============================================================
 # افزودن همه Routerها به Router اصلی
