@@ -77,7 +77,7 @@ class Report(Base):
     plant_name = Column(String(50), nullable=True)
     season = Column(String(20), nullable=True)
     growth_stage = Column(String(50), nullable=True)
-    report_date = Column(String(20), nullable=True)  # تاریخ شمسی
+    report_date = Column(String(20), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -102,9 +102,9 @@ class Fertilizer(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     name = Column(String(100), nullable=False)
     price_per_kg = Column(Float, default=0.0)
-    elements = Column(JSON, nullable=True)  # ذخیره درصد عناصر به صورت JSON
-    is_acid = Column(Boolean, default=False)  # آیا اسید است؟
-    acid_type = Column(String(10), nullable=True)  # H3PO4, HNO3, H2SO4
+    elements = Column(JSON, nullable=True)
+    is_acid = Column(Boolean, default=False)
+    acid_type = Column(String(10), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -125,11 +125,11 @@ class WaterAnalysis(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
-    water_percentage = Column(Float, default=80.0)  # درصد آب
-    wastewater_percentage = Column(Float, default=20.0)  # درصد پساب
-    water_salinity = Column(Float, default=0.0)  # شوری آب
-    wastewater_values = Column(JSON, nullable=True)  # مقادیر پساب
-    water_values = Column(JSON, nullable=True)  # مقادیر آب
+    water_percentage = Column(Float, default=80.0)
+    wastewater_percentage = Column(Float, default=20.0)
+    water_salinity = Column(Float, default=0.0)
+    wastewater_values = Column(JSON, nullable=True)
+    water_values = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # ===== روابط =====
@@ -149,11 +149,11 @@ class Calculation(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=False)
-    target_values = Column(JSON, nullable=True)  # مقادیر هدف
-    final_values = Column(JSON, nullable=True)  # مقادیر نهایی
-    reservoir_data = Column(JSON, nullable=True)  # اطلاعات مخازن A, B, C
-    calc_rows = Column(JSON, nullable=True)  # ردیف‌های جدول محاسبات
-    interpretation = Column(Text, nullable=True)  # تفسیر داده‌ها
+    target_values = Column(JSON, nullable=True)
+    final_values = Column(JSON, nullable=True)
+    reservoir_data = Column(JSON, nullable=True)
+    calc_rows = Column(JSON, nullable=True)
+    interpretation = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # ===== روابط =====

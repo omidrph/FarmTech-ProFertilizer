@@ -4,6 +4,7 @@
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import re
 
 
 # ============================================================
@@ -19,7 +20,6 @@ class UserCreate(BaseModel):
     
     @validator('phone_number')
     def validate_phone(cls, v):
-        import re
         if not re.match(r'^09[0-9]{9}$', v):
             raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
         return v
@@ -135,11 +135,11 @@ class FertilizerResponse(BaseModel):
     user_id: int
     name: str
     price_per_kg: float
-    elements: Optional[Dict[str, float]]
-    is_acid: bool
-    acid_type: Optional[str]
+    elements: Optional[Dict[str, float]] = None
+    is_acid: bool = False
+    acid_type: Optional[str] = None
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -174,8 +174,8 @@ class WaterAnalysisResponse(BaseModel):
     water_percentage: float
     wastewater_percentage: float
     water_salinity: float
-    wastewater_values: Optional[Dict[str, float]]
-    water_values: Optional[Dict[str, float]]
+    wastewater_values: Optional[Dict[str, float]] = None
+    water_values: Optional[Dict[str, float]] = None
     created_at: datetime
     
     class Config:
@@ -208,11 +208,11 @@ class CalculationResponse(BaseModel):
     """طرح پاسخ محاسبات"""
     id: int
     report_id: int
-    target_values: Optional[Dict[str, float]]
-    final_values: Optional[Dict[str, float]]
-    reservoir_data: Optional[Dict[str, Any]]
-    calc_rows: Optional[List[Dict[str, Any]]]
-    interpretation: Optional[str]
+    target_values: Optional[Dict[str, float]] = None
+    final_values: Optional[Dict[str, float]] = None
+    reservoir_data: Optional[Dict[str, Any]] = None
+    calc_rows: Optional[List[Dict[str, Any]]] = None
+    interpretation: Optional[str] = None
     created_at: datetime
     
     class Config:
@@ -237,7 +237,7 @@ class ElementStatusResponse(BaseModel):
     target: float
     actual: float
     difference: float
-    status: str  # deficient, sufficient, excessive, toxic
+    status: str
     message: str
 
 
@@ -252,7 +252,7 @@ class RecommendationResponse(BaseModel):
     """طرح پاسخ توصیه کودی"""
     issue: str
     suggestion: str
-    priority: str  # low, medium, high
+    priority: str
 
 
 class InterpretationResponse(BaseModel):

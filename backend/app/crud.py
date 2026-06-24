@@ -4,6 +4,7 @@
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
+import logging
 
 from app.models import User, Report, Fertilizer, WaterAnalysis, Calculation, UserSession
 from app.schemas import (
@@ -15,6 +16,9 @@ from app.schemas import (
 )
 from app.security import get_password_hash, delete_user_sessions
 
+# ===== تنظیمات Logger =====
+logger = logging.getLogger(__name__)
+
 
 # ============================================================
 # CRUD برای User (کاربر)
@@ -22,69 +26,98 @@ from app.security import get_password_hash, delete_user_sessions
 
 def create_user(db: Session, user_data: UserCreate) -> User:
     """ایجاد کاربر جدید"""
-    hashed_password = get_password_hash(user_data.password)
-    
-    db_user = User(
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        phone_number=user_data.phone_number,
-        password_hash=hashed_password
-    )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    return db_user
+    try:
+        hashed_password = get_password_hash(user_data.password)
+        
+        db_user = User(
+            first_name=user_data.first_name,
+            last_name=user_data.last_name,
+            phone_number=user_data.phone_number,
+            password_hash=hashed_password
+        )
+        
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        logger.info(f"User created: {db_user.id} - {db_user.phone_number}")
+        return db_user
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating user: {e}")
+        raise e
 
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     """دریافت کاربر با شناسه"""
-    return db.query(User).filter(User.id == user_id).first()
+    try:
+        return db.query(User).filter(User.id == user_id).first()
+    except Exception as e:
+        logger.error(f"Error getting user by id: {e}")
+        return None
 
 
 def get_user_by_phone(db: Session, phone_number: str) -> Optional[User]:
     """دریافت کاربر با شماره تلفن"""
-    return db.query(User).filter(User.phone_number == phone_number).first()
+    try:
+        return db.query(User).filter(User.phone_number == phone_number).first()
+    except Exception as e:
+        logger.error(f"Error getting user by phone: {e}")
+        return None
 
 
 def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
     """دریافت لیست کاربران"""
-    return db.query(User).offset(skip).limit(limit).all()
+    try:
+        return db.query(User).offset(skip).limit(limit).all()
+    except Exception as e:
+        logger.error(f"Error getting users: {e}")
+        return []
 
 
 def update_user(db: Session, user_id: int, user_data: UserUpdate) -> Optional[User]:
     """به‌روزرسانی اطلاعات کاربر"""
-    db_user = get_user_by_id(db, user_id)
-    
-    if db_user is None:
-        return None
-    
-    update_data = user_data.model_dump(exclude_unset=True)
-    
-    for key, value in update_data.items():
-        setattr(db_user, key, value)
-    
-    db.commit()
-    db.refresh(db_user)
-    
-    return db_user
+    try:
+        db_user = get_user_by_id(db, user_id)
+        
+        if db_user is None:
+            return None
+        
+        update_data = user_data.model_dump(exclude_unset=True)
+        
+        for key, value in update_data.items():
+            setattr(db_user, key, value)
+        
+        db.commit()
+        db.refresh(db_user)
+        
+        logger.info(f"User updated: {db_user.id}")
+        return db_user
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating user: {e}")
+        raise e
 
 
 def delete_user(db: Session, user_id: int) -> bool:
     """حذف کاربر (همراه با حذف نشست‌ها)"""
-    db_user = get_user_by_id(db, user_id)
-    
-    if db_user is None:
-        return False
-    
-    # حذف نشست‌های کاربر
-    delete_user_sessions(user_id, db)
-    
-    db.delete(db_user)
-    db.commit()
-    
-    return True
+    try:
+        db_user = get_user_by_id(db, user_id)
+        
+        if db_user is None:
+            return False
+        
+        delete_user_sessions(user_id, db)
+        
+        db.delete(db_user)
+        db.commit()
+        
+        logger.info(f"User deleted: {user_id}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting user: {e}")
+        raise e
 
 
 # ============================================================
@@ -93,21 +126,35 @@ def delete_user(db: Session, user_id: int) -> bool:
 
 def create_report(db: Session, report_data: ReportCreate, user_id: int) -> Report:
     """ایجاد گزارش جدید"""
-    db_report = Report(
-        user_id=user_id,
-        **report_data.model_dump()
-    )
-    
-    db.add(db_report)
-    db.commit()
-    db.refresh(db_report)
-    
-    return db_report
+    try:
+        db_report = Report(
+            user_id=user_id,
+            report_name=report_data.report_name,
+            plant_name=report_data.plant_name,
+            season=report_data.season,
+            growth_stage=report_data.growth_stage,
+            report_date=report_data.report_date
+        )
+        
+        db.add(db_report)
+        db.commit()
+        db.refresh(db_report)
+        
+        logger.info(f"Report created: {db_report.id} for user {user_id}")
+        return db_report
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating report: {e}")
+        raise e
 
 
 def get_report_by_id(db: Session, report_id: int) -> Optional[Report]:
     """دریافت گزارش با شناسه"""
-    return db.query(Report).filter(Report.id == report_id).first()
+    try:
+        return db.query(Report).filter(Report.id == report_id).first()
+    except Exception as e:
+        logger.error(f"Error getting report by id: {e}")
+        return None
 
 
 def get_reports_by_user(
@@ -117,61 +164,107 @@ def get_reports_by_user(
     limit: int = 100
 ) -> List[Report]:
     """دریافت گزارش‌های یک کاربر"""
-    return db.query(Report).filter(Report.user_id == user_id).offset(skip).limit(limit).all()
+    try:
+        return db.query(Report).filter(Report.user_id == user_id).offset(skip).limit(limit).all()
+    except Exception as e:
+        logger.error(f"Error getting reports by user: {e}")
+        return []
 
 
 def update_report(db: Session, report_id: int, report_data: ReportUpdate) -> Optional[Report]:
     """به‌روزرسانی گزارش"""
-    db_report = get_report_by_id(db, report_id)
-    
-    if db_report is None:
-        return None
-    
-    update_data = report_data.model_dump(exclude_unset=True)
-    
-    for key, value in update_data.items():
-        setattr(db_report, key, value)
-    
-    db.commit()
-    db.refresh(db_report)
-    
-    return db_report
+    try:
+        db_report = get_report_by_id(db, report_id)
+        
+        if db_report is None:
+            return None
+        
+        update_data = report_data.model_dump(exclude_unset=True)
+        
+        for key, value in update_data.items():
+            setattr(db_report, key, value)
+        
+        db.commit()
+        db.refresh(db_report)
+        
+        logger.info(f"Report updated: {report_id}")
+        return db_report
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating report: {e}")
+        raise e
 
 
 def delete_report(db: Session, report_id: int) -> bool:
     """حذف گزارش"""
-    db_report = get_report_by_id(db, report_id)
-    
-    if db_report is None:
-        return False
-    
-    db.delete(db_report)
-    db.commit()
-    
-    return True
+    try:
+        db_report = get_report_by_id(db, report_id)
+        
+        if db_report is None:
+            return False
+        
+        db.delete(db_report)
+        db.commit()
+        
+        logger.info(f"Report deleted: {report_id}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting report: {e}")
+        raise e
 
 
 # ============================================================
-# CRUD برای Fertilizer (کود)
+# CRUD برای Fertilizer (کود) - اصلاح شده نهایی
 # ============================================================
 
-def create_fertilizer(db: Session, fertilizer_data: FertilizerCreate, user_id: int) -> Fertilizer:
-    """ایجاد کود جدید"""
-    db_fertilizer = Fertilizer(
-        user_id=user_id,
-        **fertilizer_data.model_dump()
-    )
+def create_fertilizer(db: Session, fertilizer_data: FertilizerCreate, user_id: int):
+    """
+    ایجاد کود جدید
     
-    db.add(db_fertilizer)
-    db.commit()
-    db.refresh(db_fertilizer)
-    
-    return db_fertilizer
+    توجه: این تابع حتماً باید یک شیء Fertilizer برگرداند، نه عدد
+    """
+    try:
+        logger.info(f"Creating fertilizer: {fertilizer_data.name} for user {user_id}")
+        
+        # ایجاد شیء Fertilizer
+        db_fertilizer = Fertilizer(
+            user_id=user_id,
+            name=fertilizer_data.name,
+            price_per_kg=fertilizer_data.price_per_kg,
+            elements=fertilizer_data.elements or {},
+            is_acid=fertilizer_data.is_acid,
+            acid_type=fertilizer_data.acid_type
+        )
+        
+        # اضافه کردن به دیتابیس
+        db.add(db_fertilizer)
+        
+        # Commit کردن
+        db.commit()
+        
+        # Refresh کردن برای دریافت ID
+        db.refresh(db_fertilizer)
+        
+        # لاگ کردن
+        logger.info(f"Fertilizer created successfully: ID={db_fertilizer.id}, Name={db_fertilizer.name}")
+        
+        # برگرداندن شیء Fertilizer (نه عدد!)
+        return db_fertilizer
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating fertilizer: {e}")
+        raise e
 
 
 def get_fertilizer_by_id(db: Session, fertilizer_id: int) -> Optional[Fertilizer]:
     """دریافت کود با شناسه"""
-    return db.query(Fertilizer).filter(Fertilizer.id == fertilizer_id).first()
+    try:
+        return db.query(Fertilizer).filter(Fertilizer.id == fertilizer_id).first()
+    except Exception as e:
+        logger.error(f"Error getting fertilizer by id: {e}")
+        return None
 
 
 def get_fertilizers_by_user(
@@ -181,38 +274,54 @@ def get_fertilizers_by_user(
     limit: int = 100
 ) -> List[Fertilizer]:
     """دریافت کودهای یک کاربر"""
-    return db.query(Fertilizer).filter(Fertilizer.user_id == user_id).offset(skip).limit(limit).all()
+    try:
+        return db.query(Fertilizer).filter(Fertilizer.user_id == user_id).offset(skip).limit(limit).all()
+    except Exception as e:
+        logger.error(f"Error getting fertilizers by user: {e}")
+        return []
 
 
 def update_fertilizer(db: Session, fertilizer_id: int, fertilizer_data: FertilizerUpdate) -> Optional[Fertilizer]:
     """به‌روزرسانی کود"""
-    db_fertilizer = get_fertilizer_by_id(db, fertilizer_id)
-    
-    if db_fertilizer is None:
-        return None
-    
-    update_data = fertilizer_data.model_dump(exclude_unset=True)
-    
-    for key, value in update_data.items():
-        setattr(db_fertilizer, key, value)
-    
-    db.commit()
-    db.refresh(db_fertilizer)
-    
-    return db_fertilizer
+    try:
+        db_fertilizer = get_fertilizer_by_id(db, fertilizer_id)
+        
+        if db_fertilizer is None:
+            return None
+        
+        update_data = fertilizer_data.model_dump(exclude_unset=True)
+        
+        for key, value in update_data.items():
+            setattr(db_fertilizer, key, value)
+        
+        db.commit()
+        db.refresh(db_fertilizer)
+        
+        logger.info(f"Fertilizer updated: {fertilizer_id}")
+        return db_fertilizer
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating fertilizer: {e}")
+        raise e
 
 
 def delete_fertilizer(db: Session, fertilizer_id: int) -> bool:
     """حذف کود"""
-    db_fertilizer = get_fertilizer_by_id(db, fertilizer_id)
-    
-    if db_fertilizer is None:
-        return False
-    
-    db.delete(db_fertilizer)
-    db.commit()
-    
-    return True
+    try:
+        db_fertilizer = get_fertilizer_by_id(db, fertilizer_id)
+        
+        if db_fertilizer is None:
+            return False
+        
+        db.delete(db_fertilizer)
+        db.commit()
+        
+        logger.info(f"Fertilizer deleted: {fertilizer_id}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting fertilizer: {e}")
+        raise e
 
 
 # ============================================================
@@ -221,52 +330,78 @@ def delete_fertilizer(db: Session, fertilizer_id: int) -> bool:
 
 def create_water_analysis(db: Session, analysis_data: WaterAnalysisCreate, report_id: int) -> WaterAnalysis:
     """ایجاد آنالیز آب"""
-    db_analysis = WaterAnalysis(
-        report_id=report_id,
-        **analysis_data.model_dump()
-    )
-    
-    db.add(db_analysis)
-    db.commit()
-    db.refresh(db_analysis)
-    
-    return db_analysis
+    try:
+        db_analysis = WaterAnalysis(
+            report_id=report_id,
+            water_percentage=analysis_data.water_percentage,
+            wastewater_percentage=analysis_data.wastewater_percentage,
+            water_salinity=analysis_data.water_salinity,
+            wastewater_values=analysis_data.wastewater_values or {},
+            water_values=analysis_data.water_values or {}
+        )
+        
+        db.add(db_analysis)
+        db.commit()
+        db.refresh(db_analysis)
+        
+        logger.info(f"Water analysis created: {db_analysis.id} for report {report_id}")
+        return db_analysis
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating water analysis: {e}")
+        raise e
 
 
 def get_water_analysis_by_report(db: Session, report_id: int) -> Optional[WaterAnalysis]:
     """دریافت آنالیز آب بر اساس گزارش"""
-    return db.query(WaterAnalysis).filter(WaterAnalysis.report_id == report_id).first()
+    try:
+        return db.query(WaterAnalysis).filter(WaterAnalysis.report_id == report_id).first()
+    except Exception as e:
+        logger.error(f"Error getting water analysis by report: {e}")
+        return None
 
 
 def update_water_analysis(db: Session, analysis_id: int, analysis_data: WaterAnalysisUpdate) -> Optional[WaterAnalysis]:
     """به‌روزرسانی آنالیز آب"""
-    db_analysis = db.query(WaterAnalysis).filter(WaterAnalysis.id == analysis_id).first()
-    
-    if db_analysis is None:
-        return None
-    
-    update_data = analysis_data.model_dump(exclude_unset=True)
-    
-    for key, value in update_data.items():
-        setattr(db_analysis, key, value)
-    
-    db.commit()
-    db.refresh(db_analysis)
-    
-    return db_analysis
+    try:
+        db_analysis = db.query(WaterAnalysis).filter(WaterAnalysis.id == analysis_id).first()
+        
+        if db_analysis is None:
+            return None
+        
+        update_data = analysis_data.model_dump(exclude_unset=True)
+        
+        for key, value in update_data.items():
+            setattr(db_analysis, key, value)
+        
+        db.commit()
+        db.refresh(db_analysis)
+        
+        logger.info(f"Water analysis updated: {analysis_id}")
+        return db_analysis
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating water analysis: {e}")
+        raise e
 
 
 def delete_water_analysis(db: Session, analysis_id: int) -> bool:
     """حذف آنالیز آب"""
-    db_analysis = db.query(WaterAnalysis).filter(WaterAnalysis.id == analysis_id).first()
-    
-    if db_analysis is None:
-        return False
-    
-    db.delete(db_analysis)
-    db.commit()
-    
-    return True
+    try:
+        db_analysis = db.query(WaterAnalysis).filter(WaterAnalysis.id == analysis_id).first()
+        
+        if db_analysis is None:
+            return False
+        
+        db.delete(db_analysis)
+        db.commit()
+        
+        logger.info(f"Water analysis deleted: {analysis_id}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting water analysis: {e}")
+        raise e
 
 
 # ============================================================
@@ -275,49 +410,75 @@ def delete_water_analysis(db: Session, analysis_id: int) -> bool:
 
 def create_calculation(db: Session, calc_data: CalculationCreate, report_id: int) -> Calculation:
     """ایجاد محاسبات جدید"""
-    db_calculation = Calculation(
-        report_id=report_id,
-        **calc_data.model_dump()
-    )
-    
-    db.add(db_calculation)
-    db.commit()
-    db.refresh(db_calculation)
-    
-    return db_calculation
+    try:
+        db_calculation = Calculation(
+            report_id=report_id,
+            target_values=calc_data.target_values or {},
+            final_values=calc_data.final_values or {},
+            reservoir_data=calc_data.reservoir_data or {},
+            calc_rows=calc_data.calc_rows or [],
+            interpretation=calc_data.interpretation
+        )
+        
+        db.add(db_calculation)
+        db.commit()
+        db.refresh(db_calculation)
+        
+        logger.info(f"Calculation created: {db_calculation.id} for report {report_id}")
+        return db_calculation
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating calculation: {e}")
+        raise e
 
 
 def get_calculation_by_report(db: Session, report_id: int) -> Optional[Calculation]:
     """دریافت محاسبات بر اساس گزارش"""
-    return db.query(Calculation).filter(Calculation.report_id == report_id).first()
+    try:
+        return db.query(Calculation).filter(Calculation.report_id == report_id).first()
+    except Exception as e:
+        logger.error(f"Error getting calculation by report: {e}")
+        return None
 
 
 def update_calculation(db: Session, calc_id: int, calc_data: CalculationUpdate) -> Optional[Calculation]:
     """به‌روزرسانی محاسبات"""
-    db_calculation = db.query(Calculation).filter(Calculation.id == calc_id).first()
-    
-    if db_calculation is None:
-        return None
-    
-    update_data = calc_data.model_dump(exclude_unset=True)
-    
-    for key, value in update_data.items():
-        setattr(db_calculation, key, value)
-    
-    db.commit()
-    db.refresh(db_calculation)
-    
-    return db_calculation
+    try:
+        db_calculation = db.query(Calculation).filter(Calculation.id == calc_id).first()
+        
+        if db_calculation is None:
+            return None
+        
+        update_data = calc_data.model_dump(exclude_unset=True)
+        
+        for key, value in update_data.items():
+            setattr(db_calculation, key, value)
+        
+        db.commit()
+        db.refresh(db_calculation)
+        
+        logger.info(f"Calculation updated: {calc_id}")
+        return db_calculation
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating calculation: {e}")
+        raise e
 
 
 def delete_calculation(db: Session, calc_id: int) -> bool:
     """حذف محاسبات"""
-    db_calculation = db.query(Calculation).filter(Calculation.id == calc_id).first()
-    
-    if db_calculation is None:
-        return False
-    
-    db.delete(db_calculation)
-    db.commit()
-    
-    return True
+    try:
+        db_calculation = db.query(Calculation).filter(Calculation.id == calc_id).first()
+        
+        if db_calculation is None:
+            return False
+        
+        db.delete(db_calculation)
+        db.commit()
+        
+        logger.info(f"Calculation deleted: {calc_id}")
+        return True
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting calculation: {e}")
+        raise e

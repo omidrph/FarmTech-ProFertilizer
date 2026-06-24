@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
+import traceback
 
 from app.config import settings
 from app.database import create_tables
@@ -65,12 +66,16 @@ async def validation_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    logger.error(f"Unhandled Exception: {str(exc)}", exc_info=True)
+    # لاگ کامل خطا با traceback
+    logger.error(f"Unhandled Exception: {str(exc)}")
+    logger.error(traceback.format_exc())
+    
     return JSONResponse(
         status_code=500,
         content={
             "detail": "خطای داخلی سرور",
-            "message": str(exc) if settings.DEBUG else "لطفاً با پشتیبانی تماس بگیرید"
+            "message": str(exc) if settings.DEBUG else "لطفاً با پشتیبانی تماس بگیرید",
+            "traceback": traceback.format_exc() if settings.DEBUG else None
         }
     )
 
@@ -114,7 +119,6 @@ app.include_router(router, prefix=settings.API_PREFIX)
 async def startup_event():
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Debug mode: {settings.DEBUG}")
-    logger.info(f"SECRET_KEY: {settings.SECRET_KEY[:10]}...")
     try:
         create_tables()
         logger.info("Database tables created successfully")
