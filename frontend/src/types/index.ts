@@ -157,6 +157,37 @@ export interface InterpretationResult {
 }
 
 // ============================================================
+// ✅ بخش جدید: نوع‌های مربوط به آموزش (Education)
+// ============================================================
+
+export interface FAQItem {
+  id: string;
+  question: string;
+  answer: string;
+  category: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuickStartStep {
+  id: string;
+  title: string;
+  description: string;
+  details: string[];
+  tips: string[];
+  warnings: string[];
+  order: number;
+}
+
+export interface EducationState {
+  faqItems: FAQItem[];
+  quickStartSteps: QuickStartStep[];
+  searchQuery: string;
+  activeCategory: string;
+}
+
+// ============================================================
 // TYPE ALIASES - بخش قبلی
 // ============================================================
 
@@ -205,6 +236,23 @@ export const RESERVOIR_TYPES: ReservoirType[] = [
   ReservoirType.B,
   ReservoirType.C
 ];
+
+// ============================================================
+// ✅ بخش جدید: ثابت‌های آموزش
+// ============================================================
+
+export const FAQ_CATEGORIES = [
+  'همه',
+  'پایگاه داده',
+  'تنظیمات',
+  'تغذیه',
+  'گزارش',
+  'عمومی',
+  'محاسبات',
+  'پشتیبانی'
+];
+
+export const QUICK_START_TOTAL_STEPS = 6;
 
 // ============================================================
 // ✅ بخش جدید: نوع‌های مربوط به احراز هویت (Auth)

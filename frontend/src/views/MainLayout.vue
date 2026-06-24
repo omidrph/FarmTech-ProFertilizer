@@ -23,6 +23,26 @@
       </div>
     </nav>
 
+    <!-- Sub Navigation برای تب Education -->
+    <nav v-if="activeTab === 'education'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky z-40 shadow-sm" :style="{ top: headerHeight + 'px' }">
+      <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+        <div class="flex gap-1 overflow-x-auto py-2 scrollbar-hide snap-x snap-mandatory">
+          <button
+            v-for="subTab in educationSubTabs"
+            :key="subTab.id"
+            @click="activeEducationSubTab = subTab.id"
+            class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 snap-start flex-shrink-0"
+            :class="activeEducationSubTab === subTab.id
+              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
+              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'"
+          >
+            <span v-html="subTab.icon" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"></span>
+            <span class="text-xs sm:text-sm">{{ subTab.label }}</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 w-full">
       <!-- Loading Indicator -->
@@ -41,59 +61,59 @@
       <div v-if="activeTab === 'home'" class="space-y-4 sm:space-y-6">
         <!-- Report Header -->
         <ReportHeader
-          v-model:reportName="reportName"
-          v-model:plantName="plantName"
-          v-model:season="season"
-          v-model:growthStage="growthStage"
-          v-model:reportDate="reportDate"
+          v-model:reportName="reportStore.reportData.reportName"
+          v-model:plantName="reportStore.reportData.plantName"
+          v-model:season="reportStore.reportData.season"
+          v-model:growthStage="reportStore.reportData.growthStage"
+          v-model:reportDate="reportStore.reportData.date"
         />
 
         <!-- Home Sub Tab -->
         <div v-if="activeSubTab === 'home'">
           <HomeTab
-            v-model:targetUnit="targetUnit"
-            v-model:targetValues="targetValues"
-            v-model:finalValues="finalValues"
-            v-model:reservoirData="reservoirData"
+            v-model:targetUnit="targetStore.targetUnit"
+            v-model:targetValues="targetStore.targetElements"
+            v-model:finalValues="calcStore.elementTotals"
+            v-model:reservoirData="calcStore.reservoirData"
           />
         </div>
 
         <!-- Water Analysis Sub Tab -->
         <div v-else-if="activeSubTab === 'water-analysis'">
           <WaterAnalysisTab
-            v-model:waterPercentage="waterPercentage"
-            v-model:wastewaterPercentage="wastewaterPercentage"
-            v-model:waterSalinity="waterSalinity"
+            v-model:waterPercentage="waterStore.waterMixData.waterPercentage"
+            v-model:wastewaterPercentage="waterStore.waterMixData.wastewaterPercentage"
+            v-model:waterSalinity="waterStore.waterMixData.waterSalinity"
             v-model:analysisUnit="analysisUnit"
-            v-model:wastewaterValues="wastewaterValues"
-            v-model:waterValues="waterValues"
+            v-model:wastewaterValues="waterStore.wastewaterValues"
+            v-model:waterValues="waterStore.waterValues"
           />
         </div>
 
         <!-- Target Elements Sub Tab -->
         <div v-else-if="activeSubTab === 'target-elements'">
           <TargetElementsTab
-            v-model:targetUnit="targetUnit"
-            v-model:targetValues="targetValues"
+            v-model:targetUnit="targetStore.targetUnit"
+            v-model:targetValues="targetStore.targetElements"
           />
         </div>
 
         <!-- Fertilizer Calc Sub Tab -->
         <div v-else-if="activeSubTab === 'fertilizer-calc'">
           <FertilizerCalcTab
-            :fertilizers="fertilizers"
-            v-model:selectedFertilizers="selectedFertilizers"
-            v-model:tankVolume="tankVolume"
-            v-model:dilutionFactor="dilutionFactor"
-            v-model:calcRows="calcRows"
-            v-model:calcErrors="calcErrors"
+            :fertilizers="fertilizerStore.fertilizers"
+            v-model:selectedFertilizers="fertilizerStore.selectedFertilizerIds"
+            v-model:tankVolume="calcStore.calculationInputs.tankVolume"
+            v-model:dilutionFactor="calcStore.calculationInputs.dilutionFactor"
+            v-model:calcRows="calcStore.calculationRows"
+            v-model:calcErrors="calcStore.errorMessages"
           />
         </div>
 
         <!-- Fertilizer DB Sub Tab -->
         <div v-else-if="activeSubTab === 'fertilizer-db'">
           <FertilizerDBTab
-            v-model:fertilizers="fertilizers"
+            v-model:fertilizers="fertilizerStore.fertilizers"
             @show-add-modal="showAddFertilizerModal = true"
           />
         </div>
@@ -108,102 +128,26 @@
       </div>
 
       <!-- Education Tab -->
-      <div v-else-if="activeTab === 'education'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
-          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-          </svg>
-          آموزش
-        </h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div class="flex items-center gap-2 mb-2">
-              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-              </svg>
-              <h3 class="font-semibold text-gray-900 dark:text-white">راهنمای شروع سریع</h3>
-            </div>
-            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">با این راهنما در کمتر از 5 دقیقه با نرم‌افزار آشنا شوید.</p>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
-              مشاهده
-            </button>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div class="flex items-center gap-2 mb-2">
-              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              <h3 class="font-semibold text-gray-900 dark:text-white">فیلم‌های آموزشی</h3>
-            </div>
-            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">مجموعه کامل فیلم‌های آموزشی برای تمام بخش‌ها.</p>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
-              مشاهده
-            </button>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 hover:shadow-md transition-shadow">
-            <div class="flex items-center gap-2 mb-2">
-              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              <h3 class="font-semibold text-gray-900 dark:text-white">سوالات متداول</h3>
-            </div>
-            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">پاسخ به سوالات رایج کاربران.</p>
-            <button class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm">
-              مشاهده
-            </button>
-          </div>
+      <div v-else-if="activeTab === 'education'" class="space-y-4 sm:space-y-6">
+        <div v-if="activeEducationSubTab === 'quick-start'">
+          <EducationQuickStart />
+        </div>
+        <div v-else-if="activeEducationSubTab === 'faq'">
+          <EducationFAQ />
+        </div>
+        <div v-else-if="activeEducationSubTab === 'videos'">
+          <EducationVideos />
         </div>
       </div>
 
       <!-- Contact Tab -->
-      <div v-else-if="activeTab === 'contact'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
-          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          ارتباط با ما
-        </h2>
-        <div class="space-y-3">
-          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-            </svg>
-            <span>تلفن: ۰۲۱-۱۲۳۴۵۶۷۸</span>
-          </div>
-          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            <span>ایمیل: info@farmtech.ir</span>
-          </div>
-          <div class="flex items-center gap-3 text-gray-700 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <svg class="w-5 h-5 text-primary-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-            <span>آدرس: تهران، خیابان انقلاب، پلاک ۱۲۳</span>
-          </div>
-        </div>
+      <div v-else-if="activeTab === 'contact'">
+        <ContactUs />
       </div>
 
       <!-- About Tab -->
-      <div v-else-if="activeTab === 'about'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-        <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center gap-2">
-          <svg class="w-6 h-6 sm:w-8 sm:h-8 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          درباره
-        </h2>
-        <div class="space-y-4 text-gray-700 dark:text-gray-300 leading-relaxed">
-          <p><strong>تغذیه سبز</strong> یک نرم‌افزار تخصصی برای محاسبه، تحلیل و مدیریت فرمول‌های تغذیه گیاهان در سیستم‌های کشت بدون خاک، هیدروپونیک و گلخانه‌ای است.</p>
-          <p>این نرم‌افزار قابلیت تحلیل آب و پساب، تعیین عناصر هدف، محاسبه خودکار مقدار کود مصرفی، مدیریت پایگاه داده کودها و ارائه تفسیر هوشمند از داده‌ها را دارد.</p>
-          <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/>
-            </svg>
-            <span>نسخه: ۰.۱.۰</span>
-          </div>
-        </div>
+      <div v-else-if="activeTab === 'about'">
+        <AboutUs />
       </div>
     </main>
 
@@ -255,9 +199,17 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+
+// ===== Store Imports =====
+import { useReportStore } from '@/store/modules/reportStore';
+import { useTargetStore } from '@/store/modules/targetStore';
+import { useWaterStore } from '@/store/modules/waterStore';
+import { useFertilizerStore } from '@/store/modules/fertilizerStore';
+import { useCalcStore } from '@/store/modules/calcStore';
+import { useAppStore } from '@/store/modules/appStore';
+
+// ===== Composables =====
 import { useApi } from '@/composables/useApi';
-import { useAuth } from '@/composables/useAuth';
 
 // ===== Import Components =====
 import AppHeader from '@/components/layout/AppHeader.vue';
@@ -269,29 +221,39 @@ import TargetElementsTab from '@/components/features/TargetElementsTab.vue';
 import FertilizerCalcTab from '@/components/features/FertilizerCalcTab.vue';
 import FertilizerDBTab from '@/components/features/FertilizerDBTab.vue';
 import InterpretationTab from '@/components/features/InterpretationTab.vue';
+import EducationQuickStart from '@/components/features/EducationQuickStart.vue';
+import EducationFAQ from '@/components/features/EducationFAQ.vue';
+import EducationVideos from '@/components/features/EducationVideos.vue';
+import ContactUs from '@/components/features/ContactUs.vue';
+import AboutUs from '@/components/features/AboutUs.vue';
 
-// ===== Router =====
-const router = useRouter();
+// ===== Stores =====
+const reportStore = useReportStore();
+const targetStore = useTargetStore();
+const waterStore = useWaterStore();
+const fertilizerStore = useFertilizerStore();
+const calcStore = useCalcStore();
+const appStore = useAppStore();
 
-// ===== API & Auth =====
-const { request, isLoading, error: apiError, checkConnection } = useApi();
-const { checkAuth } = useAuth();
+// ===== API =====
+const { isLoading, error: apiError, checkConnection } = useApi();
 
 // ===== State =====
 const activeTab = ref('home');
 const activeSubTab = ref('home');
+const activeEducationSubTab = ref('quick-start');
 const showAddFertilizerModal = ref(false);
 const headerHeight = ref(56);
-
-// ===== Report Fields =====
-const reportName = ref('');
-const plantName = ref('');
-const season = ref('');
-const growthStage = ref('');
-const reportDate = ref(new Date().toLocaleDateString('fa-IR'));
-
-// ===== Elements =====
+const analysisUnit = ref('ppm');
+const interpretationResult = ref<any>(null);
 const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
+
+// ===== New Fertilizer =====
+const newFertilizer = reactive({
+  name: '',
+  pricePerKg: 0,
+  elements: {} as Record<string, number>
+});
 
 // ===== Sub Tabs =====
 const subTabs = [
@@ -327,164 +289,145 @@ const subTabs = [
   }
 ];
 
-// ===== Target Elements =====
-const targetUnit = ref('ppm');
-const targetValues = reactive<Record<string, number>>({});
-const finalValues = reactive<Record<string, number>>({});
-const reservoirData = ref({});
-
-// ===== Water Analysis =====
-const waterPercentage = ref(80);
-const wastewaterPercentage = ref(20);
-const waterSalinity = ref(0);
-const analysisUnit = ref('ppm');
-const wastewaterValues = reactive<Record<string, number>>({});
-const waterValues = reactive<Record<string, number>>({});
-
-// ===== Fertilizer DB =====
-const fertilizers = ref<any[]>([]);
-const newFertilizer = reactive({
-  name: '',
-  pricePerKg: 0,
-  elements: {} as Record<string, number>
-});
-
-// ===== Fertilizer Calc =====
-const selectedFertilizers = ref<string[]>([]);
-const tankVolume = ref(1000);
-const dilutionFactor = ref(1);
-const calcRows = ref<any[]>([]);
-const calcErrors = ref<string[]>([]);
-
-// ===== Interpretation =====
-const interpretationResult = ref<any>(null);
-
-// ===== API Methods =====
-const loadFertilizersFromBackend = async () => {
-  try {
-    const result = await request('get', '/fertilizers');
-    if (result && Array.isArray(result)) {
-      fertilizers.value = result;
-      return true;
-    }
-    return false;
-  } catch (error: any) {
-    // اگر خطا 401 بود، از داده‌های نمونه استفاده کن
-    if (error?.response?.status === 401) {
-      console.warn('⚠️ خطای 401 - استفاده از داده‌های نمونه');
-      useSampleData();
-      return true;
-    }
-    console.error('خطا در دریافت کودها:', error);
-    return false;
+// ===== Education Sub Tabs =====
+const educationSubTabs = [
+  {
+    id: 'quick-start',
+    label: 'شروع سریع',
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
+  },
+  {
+    id: 'videos',
+    label: 'فیلم‌های آموزشی',
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`
+  },
+  {
+    id: 'faq',
+    label: 'سوالات متداول',
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
   }
-};
+];
 
-const useSampleData = () => {
-  fertilizers.value = [
-    {
-      id: '1',
-      name: 'کلسیم نیترات + آمونیوم',
-      pricePerKg: 25000,
-      elements: { 'N-NO3': 14.5, 'N-NH4': 1.5, 'Ca': 19 }
-    },
-    {
-      id: '2',
-      name: 'پتاسیم نیترات',
-      pricePerKg: 32000,
-      elements: { 'N-NO3': 13, 'K': 38 }
-    },
-    {
-      id: '3',
-      name: 'فسفات پتاسیم',
-      pricePerKg: 28000,
-      elements: { 'P': 22, 'K': 28 }
-    },
-    {
-      id: '4',
-      name: 'سولفات منیزیم',
-      pricePerKg: 15000,
-      elements: { 'S': 13, 'Mg': 10 }
-    }
-  ];
-};
-
-const saveFertilizerToBackend = async () => {
+// ===== Methods =====
+const saveFertilizer = async () => {
   if (!newFertilizer.name || !newFertilizer.pricePerKg) {
     alert('لطفاً نام و قیمت کود را وارد کنید');
     return;
   }
   
-  try {
-    const result = await request('post', '/fertilizers', newFertilizer);
-    if (result) {
-      fertilizers.value.push(result as any);
-      showAddFertilizerModal.value = false;
-      newFertilizer.name = '';
-      newFertilizer.pricePerKg = 0;
-      newFertilizer.elements = {};
-      alert('کود با موفقیت افزوده شد');
-    }
-  } catch {
-    // اگر خطا بود، به صورت محلی اضافه کن
-    const newItem = {
-      id: Date.now().toString(),
-      ...newFertilizer
-    };
-    fertilizers.value.push(newItem);
-    showAddFertilizerModal.value = false;
-    newFertilizer.name = '';
-    newFertilizer.pricePerKg = 0;
-    newFertilizer.elements = {};
-    alert('کود به صورت محلی افزوده شد (اتصال به سرور برقرار نیست)');
-  }
+  fertilizerStore.addFertilizer(newFertilizer);
+  showAddFertilizerModal.value = false;
+  newFertilizer.name = '';
+  newFertilizer.pricePerKg = 0;
+  newFertilizer.elements = {};
 };
 
-const saveFertilizer = saveFertilizerToBackend;
-
-// ===== Methods =====
 const generateInterpretation = () => {
+  // استفاده از محاسبات واقعی از stores
+  const targetVals = targetStore.targetElements;
+  const finalVals = calcStore.elementTotals;
+  const waterData = waterStore.waterMixData;
+  
+  // محاسبه تعادل یونی
+  let cation = 0;
+  let anion = 0;
+  const cations = ['K', 'Ca', 'Mg', 'Na'];
+  const anions = ['N-NO3', 'P', 'S', 'N-NH4', 'Cl'];
+  
+  for (const [key, val] of Object.entries(targetVals)) {
+    if (cations.includes(key)) cation += val || 0;
+    else if (anions.includes(key)) anion += val || 0;
+  }
+  
+  const isBalanced = Math.abs(cation - anion) < 0.5;
+  
+  // وضعیت عناصر
+  const elementStatus = elements.map(el => {
+    const target = targetVals[el] || 0;
+    const actual = (finalVals[el] as number) || 0;
+    const diff = target - actual;
+    
+    let status: 'deficient' | 'sufficient' | 'excessive' | 'toxic' = 'sufficient';
+    let message = 'وضعیت مطلوب';
+    
+    if (diff > 5) {
+      status = 'deficient';
+      message = `کمبود ${diff.toFixed(2)} واحد`;
+    } else if (diff < -5) {
+      status = 'excessive';
+      message = `بیش‌بود ${Math.abs(diff).toFixed(2)} واحد`;
+    } else if (diff < -15) {
+      status = 'toxic';
+      message = 'سمیت احتمالی';
+    }
+    
+    return {
+      element: el as any,
+      target,
+      actual,
+      difference: diff,
+      status,
+      message
+    };
+  });
+  
+  // کیفیت آب
+  const salinity = waterData.waterSalinity || 0;
+  let impact = 'مناسب';
+  let recommendation = 'نیازی به اقدام نیست';
+  
+  if (salinity > 2.5) {
+    impact = 'بالا';
+    recommendation = 'استفاده از آب با شوری کمتر توصیه می‌شود';
+  } else if (salinity > 1.5) {
+    impact = 'متوسط';
+    recommendation = 'توجه به عناصر سمی در آب';
+  }
+  
+  // توصیه‌ها
+  const recommendations: any[] = [];
+  
+  if (!isBalanced) {
+    recommendations.push({
+      issue: 'عدم تعادل یونی',
+      suggestion: 'مقادیر کاتیون و آنیون را تنظیم کنید تا برابر شوند',
+      priority: 'high'
+    });
+  }
+  
+  for (const item of elementStatus) {
+    if (item.status === 'deficient' || item.status === 'toxic') {
+      recommendations.push({
+        issue: `عنصر ${item.element}: ${item.message}`,
+        suggestion: item.status === 'deficient' 
+          ? 'افزایش مقدار این عنصر در فرمول غذایی' 
+          : 'کاهش مقدار این عنصر یا بررسی کیفیت آب',
+        priority: item.status === 'toxic' ? 'high' : 'medium'
+      });
+    }
+  }
+  
+  const problemElements = elementStatus.filter(e => e.status !== 'sufficient').map(e => e.element);
+  
   interpretationResult.value = {
-    summary: 'گزارش تفسیر تغذیه گیاه:\n- تعادل یونی: برقرار ✅\n- عناصر دارای مشکل: هیچکدام\n- کیفیت آب: مناسب\n- تعداد توصیه‌ها: 0',
+    summary: `گزارش تفسیر تغذیه گیاه:\n- تعادل یونی: ${isBalanced ? 'برقرار ✅' : 'نامتعادل ⚠️'}\n- عناصر دارای مشکل: ${problemElements.length ? problemElements.join(', ') : 'هیچکدام'}\n- کیفیت آب: ${impact}\n- تعداد توصیه‌ها: ${recommendations.length}`,
     ionBalance: {
-      cation: 10.5,
-      anion: 10.2,
-      isBalanced: true,
-      message: 'تعادل یونی برقرار است'
+      cation,
+      anion,
+      isBalanced,
+      message: isBalanced ? 'تعادل یونی برقرار است' : 'تعادل یونی برقرار نیست'
     },
-    elementStatus: elements.map(el => ({
-      element: el,
-      target: targetValues[el] || 0,
-      actual: (targetValues[el] || 0) * 0.95,
-      difference: (targetValues[el] || 0) * 0.05,
-      status: 'sufficient',
-      message: 'وضعیت مطلوب'
-    })),
+    elementStatus,
     waterQuality: {
-      salinity: waterSalinity.value,
-      impact: 'مناسب',
-      recommendation: 'نیازی به اقدام نیست'
+      salinity,
+      impact,
+      recommendation
     },
-    fertilizerRecommendation: []
+    fertilizerRecommendation: recommendations
   };
 };
 
-const loadSampleData = async () => {
-  try {
-    // بررسی احراز هویت (همیشه true برمی‌گرداند)
-    await checkAuth();
-    
-    const loaded = await loadFertilizersFromBackend();
-    if (!loaded) {
-      useSampleData();
-    }
-  } catch (err) {
-    console.error('Error loading data:', err);
-    useSampleData();
-  }
-};
-
-// ===== محاسبه ارتفاع هدر =====
+// ===== Lifecycle =====
 const updateHeaderHeight = () => {
   const header = document.querySelector('header');
   if (header) {
@@ -492,12 +435,15 @@ const updateHeaderHeight = () => {
   }
 };
 
-// ===== Lifecycle =====
 onMounted(async () => {
-  await loadSampleData();
   updateHeaderHeight();
   window.addEventListener('resize', updateHeaderHeight);
   await checkConnection();
+  
+  // بارگذاری نمونه کودها (در صورت خالی بودن)
+  if (fertilizerStore.fertilizers.length === 0) {
+    fertilizerStore.loadSampleFertilizers();
+  }
 });
 
 onUnmounted(() => {
@@ -536,18 +482,5 @@ onUnmounted(() => {
 
 .snap-start {
   scroll-snap-align: start;
-}
-
-.flex {
-  display: flex;
-}
-.flex-col {
-  flex-direction: column;
-}
-.min-h-screen {
-  min-height: 100vh;
-}
-.flex-1 {
-  flex: 1 1 0%;
 }
 </style>
