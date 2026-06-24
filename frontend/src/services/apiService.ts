@@ -4,7 +4,7 @@ import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // ============================================================
-// 🆕 Types برای APIهای محاسباتی جدید
+// Types برای APIهای محاسباتی
 // ============================================================
 export interface IonBalanceRequest {
     elements: Record<string, number>;
@@ -104,6 +104,21 @@ export interface LoadSystemFertilizersResponse {
     success: boolean;
 }
 
+export interface ChangePasswordRequest {
+    current_password: string;
+    new_password: string;
+}
+
+export interface ChangePasswordResponse {
+    message: string;
+    success: boolean;
+}
+
+export interface UpdateProfileRequest {
+    first_name?: string;
+    last_name?: string;
+}
+
 class ApiService {
     private api: AxiosInstance;
 
@@ -141,7 +156,7 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 متدهای عمومی HTTP (برای رفع خطای TypeScript)
+    // 🆕 متدهای عمومی HTTP (برای انعطاف‌پذیری)
     // ============================================================
     async get<T = any>(url: string, config?: any): Promise<T> {
         const response: AxiosResponse<T> = await this.api.get(url, config);
@@ -164,11 +179,8 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 APIهای محاسباتی جدید
+    // 🆕 APIهای محاسباتی
     // ============================================================
-    /**
-     * 🆕 دریافت خلاصه داشبورد - تمام محاسبات در بک‌اند انجام می‌شود
-     */
     async getHomeSummary(): Promise<HomeSummaryResponse> {
         try {
             const response: AxiosResponse<HomeSummaryResponse> = await this.api.get('/calculations/home-summary');
@@ -179,9 +191,6 @@ class ApiService {
         }
     }
 
-    /**
-     * 🆕 محاسبه تعادل یونی
-     */
     async calculateIonBalance(data: IonBalanceRequest): Promise<IonBalanceResponse> {
         try {
             const response: AxiosResponse<IonBalanceResponse> = await this.api.post('/calculations/calculate-ion-balance', data);
@@ -192,9 +201,6 @@ class ApiService {
         }
     }
 
-    /**
-     * 🆕 محاسبه محلول نهایی
-     */
     async calculateFinalSolution(data: FinalSolutionRequest): Promise<FinalSolutionResponse> {
         try {
             const response: AxiosResponse<FinalSolutionResponse> = await this.api.post('/calculations/calculate-final-solution', data);
@@ -205,9 +211,6 @@ class ApiService {
         }
     }
 
-    /**
-     * 🆕 محاسبه مخازن
-     */
     async calculateReservoir(data: ReservoirRequest): Promise<ReservoirResponse> {
         try {
             const response: AxiosResponse<ReservoirResponse> = await this.api.post('/calculations/calculate-reservoir', data);
@@ -218,9 +221,6 @@ class ApiService {
         }
     }
 
-    /**
-     * 🆕 تبدیل واحد
-     */
     async convertUnit(data: UnitConversionRequest): Promise<UnitConversionResponse> {
         try {
             const response: AxiosResponse<UnitConversionResponse> = await this.api.post('/calculations/convert-unit', data);
@@ -234,15 +234,54 @@ class ApiService {
     // ============================================================
     // 🆕 System Fertilizers
     // ============================================================
-    /**
-     * 🆕 بارگذاری کودهای سیستمی از seed
-     */
     async loadSystemFertilizers(): Promise<LoadSystemFertilizersResponse> {
         try {
             const response: AxiosResponse<LoadSystemFertilizersResponse> = await this.api.post('/fertilizers/load-system-fertilizers');
             return response.data;
         } catch (error) {
             console.error('Error loading system fertilizers:', error);
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🆕 Profile & User APIs
+    // ============================================================
+    /**
+     * 🆕 به‌روزرسانی اطلاعات پروفایل کاربر
+     */
+    async updateProfile(data: UpdateProfileRequest): Promise<any> {
+        try {
+            const response: AxiosResponse = await this.api.put('/users/me', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🆕 تغییر رمز عبور
+     */
+    async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResponse> {
+        try {
+            const response: AxiosResponse<ChangePasswordResponse> = await this.api.post('/auth/change-password', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error changing password:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🆕 دریافت اطلاعات کاربر فعلی
+     */
+    async getCurrentUser(): Promise<any> {
+        try {
+            const response: AxiosResponse = await this.api.get('/auth/me');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching current user:', error);
             throw error;
         }
     }
@@ -441,16 +480,6 @@ class ApiService {
             return response.data;
         } catch (error) {
             console.error('Error during registration:', error);
-            throw error;
-        }
-    }
-
-    async getCurrentUser(): Promise<any> {
-        try {
-            const response: AxiosResponse = await this.api.get('/auth/me');
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching current user:', error);
             throw error;
         }
     }

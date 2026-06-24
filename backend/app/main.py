@@ -1,5 +1,8 @@
 # backend/app/main.py
-"""نقطه ورود اصلی برنامه FastAPI"""
+"""
+نقطه ورود اصلی برنامه FastAPI
+FarmTech - ProFertilizer Management System
+"""
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,9 +10,10 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import logging
 import traceback
+import time
 from app.config import settings
 from app.database import create_tables, SessionLocal
-from app.routes import router
+from app.routes import router  # ✅ از فولدر routes import می‌شود
 from app.security import get_current_user
 from app.models import User
 
@@ -44,9 +48,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ===== Exception Handlers =====
+# ============================================================
+# Exception Handlers
+# ============================================================
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
+    """مدیریت خطاهای HTTP"""
     logger.error(f"HTTP Exception: {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
@@ -55,6 +62,7 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    """مدیریت خطاهای اعتبارسنجی"""
     errors = []
     for error in exc.errors():
         errors.append({
@@ -70,7 +78,7 @@ async def validation_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    # لاگ کامل خطا با traceback
+    """مدیریت خطاهای عمومی"""
     logger.error(f"Unhandled Exception: {str(exc)}")
     logger.error(traceback.format_exc())
     return JSONResponse(
@@ -82,19 +90,28 @@ async def general_exception_handler(request, exc):
         }
     )
 
-# ===== Middleware برای لاگ‌گیری =====
+# ============================================================
+# Middleware برای لاگ‌گیری
+# ============================================================
 @app.middleware("http")
 async def log_requests(request, call_next):
-    import time
+    """لاگ‌گیری همه درخواست‌های HTTP"""
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
-    logger.info(f"{request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.3f}s")
+    logger.info(
+        f"{request.method} {request.url.path} - "
+        f"Status: {response.status_code} - "
+        f"Time: {process_time:.3f}s"
+    )
     return response
 
-# ===== مسیرهای اصلی =====
+# ============================================================
+# مسیرهای اصلی
+# ============================================================
 @app.get("/")
 async def root():
+    """مسیر ریشه - اطلاعات پایه برنامه"""
     return {
         "name": settings.APP_NAME,
         "version": settings.APP_VERSION,
@@ -103,12 +120,16 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """بررسی سلامت سرور"""
     return {"status": "healthy", "database": "connected"}
 
 # ===== مسیر تست احراز هویت =====
 @app.get("/api/v1/auth/test")
 async def auth_test(current_user: User = Depends(get_current_user)):
-    """تست get_current_user - اگر این کار کند یعنی همه چیز درست است"""
+    """
+    تست get_current_user - اگر این کار کند یعنی همه چیز درست است
+    نکته: این endpoint تکراری با routes/auth.py است اما برای backward compatibility نگه داشته شده
+    """
     return {
         "message": "✅ احراز هویت موفق",
         "user": {
@@ -118,15 +139,21 @@ async def auth_test(current_user: User = Depends(get_current_user)):
         }
     }
 
-# ===== ثبت Routerها =====
+# ============================================================
+# ثبت Routerها
+# ============================================================
 app.include_router(router, prefix=settings.API_PREFIX)
 
 # ============================================================
-# 🆕 رویدادهای Startup/Shutdown (اصلاح شده)
+# 🆕 رویدادهای Startup/Shutdown
 # ============================================================
 @app.on_event("startup")
 async def startup_event():
-    """رویداد شروع برنامه - ساخت جداول و بارگذاری کودهای سیستمی"""
+    """
+    رویداد شروع برنامه:
+    1. ساخت جداول دیتابیس
+    2. بارگذاری خودکار کودهای سیستمی (در صورت عدم وجود)
+    """
     logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"🔧 Debug mode: {settings.DEBUG}")
     
@@ -138,7 +165,7 @@ async def startup_event():
         logger.error(f"❌ Failed to create tables: {e}")
         return
     
-    # ===== 🆕 مرحله ۲: بارگذاری خودکار کودهای سیستمی =====
+    # ===== مرحله ۲: بارگذاری خودکار کودهای سیستمی =====
     db = SessionLocal()
     try:
         # بررسی تعداد کودهای سیستمی موجود
@@ -173,4 +200,5 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    """رویداد توقف برنامه"""
     logger.info(f"👋 Shutting down {settings.APP_NAME}")

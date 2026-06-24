@@ -1,9 +1,8 @@
 <template>
-  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-2.5 sm:py-3 mt-auto">
+  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-3 sm:py-4 mt-auto">
     <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
       <div class="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-        
-        <!-- Copyright - نسخه ساده‌تر برای موبایل -->
+        <!-- Copyright -->
         <div class="flex items-center gap-2 flex-wrap justify-center">
           <img src="/favicon.webp" alt="FarmTech" class="h-5 w-5 sm:h-6 sm:w-6 rounded object-contain" />
           <span>© ۱۴۰۵</span>
@@ -13,12 +12,11 @@
 
         <!-- User Info, Status, Version & Logout -->
         <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
-          
-          <!-- User Info - کلیک برای رفتن به پروفایل -->
+          <!-- User Info - کلیک برای باز کردن مودال -->
           <button
-            @click="goToProfile"
+            @click="openProfileModal"
             class="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors group"
-            title="مشاهده پروفایل"
+            title="پروفایل کاربری"
           >
             <div class="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors">
               {{ userInitials }}
@@ -100,7 +98,7 @@ const userInitials = computed(() => {
     const last = user.value.last_name?.charAt(0) || '';
     return (first + last).toUpperCase();
   }
-  return '👤';
+  return '?';
 });
 
 // ===== وضعیت اتصال =====
@@ -129,9 +127,12 @@ const connectionStatusText = computed(() => {
   }
 });
 
-// ===== رفتن به پروفایل =====
-const goToProfile = () => {
-  router.push('/profile');
+// ===== باز کردن مودال پروفایل =====
+const openProfileModal = () => {
+  // emit به MainLayout برای باز کردن مودال
+  // یا استفاده از یک store/event bus
+  // برای سادگی، از یک event سفارشی استفاده می‌کنیم
+  window.dispatchEvent(new CustomEvent('open-profile-modal'));
 };
 
 // ===== خروج از حساب =====
@@ -147,8 +148,6 @@ let intervalId: number | null = null;
 onMounted(() => {
   checkConnection();
   intervalId = window.setInterval(checkConnection, 30000);
-  
-  // بررسی وضعیت کاربر
   checkAuth();
 });
 

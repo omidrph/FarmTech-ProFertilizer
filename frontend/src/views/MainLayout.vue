@@ -1,7 +1,11 @@
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200 flex flex-col">
+    
     <!-- Header -->
-    <AppHeader v-model:activeTab="activeTab" />
+    <AppHeader 
+      v-model:activeTab="activeTab" 
+      @new-report="handleNewReport"
+    />
 
     <!-- Sub Navigation (تب‌های صفحه اصلی) -->
     <nav v-if="activeTab === 'home'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky z-40 shadow-sm" :style="{ top: headerHeight + 'px' }">
@@ -45,6 +49,7 @@
 
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 w-full">
+      
       <!-- Loading Indicator -->
       <div v-if="isLoading || fertilizerStore.isLoading || calcStore.isLoading" class="flex justify-center items-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -61,6 +66,7 @@
 
       <!-- Home Tab -->
       <div v-if="activeTab === 'home'" class="space-y-4 sm:space-y-6">
+        
         <!-- Report Header -->
         <ReportHeader
           v-model:reportName="reportStore.reportData.reportName"
@@ -72,9 +78,7 @@
 
         <!-- Home Sub Tab -->
         <div v-if="activeSubTab === 'home'">
-          <HomeTab
-            :target-unit="targetStore.targetUnit"
-          />
+          <HomeTab :target-unit="targetStore.targetUnit" />
         </div>
 
         <!-- Water Analysis Sub Tab -->
@@ -154,6 +158,12 @@
     <!-- Footer -->
     <AppFooter @navigate="activeTab = $event" />
 
+    <!-- Profile Modal -->
+    <ProfileModal
+      :is-open="isProfileModalOpen"
+      @update:is-open="isProfileModalOpen = $event"
+    />
+
     <!-- Modal Add Fertilizer -->
     <div v-if="showAddFertilizerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAddFertilizerModal = false">
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 animate-slide-up">
@@ -223,8 +233,12 @@ import { useAppStore } from '@/store/modules/appStore';
 import { useApi } from '@/composables/useApi';
 import { useCalculations } from '@/composables/useCalculations';
 
+// Layout Components
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppFooter from '@/components/layout/AppFooter.vue';
+import ProfileModal from '@/components/layout/ProfileModal.vue';
+
+// Feature Components
 import ReportHeader from '@/components/features/ReportHeader.vue';
 import HomeTab from '@/components/features/HomeTab.vue';
 import WaterAnalysisTab from '@/components/features/WaterAnalysisTab.vue';
@@ -238,6 +252,7 @@ import EducationVideos from '@/components/features/EducationVideos.vue';
 import ContactUs from '@/components/features/ContactUs.vue';
 import AboutUs from '@/components/features/AboutUs.vue';
 
+// ===== Stores =====
 const reportStore = useReportStore();
 const targetStore = useTargetStore();
 const waterStore = useWaterStore();
@@ -247,13 +262,16 @@ const appStore = useAppStore();
 const { isLoading, error: apiError, checkConnection, clearError } = useApi();
 const { generateInterpretation: generateInterpretationFromAPI } = useCalculations();
 
+// ===== State =====
 const activeTab = ref('home');
 const activeSubTab = ref('home');
 const activeEducationSubTab = ref('quick-start');
 const showAddFertilizerModal = ref(false);
+const isProfileModalOpen = ref(false);
 const headerHeight = ref(56);
 const analysisUnit = ref('ppm');
 const interpretationResult = ref<any>(null);
+
 const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
 const newFertilizer = reactive({
@@ -264,6 +282,7 @@ const newFertilizer = reactive({
   acidType: '' as string
 });
 
+// ===== Navigation Tabs =====
 const subTabs = [
   {
     id: 'home',
@@ -315,16 +334,14 @@ const educationSubTabs = [
   }
 ];
 
+// ===== Methods =====
 const loadData = async () => {
   const connected = await checkConnection();
   if (!connected) {
-    console.warn('⚠️ بک‌اند در دسترس نیست! لطفاً بک‌اند را اجرا کنید.');
+    console.warn('بک‌اند در دسترس نیست!');
     return;
   }
   await fertilizerStore.loadFertilizers();
-  if (fertilizerStore.fertilizers.length === 0) {
-    console.info('ℹ️ هیچ کودی در دیتابیس وجود ندارد. لطفاً از طریق دکمه "افزودن کود جدید" کود اضافه کنید.');
-  }
 };
 
 const handleAddFertilizer = async () => {
@@ -352,21 +369,22 @@ const handleDeleteFertilizer = async (id: string) => {
   }
 };
 
-/**
- * 🎯 تولید تفسیر - کاملاً از طریق API بک‌اند
- * هیچ محاسبه‌ای در فرانت‌اند انجام نمی‌شود
- */
+const handleNewReport = () => {
+  // این تابع وقتی از AppHeader emit می‌شود فراخوانی می‌شود
+  // می‌توانید در اینجا اقدامات اضافی انجام دهید
+  console.log('گزارش جدید ایجاد شد');
+};
+
 const generateInterpretation = async () => {
   if (!calcStore.currentReportId) {
     alert('لطفاً ابتدا محاسبات را در بخش "محاسبه کود" ذخیره کنید');
     return;
   }
-
   const result = await generateInterpretationFromAPI(calcStore.currentReportId);
   if (result) {
     interpretationResult.value = result;
   } else {
-    alert('خطا در تولید تفسیر. لطفاً مطمئن شوید آنالیز آب و عناصر هدف وارد شده‌اند.');
+    alert('خطا در تولید تفسیر');
   }
 };
 
@@ -383,13 +401,47 @@ const updateHeaderHeight = () => {
   }
 };
 
+// ===== Event Listener for Profile Modal =====
+const openProfileModalHandler = () => {
+  isProfileModalOpen.value = true;
+};
+
+// ===== Lifecycle =====
 onMounted(async () => {
   updateHeaderHeight();
   window.addEventListener('resize', updateHeaderHeight);
+  window.addEventListener('open-profile-modal', openProfileModalHandler);
   await loadData();
 });
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateHeaderHeight);
+  window.removeEventListener('open-profile-modal', openProfileModalHandler);
 });
 </script>
+
+<style scoped>
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+</style>

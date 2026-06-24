@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/views/MainLayout.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
-import Profile from '@/views/Profile.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,32 +20,25 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
-      path: '/profile',
-      name: 'profile',
-      component: Profile,
-      meta: { requiresAuth: true }
-    },
-    {
       path: '/',
       name: 'home',
       component: MainLayout,
       meta: { requiresAuth: true }
     }
+    // ❌ مسیر /profile حذف شد - حالا به صورت مودال باز می‌شود
   ]
 });
 
-// ===== Navigation Guard (محافظت از مسیرها) =====
+// ===== Navigation Guard =====
 router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('access_token');
   const isAuthenticated = !!token;
 
-  // اگر مسیر نیاز به احراز هویت دارد و کاربر لاگین نیست
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/login');
     return;
   }
 
-  // اگر کاربر لاگین است و به صفحه لاگین یا ثبت‌نام می‌رود
   if (isAuthenticated && (to.path === '/login' || to.path === '/register')) {
     next('/');
     return;
