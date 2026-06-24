@@ -27,6 +27,8 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
     return fertilizers.value.find((f: Fertilizer) => f.id === id);
   };
 
+  const hasFertilizers = computed(() => fertilizers.value.length > 0);
+
   // ===== Actions =====
 
   // بارگذاری کودها از بک‌اند
@@ -48,6 +50,7 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
           createdAt: item.created_at ? new Date(item.created_at) : new Date(),
           updatedAt: item.updated_at ? new Date(item.updated_at) : new Date()
         }));
+        console.log(`✅ ${fertilizers.value.length} کود از بک‌اند بارگذاری شد`);
         return true;
       }
       return false;
@@ -88,6 +91,7 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
           updatedAt: result.updated_at ? new Date(result.updated_at) : new Date()
         };
         fertilizers.value.push(newFertilizer);
+        console.log(`✅ کود "${newFertilizer.name}" با موفقیت افزوده شد`);
         return true;
       }
       return false;
@@ -120,6 +124,7 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
             acidType: result.acid_type || fertilizers.value[index].acidType,
             updatedAt: new Date()
           };
+          console.log(`✅ کود "${fertilizers.value[index].name}" با موفقیت به‌روزرسانی شد`);
         }
         return true;
       }
@@ -143,11 +148,13 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
       
       const index = fertilizers.value.findIndex((f: Fertilizer) => f.id === id);
       if (index !== -1) {
+        const name = fertilizers.value[index].name;
         fertilizers.value.splice(index, 1);
         const selIndex = selectedFertilizerIds.value.indexOf(id);
         if (selIndex !== -1) {
           selectedFertilizerIds.value.splice(selIndex, 1);
         }
+        console.log(`✅ کود "${name}" با موفقیت حذف شد`);
       }
       return true;
     } catch (err: any) {
@@ -181,49 +188,6 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
     error.value = null;
   };
 
-  // بارگذاری نمونه (برای زمانی که بک‌اند در دسترس نیست)
-  const loadSampleFertilizers = () => {
-    const samples: Fertilizer[] = [
-      {
-        id: 'sample-1',
-        name: 'کلسیم نیترات + آمونیوم',
-        pricePerKg: 25000,
-        elements: { 'N-NO3': 14.5, 'N-NH4': 1.5, 'Ca': 19 } as Partial<Record<ElementName, number>>,
-        isAcid: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 'sample-2',
-        name: 'پتاسیم نیترات',
-        pricePerKg: 32000,
-        elements: { 'N-NO3': 13, 'K': 38 } as Partial<Record<ElementName, number>>,
-        isAcid: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 'sample-3',
-        name: 'فسفات پتاسیم',
-        pricePerKg: 28000,
-        elements: { 'P': 22, 'K': 28 } as Partial<Record<ElementName, number>>,
-        isAcid: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 'sample-4',
-        name: 'سولفات منیزیم',
-        pricePerKg: 15000,
-        elements: { 'S': 13, 'Mg': 10 } as Partial<Record<ElementName, number>>,
-        isAcid: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-    fertilizers.value = samples;
-  };
-
   return {
     // State
     fertilizers,
@@ -235,6 +199,7 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
     fertilizerOptions,
     selectedFertilizers,
     getFertilizerById,
+    hasFertilizers,
     
     // Actions
     loadFertilizers,
@@ -244,7 +209,9 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
     toggleSelectFertilizer,
     selectFertilizers,
     clearSelection,
-    clearError,
-    loadSampleFertilizers
+    clearError
   };
 });
+
+// Export default برای اطمینان از اینکه ماژول به درستی صادر می‌شود
+export default useFertilizerStore;

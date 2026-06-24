@@ -74,6 +74,11 @@ export function useApi() {
     }
   };
 
+  // پاک کردن خطا
+  const clearError = (): void => {
+    error.value = null;
+  };
+
   // تابع اصلی برای درخواست‌ها
   const request = async <T>(
     method: 'get' | 'post' | 'put' | 'delete',
@@ -133,6 +138,7 @@ export function useApi() {
     error,
     isConnected,
     checkConnection,
+    clearError,  // <--- اضافه شد
     request,
   };
 }

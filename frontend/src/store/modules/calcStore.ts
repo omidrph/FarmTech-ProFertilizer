@@ -3,7 +3,6 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { CalculationRow, CalculationInputs, ElementName, ReservoirData, ReservoirItem } from '@/types';
 import { apiService } from '@/services/apiService';
-import { useFertilizerStore } from './fertilizerStore';
 
 const ELEMENTS: ElementName[] = [
   'N-NO3' as ElementName,
@@ -219,9 +218,6 @@ export const useCalcStore = defineStore('calc', () => {
       // محاسبه مخازن
       const reservoir = calculateReservoirData();
       
-      // دریافت کودها از fertilizerStore
-      const fertilizerStore = useFertilizerStore();
-      
       // آماده‌سازی داده برای ارسال به بک‌اند
       const calcData = {
         target_values: {}, // از targetStore گرفته می‌شود
@@ -368,3 +364,5 @@ export const useCalcStore = defineStore('calc', () => {
     resetCalculation
   };
 });
+
+export default useCalcStore;

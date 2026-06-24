@@ -251,7 +251,7 @@ const calcStore = useCalcStore();
 const appStore = useAppStore();
 
 // ===== API =====
-const { isLoading, error: apiError, checkConnection } = useApi();
+const { isLoading, error: apiError, checkConnection, clearError } = useApi();
 
 // ===== State =====
 const activeTab = ref('home');
@@ -329,21 +329,19 @@ const educationSubTabs = [
 
 // بارگذاری داده‌ها از بک‌اند
 const loadData = async () => {
-  // بررسی اتصال
+  // بررسی اتصال به بک‌اند
   const connected = await checkConnection();
+  
   if (!connected) {
-    console.warn('⚠️ Backend not connected. Using local data only.');
-    // بارگذاری نمونه
-    fertilizerStore.loadSampleFertilizers();
+    console.warn('⚠️ بک‌اند در دسترس نیست! لطفاً بک‌اند را اجرا کنید.');
     return;
   }
   
   // بارگذاری کودها از بک‌اند
   await fertilizerStore.loadFertilizers();
   
-  // اگر کودی از بک‌اند نیامد، از نمونه استفاده کن
   if (fertilizerStore.fertilizers.length === 0) {
-    fertilizerStore.loadSampleFertilizers();
+    console.info('ℹ️ هیچ کودی در دیتابیس وجود ندارد. لطفاً از طریق دکمه "افزودن کود جدید" کود اضافه کنید.');
   }
 };
 
@@ -377,12 +375,10 @@ const handleDeleteFertilizer = async (id: string) => {
 
 // تولید تفسیر
 const generateInterpretation = () => {
-  // استفاده از داده‌های واقعی از stores
   const targetVals = targetStore.targetElements;
   const finalVals = calcStore.elementTotals;
   const waterData = waterStore.waterMixData;
   
-  // محاسبه تعادل یونی
   let cation = 0;
   let anion = 0;
   const cations = ['K', 'Ca', 'Mg', 'Na'];
@@ -395,7 +391,6 @@ const generateInterpretation = () => {
   
   const isBalanced = Math.abs(cation - anion) < 0.5;
   
-  // وضعیت عناصر
   const elementStatus = elements.map(el => {
     const target = (targetVals as any)[el] || 0;
     const actual = (finalVals as any)[el] || 0;
@@ -425,7 +420,6 @@ const generateInterpretation = () => {
     };
   });
   
-  // کیفیت آب
   const salinity = waterData.waterSalinity || 0;
   let impact = 'مناسب';
   let recommendation = 'نیازی به اقدام نیست';
@@ -438,7 +432,6 @@ const generateInterpretation = () => {
     recommendation = 'توجه به عناصر سمی در آب';
   }
   
-  // توصیه‌ها
   const recommendations: any[] = [];
   
   if (!isBalanced) {
@@ -483,14 +476,7 @@ const generateInterpretation = () => {
 
 // پاک کردن خطاها
 const clearErrors = () => {
-  // پاک کردن error از useApi
-  // استفاده از روش ایمن
-  if (apiError) {
-    // @ts-ignore - برای دسترسی به property داخلی
-    if (typeof apiError === 'string') {
-      // فقط مقدار را بازنشانی می‌کنیم
-    }
-  }
+  clearError();
   fertilizerStore.clearError();
   calcStore.clearErrors();
 };
@@ -506,8 +492,6 @@ const updateHeaderHeight = () => {
 onMounted(async () => {
   updateHeaderHeight();
   window.addEventListener('resize', updateHeaderHeight);
-  
-  // بارگذاری داده‌ها از بک‌اند
   await loadData();
 });
 
