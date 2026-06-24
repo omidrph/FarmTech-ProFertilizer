@@ -1,56 +1,23 @@
+// frontend/src/store/modules/targetStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { apiService } from '@/services/apiService';
 
 type Unit = 'ppm' | 'meq' | 'mmol';
 
-interface IonBalance {
-  cation: number;
-  anion: number;
-  isBalanced: boolean;
-}
-
 const ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'] as const;
 type ElementName = typeof ELEMENTS[number];
-const DEFAULT_UNIT: Unit = 'ppm';
 
-// Helper function for ion balance calculation
-const calculateIonBalance = (
-  elements: Record<ElementName, number>
-): IonBalance => {
-  let cation = 0;
-  let anion = 0;
-  
-  const cations: ElementName[] = ['K', 'Ca', 'Mg', 'Na'];
-  const anions: ElementName[] = ['N-NO3', 'P', 'S', 'N-NH4', 'Cl'];
-  
-  for (const [element, value] of Object.entries(elements)) {
-    const elem = element as ElementName;
-    if (cations.includes(elem)) {
-      cation += value;
-    } else if (anions.includes(elem)) {
-      anion += value;
-    }
-  }
-  
-  const isBalanced = Math.abs(cation - anion) < 0.5;
-  
-  return { cation, anion, isBalanced };
-};
+const DEFAULT_UNIT: Unit = 'ppm';
 
 export const useTargetStore = defineStore('target', () => {
   // ===== State =====
   const targetElements = ref<Partial<Record<ElementName, number>>>({});
   const targetUnit = ref<Unit>(DEFAULT_UNIT);
+  const ionBalance = ref({ cation: 0, anion: 0, isBalanced: false });
+  const isCalculatingBalance = ref(false);
 
   // ===== Getters =====
-  const ionBalance = computed<IonBalance>(() => {
-    const fullElements: Record<ElementName, number> = {} as Record<ElementName, number>;
-    for (const element of ELEMENTS) {
-      fullElements[element] = targetElements.value[element] || 0;
-    }
-    return calculateIonBalance(fullElements);
-  });
-
   const isBalanced = computed(() => ionBalance.value.isBalanced);
 
   const targetRows = computed(() => {
@@ -60,42 +27,82 @@ export const useTargetStore = defineStore('target', () => {
     }));
   });
 
-  const convertedValues = computed(() => {
-    return ELEMENTS.map(element => ({
-      element,
-      ppm: targetElements.value[element] || 0,
-      meq: 0,
-      mmol: 0
-    }));
-  });
-
   // ===== Actions =====
+
+  /**
+   * 🎯 محاسبه تعادل یونی از طریق API بک‌اند
+   */
+  async function calculateIonBalanceFromAPI(): Promise<void> {
+    isCalculatingBalance.value = true;
+    try {
+      const fullElements: Record<string, number> = {};
+      for (const element of ELEMENTS) {
+        fullElements[element] = targetElements.value[element] || 0;
+      }
+
+      const result = await apiService.calculateIonBalance({
+        elements: fullElements,
+        unit: targetUnit.value
+      });
+
+      ionBalance.value = {
+        cation: result.cation,
+        anion: result.anion,
+        isBalanced: result.is_balanced
+      };
+    } catch (error) {
+      console.error('Error calculating ion balance:', error);
+      ionBalance.value = { cation: 0, anion: 0, isBalanced: false };
+    } finally {
+      isCalculatingBalance.value = false;
+    }
+  }
+
   function setTargetElement(element: ElementName, value: number) {
     targetElements.value[element] = value;
+    debounceCalculateBalance();
   }
 
   function setTargetUnit(unit: Unit) {
     targetUnit.value = unit;
+    calculateIonBalanceFromAPI();
   }
 
   function resetTargets() {
     targetElements.value = {};
+    ionBalance.value = { cation: 0, anion: 0, isBalanced: false };
   }
 
   function getTargetElement(element: ElementName): number {
     return targetElements.value[element] || 0;
   }
 
+  // ===== Debounce =====
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function debounceCalculateBalance() {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = setTimeout(() => {
+      calculateIonBalanceFromAPI();
+    }, 500);
+  }
+
   return {
     targetElements,
     targetUnit,
     ionBalance,
+    isCalculatingBalance,
     isBalanced,
     targetRows,
-    convertedValues,
     setTargetElement,
     setTargetUnit,
     resetTargets,
-    getTargetElement
+    getTargetElement,
+    calculateIonBalanceFromAPI
   };
 });
+
+// ✅ اضافه کردن export default
+export default useTargetStore;

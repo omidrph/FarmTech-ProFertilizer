@@ -2,7 +2,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { WaterMixData } from '@/types';
-import { WATER_ELEMENTS } from '@/utils/constants';
+
+const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
 export const useWaterStore = defineStore('water', () => {
   // ===== State =====
@@ -11,22 +12,22 @@ export const useWaterStore = defineStore('water', () => {
     wastewaterPercentage: 20,
     waterSalinity: 0
   });
-
   const wastewaterValues = ref<Record<string, number>>({});
   const waterValues = ref<Record<string, number>>({});
 
   // ===== Getters =====
+  /**
+   * محاسبه مقادیر نهایی - این محاسبه ساده است و می‌تواند در فرانت بماند
+   */
   const finalValues = computed(() => {
     const result: Record<string, number> = {};
     const waterPct = waterMixData.value.waterPercentage / 100;
     const wastePct = waterMixData.value.wastewaterPercentage / 100;
-
     for (const element of WATER_ELEMENTS) {
       const waterVal = waterValues.value[element] || 0;
       const wasteVal = wastewaterValues.value[element] || 0;
       result[element] = (waterVal * waterPct) + (wasteVal * wastePct);
     }
-
     return result;
   });
 
@@ -70,16 +71,11 @@ export const useWaterStore = defineStore('water', () => {
   }
 
   return {
-    // State
     waterMixData,
     wastewaterValues,
     waterValues,
-    
-    // Getters
     finalValues,
     analysisRows,
-    
-    // Actions
     setWaterMix,
     setWastewaterValue,
     setWaterValue,
@@ -87,3 +83,6 @@ export const useWaterStore = defineStore('water', () => {
     getElementFinalValue
   };
 });
+
+// ✅ اضافه کردن export default
+export default useWaterStore;

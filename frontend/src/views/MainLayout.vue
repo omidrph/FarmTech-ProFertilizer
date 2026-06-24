@@ -214,19 +214,15 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, reactive } from 'vue';
-
-// ===== Store Imports =====
 import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
 import { useFertilizerStore } from '@/store/modules/fertilizerStore';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useAppStore } from '@/store/modules/appStore';
-
-// ===== Composables =====
 import { useApi } from '@/composables/useApi';
+import { useCalculations } from '@/composables/useCalculations';
 
-// ===== Import Components =====
 import AppHeader from '@/components/layout/AppHeader.vue';
 import AppFooter from '@/components/layout/AppFooter.vue';
 import ReportHeader from '@/components/features/ReportHeader.vue';
@@ -242,18 +238,15 @@ import EducationVideos from '@/components/features/EducationVideos.vue';
 import ContactUs from '@/components/features/ContactUs.vue';
 import AboutUs from '@/components/features/AboutUs.vue';
 
-// ===== Stores =====
 const reportStore = useReportStore();
 const targetStore = useTargetStore();
 const waterStore = useWaterStore();
 const fertilizerStore = useFertilizerStore();
 const calcStore = useCalcStore();
 const appStore = useAppStore();
-
-// ===== API =====
 const { isLoading, error: apiError, checkConnection, clearError } = useApi();
+const { generateInterpretation: generateInterpretationFromAPI } = useCalculations();
 
-// ===== State =====
 const activeTab = ref('home');
 const activeSubTab = ref('home');
 const activeEducationSubTab = ref('quick-start');
@@ -263,7 +256,6 @@ const analysisUnit = ref('ppm');
 const interpretationResult = ref<any>(null);
 const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
-// ===== New Fertilizer =====
 const newFertilizer = reactive({
   name: '',
   pricePerKg: 0,
@@ -272,7 +264,6 @@ const newFertilizer = reactive({
   acidType: '' as string
 });
 
-// ===== Sub Tabs =====
 const subTabs = [
   {
     id: 'home',
@@ -306,7 +297,6 @@ const subTabs = [
   }
 ];
 
-// ===== Education Sub Tabs =====
 const educationSubTabs = [
   {
     id: 'quick-start',
@@ -325,33 +315,23 @@ const educationSubTabs = [
   }
 ];
 
-// ===== Methods =====
-
-// بارگذاری داده‌ها از بک‌اند
 const loadData = async () => {
-  // بررسی اتصال به بک‌اند
   const connected = await checkConnection();
-  
   if (!connected) {
     console.warn('⚠️ بک‌اند در دسترس نیست! لطفاً بک‌اند را اجرا کنید.');
     return;
   }
-  
-  // بارگذاری کودها از بک‌اند
   await fertilizerStore.loadFertilizers();
-  
   if (fertilizerStore.fertilizers.length === 0) {
     console.info('ℹ️ هیچ کودی در دیتابیس وجود ندارد. لطفاً از طریق دکمه "افزودن کود جدید" کود اضافه کنید.');
   }
 };
 
-// افزودن کود جدید
 const handleAddFertilizer = async () => {
   if (!newFertilizer.name || !newFertilizer.pricePerKg) {
     alert('لطفاً نام و قیمت کود را وارد کنید');
     return;
   }
-  
   const success = await fertilizerStore.addFertilizer(newFertilizer);
   if (success) {
     showAddFertilizerModal.value = false;
@@ -366,122 +346,36 @@ const handleAddFertilizer = async () => {
   }
 };
 
-// حذف کود
 const handleDeleteFertilizer = async (id: string) => {
   if (confirm('آیا از حذف این کود اطمینان دارید؟')) {
     await fertilizerStore.deleteFertilizer(id);
   }
 };
 
-// تولید تفسیر
-const generateInterpretation = () => {
-  const targetVals = targetStore.targetElements;
-  const finalVals = calcStore.elementTotals;
-  const waterData = waterStore.waterMixData;
-  
-  let cation = 0;
-  let anion = 0;
-  const cations = ['K', 'Ca', 'Mg', 'Na'];
-  const anions = ['N-NO3', 'P', 'S', 'N-NH4', 'Cl'];
-  
-  for (const [key, val] of Object.entries(targetVals)) {
-    if (cations.includes(key)) cation += val || 0;
-    else if (anions.includes(key)) anion += val || 0;
+/**
+ * 🎯 تولید تفسیر - کاملاً از طریق API بک‌اند
+ * هیچ محاسبه‌ای در فرانت‌اند انجام نمی‌شود
+ */
+const generateInterpretation = async () => {
+  if (!calcStore.currentReportId) {
+    alert('لطفاً ابتدا محاسبات را در بخش "محاسبه کود" ذخیره کنید');
+    return;
   }
-  
-  const isBalanced = Math.abs(cation - anion) < 0.5;
-  
-  const elementStatus = elements.map(el => {
-    const target = (targetVals as any)[el] || 0;
-    const actual = (finalVals as any)[el] || 0;
-    const diff = target - actual;
-    
-    let status: 'deficient' | 'sufficient' | 'excessive' | 'toxic' = 'sufficient';
-    let message = 'وضعیت مطلوب';
-    
-    if (diff > 5) {
-      status = 'deficient';
-      message = `کمبود ${diff.toFixed(2)} واحد`;
-    } else if (diff < -5) {
-      status = 'excessive';
-      message = `بیش‌بود ${Math.abs(diff).toFixed(2)} واحد`;
-    } else if (diff < -15) {
-      status = 'toxic';
-      message = 'سمیت احتمالی';
-    }
-    
-    return {
-      element: el as any,
-      target,
-      actual,
-      difference: diff,
-      status,
-      message
-    };
-  });
-  
-  const salinity = waterData.waterSalinity || 0;
-  let impact = 'مناسب';
-  let recommendation = 'نیازی به اقدام نیست';
-  
-  if (salinity > 2.5) {
-    impact = 'بالا';
-    recommendation = 'استفاده از آب با شوری کمتر توصیه می‌شود';
-  } else if (salinity > 1.5) {
-    impact = 'متوسط';
-    recommendation = 'توجه به عناصر سمی در آب';
+
+  const result = await generateInterpretationFromAPI(calcStore.currentReportId);
+  if (result) {
+    interpretationResult.value = result;
+  } else {
+    alert('خطا در تولید تفسیر. لطفاً مطمئن شوید آنالیز آب و عناصر هدف وارد شده‌اند.');
   }
-  
-  const recommendations: any[] = [];
-  
-  if (!isBalanced) {
-    recommendations.push({
-      issue: 'عدم تعادل یونی',
-      suggestion: 'مقادیر کاتیون و آنیون را تنظیم کنید تا برابر شوند',
-      priority: 'high'
-    });
-  }
-  
-  for (const item of elementStatus) {
-    if (item.status === 'deficient' || item.status === 'toxic') {
-      recommendations.push({
-        issue: `عنصر ${item.element}: ${item.message}`,
-        suggestion: item.status === 'deficient' 
-          ? 'افزایش مقدار این عنصر در فرمول غذایی' 
-          : 'کاهش مقدار این عنصر یا بررسی کیفیت آب',
-        priority: item.status === 'toxic' ? 'high' : 'medium'
-      });
-    }
-  }
-  
-  const problemElements = elementStatus.filter(e => e.status !== 'sufficient').map(e => e.element);
-  
-  interpretationResult.value = {
-    summary: `گزارش تفسیر تغذیه گیاه:\n- تعادل یونی: ${isBalanced ? 'برقرار ✅' : 'نامتعادل ⚠️'}\n- عناصر دارای مشکل: ${problemElements.length ? problemElements.join(', ') : 'هیچکدام'}\n- کیفیت آب: ${impact}\n- تعداد توصیه‌ها: ${recommendations.length}`,
-    ionBalance: {
-      cation,
-      anion,
-      isBalanced,
-      message: isBalanced ? 'تعادل یونی برقرار است' : 'تعادل یونی برقرار نیست'
-    },
-    elementStatus,
-    waterQuality: {
-      salinity,
-      impact,
-      recommendation
-    },
-    fertilizerRecommendation: recommendations
-  };
 };
 
-// پاک کردن خطاها
 const clearErrors = () => {
   clearError();
   fertilizerStore.clearError();
   calcStore.clearErrors();
 };
 
-// ===== Lifecycle =====
 const updateHeaderHeight = () => {
   const header = document.querySelector('header');
   if (header) {
@@ -499,37 +393,3 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateHeaderHeight);
 });
 </script>
-
-<style scoped>
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-slide-up {
-  animation: slideUp 0.3s ease-out;
-}
-
-.snap-x {
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-.snap-start {
-  scroll-snap-align: start;
-}
-</style>

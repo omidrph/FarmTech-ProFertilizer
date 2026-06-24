@@ -1,17 +1,15 @@
 # backend/app/routes.py
-"""همه مسیرهای API در یک فایل"""
-from typing import List, Optional
+"""همه مسیرهای API - نسخه کامل و نهایی"""
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta
 import logging
 from app.config import settings
 from app.database import get_db
-# اصلاح: اضافه کردن WaterAnalysis و Calculation که در db.query استفاده شده‌اند
-from app.models import User, WaterAnalysis, Calculation 
+from app.models import User, WaterAnalysis, Calculation
 from app.schemas import *
-# اصلاح: تغییر از from app.crud import * به import app.crud as crud
-import app.crud as crud 
+import app.crud as crud
 from app.security import (
     create_session_token,
     delete_session,
@@ -26,7 +24,9 @@ from app.services import (
     calculate_total_fertilizer_contribution,
     calculate_reservoir_data,
     generate_interpretation,
-    format_decimal
+    format_decimal,
+    convert_units,
+    ELEMENTS
 )
 
 # ===== تنظیمات Logger =====
@@ -51,6 +51,7 @@ def register(
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
+    """ثبت‌نام کاربر جدید"""
     try:
         existing_user = crud.get_user_by_phone(db, user_data.phone_number)
         if existing_user:
@@ -69,11 +70,13 @@ def register(
             detail=f"خطا در ثبت‌نام: {str(e)}"
         )
 
+
 @auth_router.post("/login", response_model=Token)
 def login(
     login_data: UserLogin,
     db: Session = Depends(get_db)
 ):
+    """ورود کاربر و دریافت توکن تصادفی"""
     try:
         user = crud.get_user_by_phone(db, login_data.phone_number)
         if not user:
@@ -106,11 +109,13 @@ def login(
             detail=f"خطا در ورود: {str(e)}"
         )
 
+
 @auth_router.post("/logout")
 def logout(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    """خروج از حساب (غیرفعال کردن توکن)"""
     try:
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
@@ -130,10 +135,12 @@ def logout(
             detail=f"خطا در خروج: {str(e)}"
         )
 
+
 @auth_router.get("/me", response_model=UserResponse)
 def get_me(
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت اطلاعات کاربر فعلی"""
     try:
         return current_user
     except Exception as e:
@@ -143,10 +150,12 @@ def get_me(
             detail=f"خطا در دریافت اطلاعات کاربر: {str(e)}"
         )
 
+
 @auth_router.get("/test")
 def test_auth(
     current_user: User = Depends(get_current_user)
 ):
+    """تست احراز هویت"""
     try:
         return {
             "message": "✅ احراز هویت موفق",
@@ -163,6 +172,7 @@ def test_auth(
             detail=f"خطا در تست احراز هویت: {str(e)}"
         )
 
+
 # ============================================================
 # مسیرهای کاربران (Users)
 # ============================================================
@@ -173,6 +183,7 @@ def get_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت لیست کاربران"""
     try:
         return crud.get_users(db, skip, limit)
     except Exception as e:
@@ -182,12 +193,14 @@ def get_users(
             detail=f"خطا در دریافت کاربران: {str(e)}"
         )
 
+
 @users_router.put("/me", response_model=UserResponse)
 def update_me(
     user_data: UserUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """به‌روزرسانی اطلاعات کاربر فعلی"""
     try:
         updated_user = crud.update_user(db, current_user.id, user_data)
         if not updated_user:
@@ -205,6 +218,7 @@ def update_me(
             detail=f"خطا در به‌روزرسانی کاربر: {str(e)}"
         )
 
+
 # ============================================================
 # مسیرهای گزارش‌ها (Reports)
 # ============================================================
@@ -214,6 +228,7 @@ def create_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """ایجاد گزارش جدید"""
     try:
         logger.info(f"Creating report for user {current_user.id}: {report_data.report_name}")
         report = crud.create_report(db, report_data, current_user.id)
@@ -226,6 +241,7 @@ def create_report(
             detail=f"خطا در ایجاد گزارش: {str(e)}"
         )
 
+
 @reports_router.get("/", response_model=List[ReportResponse])
 def get_reports(
     skip: int = Query(0, ge=0),
@@ -233,6 +249,7 @@ def get_reports(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت گزارش‌های کاربر فعلی"""
     try:
         reports = crud.get_reports_by_user(db, current_user.id, skip, limit)
         logger.info(f"Found {len(reports)} reports for user {current_user.id}")
@@ -244,12 +261,14 @@ def get_reports(
             detail=f"خطا در دریافت گزارش‌ها: {str(e)}"
         )
 
+
 @reports_router.get("/{report_id}", response_model=ReportResponse)
 def get_report(
     report_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت یک گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -272,6 +291,7 @@ def get_report(
             detail=f"خطا در دریافت گزارش: {str(e)}"
         )
 
+
 @reports_router.put("/{report_id}", response_model=ReportResponse)
 def update_report(
     report_id: int,
@@ -279,6 +299,7 @@ def update_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """به‌روزرسانی گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -302,12 +323,14 @@ def update_report(
             detail=f"خطا در به‌روزرسانی گزارش: {str(e)}"
         )
 
+
 @reports_router.delete("/{report_id}")
 def delete_report(
     report_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """حذف گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -331,6 +354,7 @@ def delete_report(
             detail=f"خطا در حذف گزارش: {str(e)}"
         )
 
+
 # ============================================================
 # مسیرهای کودها (Fertilizers)
 # ============================================================
@@ -340,9 +364,9 @@ def create_fertilizer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """ایجاد کود جدید"""
     try:
         logger.info(f"Creating fertilizer for user {current_user.id}: {fertilizer_data.name}")
-        # فراخوانی صحیح تابع crud با پیشوند crud.
         fertilizer = crud.create_fertilizer(db, fertilizer_data, current_user.id)
         if fertilizer is None:
             raise HTTPException(
@@ -360,6 +384,7 @@ def create_fertilizer(
             detail=f"خطا در ایجاد کود: {str(e)}"
         )
 
+
 @fertilizers_router.get("/", response_model=List[FertilizerResponse])
 def get_fertilizers(
     skip: int = Query(0, ge=0),
@@ -367,6 +392,7 @@ def get_fertilizers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت کودهای کاربر فعلی"""
     try:
         fertilizers = crud.get_fertilizers_by_user(db, current_user.id, skip, limit)
         logger.info(f"Found {len(fertilizers)} fertilizers for user {current_user.id}")
@@ -378,12 +404,14 @@ def get_fertilizers(
             detail=f"خطا در دریافت کودها: {str(e)}"
         )
 
+
 @fertilizers_router.get("/{fertilizer_id}", response_model=FertilizerResponse)
 def get_fertilizer(
     fertilizer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت یک کود"""
     try:
         fertilizer = crud.get_fertilizer_by_id(db, fertilizer_id)
         if not fertilizer:
@@ -406,6 +434,7 @@ def get_fertilizer(
             detail=f"خطا در دریافت کود: {str(e)}"
         )
 
+
 @fertilizers_router.put("/{fertilizer_id}", response_model=FertilizerResponse)
 def update_fertilizer(
     fertilizer_id: int,
@@ -413,6 +442,7 @@ def update_fertilizer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """به‌روزرسانی کود"""
     try:
         fertilizer = crud.get_fertilizer_by_id(db, fertilizer_id)
         if not fertilizer:
@@ -436,12 +466,14 @@ def update_fertilizer(
             detail=f"خطا در به‌روزرسانی کود: {str(e)}"
         )
 
+
 @fertilizers_router.delete("/{fertilizer_id}")
 def delete_fertilizer(
     fertilizer_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """حذف کود"""
     try:
         fertilizer = crud.get_fertilizer_by_id(db, fertilizer_id)
         if not fertilizer:
@@ -465,6 +497,7 @@ def delete_fertilizer(
             detail=f"خطا در حذف کود: {str(e)}"
         )
 
+
 # ============================================================
 # مسیرهای آنالیز آب (Water Analysis)
 # ============================================================
@@ -475,6 +508,7 @@ def create_water_analysis(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """ایجاد آنالیز آب برای یک گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -504,12 +538,14 @@ def create_water_analysis(
             detail=f"خطا در ایجاد آنالیز آب: {str(e)}"
         )
 
+
 @water_analysis_router.get("/{report_id}", response_model=WaterAnalysisResponse)
 def get_water_analysis(
     report_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت آنالیز آب یک گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -538,6 +574,7 @@ def get_water_analysis(
             detail=f"خطا در دریافت آنالیز آب: {str(e)}"
         )
 
+
 @water_analysis_router.put("/{analysis_id}", response_model=WaterAnalysisResponse)
 def update_water_analysis(
     analysis_id: int,
@@ -545,8 +582,8 @@ def update_water_analysis(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """به‌روزرسانی آنالیز آب"""
     try:
-        # استفاده از db.query به جای crud چون تابع get_by_id در crud وجود ندارد
         analysis = db.query(WaterAnalysis).filter(WaterAnalysis.id == analysis_id).first()
         if not analysis:
             raise HTTPException(
@@ -570,9 +607,284 @@ def update_water_analysis(
             detail=f"خطا در به‌روزرسانی آنالیز آب: {str(e)}"
         )
 
+
 # ============================================================
 # مسیرهای محاسبات (Calculations)
+# ⚠️ IMPORTANT: ترتیب endpoint ها بسیار مهم است!
+# endpoint های ثابت (بدون پارامتر) باید قبل از endpoint های پارامتری باشند
 # ============================================================
+
+# 🆕 APIهای محاسباتی جدید (ثابت - بدون پارامتر)
+@calculations_router.get("/home-summary", response_model=HomeSummaryResponse)
+def get_home_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """🆕 دریافت خلاصه داشبورد - تمام محاسبات در بک‌اند انجام می‌شود"""
+    try:
+        logger.info(f"Getting home summary for user {current_user.id}")
+        
+        # دریافت آخرین گزارش کاربر
+        reports = crud.get_reports_by_user(db, current_user.id, skip=0, limit=1)
+        if not reports:
+            return HomeSummaryResponse(
+                has_data=False,
+                message="هنوز گزارشی ایجاد نشده است"
+            )
+        
+        report = reports[0]
+        water_analysis = crud.get_water_analysis_by_report(db, report.id)
+        water_salinity = water_analysis.water_salinity if water_analysis else 0
+        calculation = crud.get_calculation_by_report(db, report.id)
+        
+        if not calculation:
+            return HomeSummaryResponse(
+                has_data=False,
+                message="هنوز محاسباتی انجام نشده است"
+            )
+        
+        target_values = calculation.target_values or {}
+        final_values = calculation.final_values or {}
+        reservoir_data = calculation.reservoir_data or {}
+        
+        # محاسبه تعادل یونی از طریق service
+        cation, anion, is_balanced = calculate_ion_balance(target_values, unit="ppm")
+        
+        # محاسبه آمار
+        active_elements_count = sum(1 for v in target_values.values() if v and v > 0)
+        total_elements = len(ELEMENTS)
+        
+        active_reservoirs_count = 0
+        if reservoir_data.get('A') and len(reservoir_data['A']) > 0:
+            active_reservoirs_count += 1
+        if reservoir_data.get('B') and len(reservoir_data['B']) > 0:
+            active_reservoirs_count += 1
+        if reservoir_data.get('C') and len(reservoir_data['C']) > 0:
+            active_reservoirs_count += 1
+        
+        # محاسبه مجموع هزینه
+        total_cost = 0
+        if calculation.calc_rows:
+            for row in calculation.calc_rows:
+                total_cost += row.get('cost', 0)
+        
+        # محاسبه مجموع وزن مخازن
+        total_reservoir_weight = 0
+        for reservoir_items in reservoir_data.values():
+            if isinstance(reservoir_items, list):
+                for item in reservoir_items:
+                    total_reservoir_weight += item.get('amount', 0)
+        
+        # تولید توصیه‌ها در بک‌اند
+        recommendations = []
+        
+        if not is_balanced:
+            diff = abs(cation - anion)
+            recommendations.append({
+                'type': 'danger',
+                'title': 'عدم تعادل یونی',
+                'description': f'اختلاف کاتیون و آنیون {diff:.2f} meq/L است.'
+            })
+        
+        deficient_elements = []
+        excessive_elements = []
+        
+        for element in ELEMENTS:
+            target = target_values.get(element, 0)
+            actual = final_values.get(element, 0)
+            if target == 0:
+                continue
+            
+            percent = (actual / target) * 100 if target > 0 else 0
+            if percent < 70:
+                deficient_elements.append(element)
+            elif percent > 130:
+                excessive_elements.append(element)
+        
+        if deficient_elements:
+            recommendations.append({
+                'type': 'warning',
+                'title': f'{len(deficient_elements)} عنصر با کمبود شدید',
+                'description': f'عناصر {", ".join(deficient_elements[:3])}{" و..." if len(deficient_elements) > 3 else ""} کمتر از 70% مقدار هدف هستند.'
+            })
+        
+        if excessive_elements:
+            recommendations.append({
+                'type': 'warning',
+                'title': f'{len(excessive_elements)} عنصر با بیش‌بود',
+                'description': f'عناصر {", ".join(excessive_elements[:3])}{" و..." if len(excessive_elements) > 3 else ""} بیشتر از 130% مقدار هدف هستند.'
+            })
+        
+        if water_salinity > 2.5:
+            recommendations.append({
+                'type': 'danger',
+                'title': 'شوری آب بالا',
+                'description': f'شوری آب {water_salinity:.2f} dS/m است. استفاده از منابع آب با کیفیت‌تر توصیه می‌شود.'
+            })
+        elif water_salinity > 1.5:
+            recommendations.append({
+                'type': 'warning',
+                'title': 'شوری آب متوسط',
+                'description': f'شوری آب {water_salinity:.2f} dS/m است. مراقب تجمع عناصر سمی باشید.'
+            })
+        
+        if not recommendations:
+            recommendations.append({
+                'type': 'success',
+                'title': 'وضعیت مطلوب',
+                'description': 'تمام پارامترها در محدوده مناسب قرار دارند.'
+            })
+        
+        # آماده‌سازی داده عناصر برای جدول
+        elements_data = []
+        for element in ELEMENTS:
+            target = target_values.get(element, 0)
+            actual = final_values.get(element, 0)
+            diff = actual - target
+            percent = (actual / target * 100) if target > 0 else 0
+            
+            elements_data.append({
+                'element': element,
+                'target': target,
+                'actual': actual,
+                'difference': diff,
+                'progress_percent': min(percent, 150)
+            })
+        
+        return HomeSummaryResponse(
+            has_data=True,
+            ion_balance={
+                'cation': cation,
+                'anion': anion,
+                'is_balanced': is_balanced,
+                'message': 'تعادل یونی برقرار است ✅' if is_balanced else 'تعادل یونی برقرار نیست ⚠️'
+            },
+            active_elements_count=active_elements_count,
+            total_elements=total_elements,
+            active_reservoirs_count=active_reservoirs_count,
+            total_cost=total_cost,
+            total_reservoir_weight=total_reservoir_weight,
+            reservoir_data=reservoir_data,
+            elements_data=elements_data,
+            recommendations=recommendations,
+            water_salinity=water_salinity
+        )
+    
+    except Exception as e:
+        logger.error(f"Error in get_home_summary: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در دریافت خلاصه: {str(e)}"
+        )
+
+
+@calculations_router.post("/calculate-ion-balance", response_model=IonBalanceResponse)
+def api_calculate_ion_balance(
+    data: IonBalanceRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """🆕 محاسبه تعادل یونی"""
+    try:
+        cation, anion, is_balanced = calculate_ion_balance(data.elements, unit=data.unit)
+        message = "تعادل یونی برقرار است ✅" if is_balanced else "تعادل یونی برقرار نیست ⚠️"
+        return IonBalanceResponse(
+            cation=cation,
+            anion=anion,
+            is_balanced=is_balanced,
+            message=message
+        )
+    except Exception as e:
+        logger.error(f"Error in calculate_ion_balance: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در محاسبه تعادل یونی: {str(e)}"
+        )
+
+
+@calculations_router.post("/calculate-final-solution", response_model=FinalSolutionResponse)
+def api_calculate_final_solution(
+    data: FinalSolutionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """🆕 محاسبه محلول نهایی"""
+    try:
+        final_values = calculate_final_solution(
+            target_values=data.target_values,
+            water_values=data.water_values,
+            fertilizer_contributions=data.fertilizer_contributions
+        )
+        cation, anion, is_balanced = calculate_ion_balance(final_values, unit="ppm")
+        return FinalSolutionResponse(
+            final_values=final_values,
+            ion_balance=IonBalanceResponse(
+                cation=cation,
+                anion=anion,
+                is_balanced=is_balanced,
+                message="متعادل" if is_balanced else "نامتعادل"
+            )
+        )
+    except Exception as e:
+        logger.error(f"Error in calculate_final_solution: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در محاسبه محلول نهایی: {str(e)}"
+        )
+
+
+@calculations_router.post("/calculate-reservoir", response_model=ReservoirResponse)
+def api_calculate_reservoir(
+    data: ReservoirRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """🆕 محاسبه توزیع مخازن"""
+    try:
+        reservoir_data = calculate_reservoir_data(data.fertilizers)
+        totals = {
+            'A': sum(item['amount'] for item in reservoir_data.get('A', [])),
+            'B': sum(item['amount'] for item in reservoir_data.get('B', [])),
+            'C': sum(item['amount'] for item in reservoir_data.get('C', []))
+        }
+        return ReservoirResponse(
+            reservoir_data=reservoir_data,
+            totals=totals
+        )
+    except Exception as e:
+        logger.error(f"Error in calculate_reservoir: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در محاسبه مخازن: {str(e)}"
+        )
+
+
+@calculations_router.post("/convert-unit", response_model=UnitConversionResponse)
+def api_convert_unit(
+    data: UnitConversionRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """🆕 تبدیل واحد"""
+    try:
+        converted_value = convert_units(
+            value=data.value,
+            from_unit=data.from_unit,
+            to_unit=data.to_unit,
+            element=data.element
+        )
+        return UnitConversionResponse(
+            original_value=data.value,
+            converted_value=converted_value,
+            from_unit=data.from_unit,
+            to_unit=data.to_unit,
+            element=data.element
+        )
+    except Exception as e:
+        logger.error(f"Error in convert_unit: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"خطا در تبدیل واحد: {str(e)}"
+        )
+
+
+# ⚠️ endpoint های پارامتری (با پارامتر) - باید بعد از endpoint های ثابت باشند
 @calculations_router.post("/{report_id}", response_model=CalculationResponse)
 def create_calculation(
     report_id: int,
@@ -580,6 +892,7 @@ def create_calculation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """ایجاد محاسبات برای یک گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -609,12 +922,14 @@ def create_calculation(
             detail=f"خطا در ایجاد محاسبات: {str(e)}"
         )
 
+
 @calculations_router.get("/{report_id}", response_model=CalculationResponse)
 def get_calculation(
     report_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """دریافت محاسبات یک گزارش"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -643,6 +958,7 @@ def get_calculation(
             detail=f"خطا در دریافت محاسبات: {str(e)}"
         )
 
+
 @calculations_router.put("/{calc_id}", response_model=CalculationResponse)
 def update_calculation(
     calc_id: int,
@@ -650,6 +966,7 @@ def update_calculation(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """به‌روزرسانی محاسبات"""
     try:
         calculation = db.query(Calculation).filter(Calculation.id == calc_id).first()
         if not calculation:
@@ -674,12 +991,14 @@ def update_calculation(
             detail=f"خطا در به‌روزرسانی محاسبات: {str(e)}"
         )
 
+
 @calculations_router.post("/{report_id}/calculate", response_model=InterpretationResponse)
 def calculate_and_interpret(
     report_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    """تولید تفسیر کامل"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -730,6 +1049,7 @@ def calculate_and_interpret(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در تولید تفسیر: {str(e)}"
         )
+
 
 # ============================================================
 # افزودن همه Routerها به Router اصلی

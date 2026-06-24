@@ -15,12 +15,12 @@
             استفاده از آب (درصد) <span class="text-danger-500">*</span>
           </label>
           <div class="relative">
-            <input 
-              type="number" 
-              :value="waterPercentage" 
+            <input
+              type="number"
+              :value="waterPercentage"
               @input="updateWaterPercentage($event)"
-              min="0" 
-              max="100" 
+              min="0"
+              max="100"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">%</span>
@@ -31,12 +31,12 @@
             استفاده از پساب (درصد) <span class="text-danger-500">*</span>
           </label>
           <div class="relative">
-            <input 
-              type="number" 
-              :value="wastewaterPercentage" 
+            <input
+              type="number"
+              :value="wastewaterPercentage"
               @input="updateWastewaterPercentage($event)"
-              min="0" 
-              max="100" 
+              min="0"
+              max="100"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
             />
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-sm">%</span>
@@ -47,17 +47,17 @@
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             شوری آب (EC)
           </label>
-          <input 
-            type="number" 
-            :value="waterSalinity" 
+          <input
+            type="number"
+            :value="waterSalinity"
             @input="updateWaterSalinity($event)"
-            step="0.01" 
+            step="0.01"
             min="0"
             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
         </div>
       </div>
-      
+
       <!-- هشدار مجموع درصد -->
       <div v-if="totalPercentage !== 100" class="mt-3 bg-yellow-50 dark:bg-yellow-900/20 border-r-4 border-yellow-500 rounded-lg p-3">
         <p class="text-yellow-700 dark:text-yellow-400 text-sm flex items-center gap-2">
@@ -75,9 +75,8 @@
         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">مقادیر آنالیز آب و پساب</h3>
         <div class="flex items-center gap-2">
           <label class="text-sm text-gray-600 dark:text-gray-400">واحد:</label>
-          <select 
-            :value="analysisUnit" 
-            @change="updateAnalysisUnit($event)"
+          <select
+            v-model="analysisUnit"
             class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500"
           >
             <option value="ppm">PPM/L</option>
@@ -105,11 +104,11 @@
                 پساب
               </td>
               <td v-for="el in waterElements" :key="'waste-'+el" class="px-2 py-1 border border-gray-200 dark:border-gray-600 text-center">
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   :value="getWastewaterValue(el)"
                   @input="updateWastewaterValue(el, $event)"
-                  step="0.01" 
+                  step="0.01"
                   min="0"
                   class="w-full max-w-[70px] px-1.5 py-1 text-center bg-transparent border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 rounded transition-all duration-200"
                   placeholder="۰"
@@ -121,11 +120,11 @@
                 آب
               </td>
               <td v-for="el in waterElements" :key="'water-'+el" class="px-2 py-1 border border-gray-200 dark:border-gray-600 text-center">
-                <input 
-                  type="number" 
+                <input
+                  type="number"
                   :value="getWaterValue(el)"
                   @input="updateWaterValue(el, $event)"
-                  step="0.01" 
+                  step="0.01"
                   min="0"
                   class="w-full max-w-[70px] px-1.5 py-1 text-center bg-transparent border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 rounded transition-all duration-200"
                   placeholder="۰"
@@ -146,8 +145,8 @@
 
       <!-- دکمه‌های اقدام -->
       <div class="flex flex-wrap gap-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <button 
-          @click="saveWaterAnalysis" 
+        <button
+          @click="saveWaterAnalysis"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
           :disabled="totalPercentage !== 100"
         >
@@ -156,14 +155,14 @@
           </svg>
           ذخیره آنالیز آب
         </button>
-        <button 
-          @click="resetWaterAnalysis" 
+        <button
+          @click="resetWaterAnalysis"
           class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
         >
           بازنشانی
         </button>
-        <button 
-          @click="loadSampleWaterAnalysis" 
+        <button
+          @click="loadSampleWaterAnalysis"
           class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors"
         >
           📥 بارگذاری نمونه
@@ -193,6 +192,7 @@ const waterStore = useWaterStore();
 // ===== State =====
 const saveSuccess = ref(false);
 const waterElements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'EC', 'pH'];
+const analysisUnit = ref('ppm');
 
 // ===== Computed =====
 const waterPercentage = computed({
@@ -210,8 +210,6 @@ const waterSalinity = computed({
   set: (val: number) => waterStore.setWaterMix({ waterSalinity: val })
 });
 
-const analysisUnit = ref('ppm');
-
 const totalPercentage = computed(() => {
   return (waterPercentage.value || 0) + (wastewaterPercentage.value || 0);
 });
@@ -225,6 +223,10 @@ const getWaterValue = (element: string): number => {
   return (waterStore.waterValues as any)[element] || 0;
 };
 
+/**
+ * 🎯 محاسبه مقادیر تامینی
+ * این محاسبه ساده است (ضرب و جمع) و در فرانت‌اند انجام می‌شود
+ */
 const getFinalValue = (element: string): string => {
   if (element === 'EC' || element === 'pH') return '-';
   const waterPct = (waterPercentage.value || 0) / 100;
@@ -250,11 +252,6 @@ const updateWaterSalinity = (event: Event) => {
   waterSalinity.value = parseFloat(target.value) || 0;
 };
 
-const updateAnalysisUnit = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  analysisUnit.value = target.value;
-};
-
 const updateWastewaterValue = (element: string, event: Event) => {
   const target = event.target as HTMLInputElement;
   const value = parseFloat(target.value) || 0;
@@ -272,12 +269,10 @@ const saveWaterAnalysis = () => {
     alert('مجموع درصد آب و پساب باید برابر ۱۰۰ باشد.');
     return;
   }
-  
   saveSuccess.value = true;
   setTimeout(() => {
     saveSuccess.value = false;
   }, 3000);
-  
   console.log('آنالیز آب ذخیره شد:', {
     waterPercentage: waterPercentage.value,
     wastewaterPercentage: wastewaterPercentage.value,
@@ -295,7 +290,7 @@ const loadSampleWaterAnalysis = () => {
   waterPercentage.value = 80;
   wastewaterPercentage.value = 20;
   waterSalinity.value = 1.2;
-  
+
   const sampleWastewater: Record<string, number> = {
     'N-NO3': 20,
     'P': 5,
@@ -310,7 +305,7 @@ const loadSampleWaterAnalysis = () => {
     'Cu': 0.01,
     'Mo': 0.005
   };
-  
+
   const sampleWater: Record<string, number> = {
     'N-NO3': 10,
     'P': 2,
@@ -325,15 +320,15 @@ const loadSampleWaterAnalysis = () => {
     'Cu': 0.005,
     'Mo': 0.002
   };
-  
+
   for (const [key, value] of Object.entries(sampleWastewater)) {
     waterStore.setWastewaterValue(key, value);
   }
-  
+
   for (const [key, value] of Object.entries(sampleWater)) {
     waterStore.setWaterValue(key, value);
   }
-  
+
   saveSuccess.value = true;
   setTimeout(() => {
     saveSuccess.value = false;
@@ -345,7 +340,6 @@ const loadSampleWaterAnalysis = () => {
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out;
 }
-
 @keyframes fadeIn {
   from {
     opacity: 0;

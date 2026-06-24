@@ -1,26 +1,13 @@
 // frontend/src/store/modules/calcStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { CalculationRow, CalculationInputs, ElementName, ReservoirData, ReservoirItem } from '@/types';
+import type { CalculationRow, CalculationInputs, ElementName, ReservoirData } from '@/types';
 import { apiService } from '@/services/apiService';
 
 const ELEMENTS: ElementName[] = [
-  'N-NO3' as ElementName,
-  'P' as ElementName,
-  'S' as ElementName,
-  'N-NH4' as ElementName,
-  'K' as ElementName,
-  'Ca' as ElementName,
-  'Mg' as ElementName,
-  'Na' as ElementName,
-  'Cl' as ElementName,
-  'Fe' as ElementName,
-  'Mn' as ElementName,
-  'Zn' as ElementName,
-  'B' as ElementName,
-  'Cu' as ElementName,
-  'Mo' as ElementName
-];
+  'N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl',
+  'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'
+] as ElementName[];
 
 export const useCalcStore = defineStore('calc', () => {
   // ===== State =====
@@ -34,12 +21,9 @@ export const useCalcStore = defineStore('calc', () => {
   const isLoading = ref(false);
   const currentReportId = ref<string | null>(null);
   const reservoirData = ref<ReservoirData>({ A: [], B: [], C: [] });
+  const totalCost = ref(0);
 
   // ===== Getters =====
-  const totalCost = computed(() => {
-    return calculationRows.value.reduce((sum: number, row: CalculationRow) => sum + (row.cost || 0), 0);
-  });
-
   const elementTotals = computed(() => {
     const totals: Partial<Record<ElementName, number>> = {};
     for (const element of ELEMENTS) {
@@ -62,7 +46,6 @@ export const useCalcStore = defineStore('calc', () => {
 
   // ===== Actions =====
 
-  // مقداردهی اولیه ردیف‌های ثابت (اسیدها)
   function initializeFixedRows() {
     const fixedRows: CalculationRow[] = [
       {
@@ -102,7 +85,6 @@ export const useCalcStore = defineStore('calc', () => {
     calculationRows.value = [...fixedRows];
   }
 
-  // افزودن ردیف محاسبه
   function addCalculationRow(fertilizerName: string, elements: Partial<Record<ElementName, number>>, fertilizerId?: string) {
     const newRow: CalculationRow = {
       id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -119,13 +101,10 @@ export const useCalcStore = defineStore('calc', () => {
     return newRow;
   }
 
-  // به‌روزرسانی ردیف محاسبه
   function updateCalculationRow(id: string, data: Partial<Omit<CalculationRow, 'id' | 'isFixedRow'>>) {
     const index = calculationRows.value.findIndex((row: CalculationRow) => row.id === id);
     if (index !== -1) {
       const row = calculationRows.value[index];
-      
-      // به‌روزرسانی فیلدها
       if (data.weight !== undefined) row.weight = data.weight;
       if (data.purity !== undefined) row.purity = data.purity;
       if (data.materialName !== undefined) row.materialName = data.materialName;
@@ -133,28 +112,12 @@ export const useCalcStore = defineStore('calc', () => {
       if (data.elements !== undefined) row.elements = data.elements;
       if (data.isAcid !== undefined) row.isAcid = data.isAcid;
       if (data.acidType !== undefined) row.acidType = data.acidType;
-      
-      // اگر وزن یا خلوص تغییر کرد، هزینه و عناصر را مجدداً محاسبه کن
-      if (row.weight && row.weight > 0 && row.purity && row.purity > 0) {
-        // محاسبه سهم عناصر
-        if (row.elements) {
-          const newElements: Partial<Record<ElementName, number>> = {};
-          for (const [element, percentage] of Object.entries(row.elements)) {
-            if (percentage) {
-              newElements[element as ElementName] = (row.weight * (percentage / 100) * (row.purity / 100));
-            }
-          }
-          row.elements = newElements;
-        }
-      }
-      
       calculationRows.value[index] = row;
       return true;
     }
     return false;
   }
 
-  // حذف ردیف محاسبه
   function removeCalculationRow(id: string) {
     const index = calculationRows.value.findIndex((row: CalculationRow) => row.id === id);
     if (index !== -1 && !calculationRows.value[index].isFixedRow) {
@@ -164,11 +127,9 @@ export const useCalcStore = defineStore('calc', () => {
     return false;
   }
 
-  // به‌روزرسانی ورودی‌های محاسبه
   function updateCalculationInputs(inputs: Partial<CalculationInputs>) {
     const newTankVolume = inputs.tankVolume !== undefined ? inputs.tankVolume : calculationInputs.value.tankVolume;
     const newDilutionFactor = inputs.dilutionFactor !== undefined ? inputs.dilutionFactor : calculationInputs.value.dilutionFactor;
-    
     calculationInputs.value = {
       tankVolume: newTankVolume,
       dilutionFactor: newDilutionFactor,
@@ -176,51 +137,51 @@ export const useCalcStore = defineStore('calc', () => {
     };
   }
 
-  // محاسبه واقعی مخازن
-  function calculateReservoirData(): ReservoirData {
-    const result: ReservoirData = { A: [], B: [], C: [] };
-    
-    for (const row of calculationRows.value) {
-      if (!row.weight || row.weight <= 0) continue;
-      
-      const item: ReservoirItem = { 
-        name: row.materialName, 
-        amount: row.weight,
-        purity: row.purity
-      };
-      
-      // اسیدها به مخزن C
-      if (row.isAcid) {
-        result.C.push(item);
-      }
-      // کودهای کلسیم دار به مخزن A
-      else if (row.materialName.includes('Ca') || 
-               row.materialName.includes('کلسیم') ||
-               row.materialName.includes('Calcium')) {
-        result.A.push(item);
-      }
-      // بقیه به مخزن B
-      else {
-        result.B.push(item);
-      }
+  /**
+   * 🎯 محاسبه مخازن از طریق API بک‌اند
+   */
+  async function calculateReservoirDataFromAPI(): Promise<ReservoirData | null> {
+    isLoading.value = true;
+    try {
+      const fertilizers = calculationRows.value
+        .filter(row => row.weight && row.weight > 0)
+        .map(row => ({
+          fertilizer: {
+            name: row.materialName,
+            is_acid: row.isAcid || false
+          },
+          weight: row.weight,
+          purity: row.purity
+        }));
+
+      const result = await apiService.calculateReservoir({ fertilizers });
+      reservoirData.value = result.reservoir_data;
+      return result.reservoir_data;
+    } catch (error) {
+      console.error('Error calculating reservoir data:', error);
+      errorMessages.value.push('خطا در محاسبه مخازن');
+      return null;
+    } finally {
+      isLoading.value = false;
     }
-    
-    reservoirData.value = result;
-    return result;
   }
 
-  // محاسبه کامل و ذخیره در دیتابیس
+  /**
+   * 🎯 محاسبه کامل و ذخیره در دیتابیس
+   */
   async function calculateAndSave(reportId: string): Promise<any> {
     isLoading.value = true;
     errorMessages.value = [];
-    
     try {
-      // محاسبه مخازن
-      const reservoir = calculateReservoirData();
-      
-      // آماده‌سازی داده برای ارسال به بک‌اند
+      const reservoir = await calculateReservoirDataFromAPI();
+      if (!reservoir) {
+        throw new Error('خطا در محاسبه مخازن');
+      }
+
+      totalCost.value = calculationRows.value.reduce((sum, row) => sum + (row.cost || 0), 0);
+
       const calcData = {
-        target_values: {}, // از targetStore گرفته می‌شود
+        target_values: {},
         final_values: elementTotals.value,
         reservoir_data: reservoir,
         calc_rows: calculationRows.value.map((row: CalculationRow) => ({
@@ -234,15 +195,12 @@ export const useCalcStore = defineStore('calc', () => {
           is_fixed: row.isFixedRow || false
         }))
       };
-      
-      // ارسال به بک‌اند
+
       const result = await apiService.createCalculation(reportId, calcData);
-      
       if (result) {
         currentReportId.value = reportId;
         return result;
       }
-      
       errorMessages.value.push('خطا در ذخیره محاسبات');
       return null;
     } catch (err: any) {
@@ -254,16 +212,12 @@ export const useCalcStore = defineStore('calc', () => {
     }
   }
 
-  // بارگذاری محاسبات از دیتابیس
   async function loadCalculation(reportId: string): Promise<boolean> {
     isLoading.value = true;
     errorMessages.value = [];
-    
     try {
       const data = await apiService.getCalculation(reportId);
-      
       if (data) {
-        // بازیابی ردیف‌ها
         if (data.calc_rows && Array.isArray(data.calc_rows)) {
           calculationRows.value = data.calc_rows.map((row: any) => ({
             id: row.id || `row-${Date.now()}-${Math.random()}`,
@@ -277,12 +231,9 @@ export const useCalcStore = defineStore('calc', () => {
             isFixedRow: row.is_fixed || row.isFixedRow || false
           }));
         }
-        
-        // بازیابی مخازن
         if (data.reservoir_data) {
           reservoirData.value = data.reservoir_data;
         }
-        
         currentReportId.value = reportId;
         return true;
       }
@@ -296,7 +247,6 @@ export const useCalcStore = defineStore('calc', () => {
     }
   }
 
-  // بازنشانی کامل
   function resetCalculation() {
     calculationRows.value = [];
     errorMessages.value = [];
@@ -307,17 +257,16 @@ export const useCalcStore = defineStore('calc', () => {
       totalLiter: 1000
     };
     currentReportId.value = null;
+    totalCost.value = 0;
     initializeFixedRows();
   }
 
-  // افزودن خطا
   function addError(message: string) {
     if (!errorMessages.value.includes(message)) {
       errorMessages.value.push(message);
     }
   }
 
-  // حذف خطا
   function removeError(message: string) {
     const index = errorMessages.value.indexOf(message);
     if (index !== -1) {
@@ -325,7 +274,6 @@ export const useCalcStore = defineStore('calc', () => {
     }
   }
 
-  // پاک کردن خطاها
   function clearErrors() {
     errorMessages.value = [];
   }
@@ -334,28 +282,23 @@ export const useCalcStore = defineStore('calc', () => {
   initializeFixedRows();
 
   return {
-    // State
     calculationRows,
     calculationInputs,
     errorMessages,
     isLoading,
     currentReportId,
     reservoirData,
-    
-    // Getters
     totalCost,
     elementTotals,
     hasErrors,
     fixedRows,
     dynamicRows,
-    
-    // Actions
     initializeFixedRows,
     addCalculationRow,
     updateCalculationRow,
     removeCalculationRow,
     updateCalculationInputs,
-    calculateReservoirData,
+    calculateReservoirDataFromAPI,
     calculateAndSave,
     loadCalculation,
     addError,
@@ -365,4 +308,5 @@ export const useCalcStore = defineStore('calc', () => {
   };
 });
 
+// ✅ اضافه کردن export default
 export default useCalcStore;

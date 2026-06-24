@@ -12,10 +12,10 @@
       <div class="flex flex-wrap gap-4 items-end">
         <div class="flex-1 min-w-[200px]">
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">انتخاب کود</label>
-          <select 
-            :value="selectedFertilizers" 
+          <select
+            :value="selectedFertilizers"
             @change="updateSelectedFertilizers($event)"
-            multiple 
+            multiple
             class="w-full min-h-[80px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           >
             <option v-for="f in fertilizers" :key="f.id" :value="f.id">
@@ -24,8 +24,8 @@
           </select>
           <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">برای انتخاب چند کود، کلید Ctrl را نگه دارید</p>
         </div>
-        <button 
-          @click="addFertilizersToCalc" 
+        <button
+          @click="addFertilizersToCalc"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors h-[42px] flex items-center gap-2"
           :disabled="selectedFertilizers.length === 0"
         >
@@ -39,32 +39,32 @@
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">حجم مخزن (لیتر)</label>
-          <input 
-            type="number" 
-            :value="tankVolume" 
+          <input
+            type="number"
+            :value="tankVolume"
             @input="updateTankVolume($event)"
-            min="1" 
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" 
+            min="1"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ضریب رقیق‌سازی</label>
-          <input 
-            type="number" 
-            :value="dilutionFactor" 
+          <input
+            type="number"
+            :value="dilutionFactor"
             @input="updateDilutionFactor($event)"
-            step="0.1" 
-            min="0.1" 
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" 
+            step="0.1"
+            min="0.1"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مجموع (لیتر)</label>
-          <input 
-            type="text" 
-            :value="totalLiter" 
-            disabled 
-            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed" 
+          <input
+            type="text"
+            :value="totalLiter"
+            disabled
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed"
           />
         </div>
       </div>
@@ -94,24 +94,24 @@
                 <span v-if="row.isFixedRow" class="text-xs text-gray-400 dark:text-gray-500 block">(ثابت)</span>
               </td>
               <td class="px-2 py-1 border border-gray-100 dark:border-gray-700 text-center">
-                <input 
-                  type="number" 
-                  :value="row.weight" 
+                <input
+                  type="number"
+                  :value="row.weight"
                   @input="updateRowWeight(row.id, $event)"
-                  step="0.001" 
+                  step="0.001"
                   min="0"
-                  class="w-full max-w-[70px] px-1 py-0.5 text-center bg-transparent border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 rounded transition-all duration-200" 
+                  class="w-full max-w-[70px] px-1 py-0.5 text-center bg-transparent border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 rounded transition-all duration-200"
                 />
               </td>
               <td class="px-2 py-1 border border-gray-100 dark:border-gray-700 text-center">
-                <input 
-                  type="number" 
-                  :value="row.purity" 
+                <input
+                  type="number"
+                  :value="row.purity"
                   @input="updateRowPurity(row.id, $event)"
-                  step="0.1" 
-                  min="0" 
-                  max="100" 
-                  class="w-full max-w-[70px] px-1 py-0.5 text-center bg-transparent border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 rounded transition-all duration-200" 
+                  step="0.1"
+                  min="0"
+                  max="100"
+                  class="w-full max-w-[70px] px-1 py-0.5 text-center bg-transparent border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 rounded transition-all duration-200"
                 />
               </td>
               <td class="px-2 py-1 border border-gray-100 dark:border-gray-700 text-center font-mono">
@@ -121,9 +121,9 @@
                 {{ row.elements && row.elements[el] ? Number(row.elements[el]).toFixed(3) : '0.000' }}
               </td>
               <td class="px-2 py-1 border border-gray-100 dark:border-gray-700 text-center">
-                <button 
-                  v-if="!row.isFixedRow" 
-                  @click="removeCalcRow(row.id)" 
+                <button
+                  v-if="!row.isFixedRow"
+                  @click="removeCalcRow(row.id)"
                   class="text-danger-600 hover:text-danger-800 dark:text-danger-400 dark:hover:text-danger-300 transition-colors text-sm"
                   title="حذف"
                 >
@@ -147,24 +147,28 @@
 
     <!-- دکمه‌های اقدام -->
     <div class="flex flex-wrap gap-3">
-      <button 
-        @click="calculateFertilizer" 
-        class="px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors flex items-center gap-2"
-        :disabled="calcRows.length === 0"
+      <button
+        @click="calculateFertilizer"
+        :disabled="isCalculating || calcRows.length === 0"
+        class="px-4 py-2 bg-success-600 text-white rounded-lg hover:bg-success-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg v-if="!isCalculating" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
         </svg>
-        محاسبه
+        <svg v-else class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        {{ isCalculating ? 'در حال محاسبه...' : 'محاسبه' }}
       </button>
-      <button 
-        @click="resetFertilizerCalc" 
+      <button
+        @click="resetFertilizerCalc"
         class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
       >
         بازنشانی
       </button>
-      <button 
-        @click="printReport" 
+      <button
+        @click="printReport"
         class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors"
       >
         🖨️ چاپ
@@ -192,8 +196,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useCalcStore } from '@/store/modules/calcStore';
+import { useCalculations } from '@/composables/useCalculations';
 
 // ===== Props =====
 const props = defineProps<{
@@ -214,15 +219,15 @@ const emit = defineEmits<{
   (e: 'update:calcErrors', value: string[]): void;
 }>();
 
-// ===== Store =====
+// ===== Store & Composables =====
 const calcStore = useCalcStore();
+const { calculateReservoir, isCalculating } = useCalculations();
 
 // ===== Data =====
 const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
 // ===== Computed =====
 const totalLiter = computed(() => props.tankVolume * props.dilutionFactor);
-
 const totalCost = computed(() => {
   return props.calcRows.reduce((sum: number, row: any) => sum + (row.cost || 0), 0);
 });
@@ -247,11 +252,10 @@ const updateDilutionFactor = (event: Event) => {
 const updateRowWeight = (id: string, event: Event) => {
   const target = event.target as HTMLInputElement;
   const value = parseFloat(target.value) || 0;
-  
   const newRows = props.calcRows.map((row: any) => {
     if (row.id === id) {
       const updatedRow = { ...row, weight: value };
-      // محاسبه مجدد سهم عناصر
+      // محاسبه ساده سهم عناصر (ضرب و تقسیم)
       if (updatedRow.elements) {
         const newElements: Record<string, number> = {};
         for (const [el, pct] of Object.entries(updatedRow.elements)) {
@@ -261,7 +265,7 @@ const updateRowWeight = (id: string, event: Event) => {
         }
         updatedRow.elements = newElements;
       }
-      // محاسبه هزینه
+      // محاسبه ساده هزینه
       const fertilizer = props.fertilizers.find((f: any) => f.name === updatedRow.materialName);
       if (fertilizer) {
         updatedRow.cost = (value / 1000) * fertilizer.pricePerKg;
@@ -270,18 +274,16 @@ const updateRowWeight = (id: string, event: Event) => {
     }
     return row;
   });
-  
   emit('update:calcRows', newRows);
 };
 
 const updateRowPurity = (id: string, event: Event) => {
   const target = event.target as HTMLInputElement;
   const value = parseFloat(target.value) || 0;
-  
   const newRows = props.calcRows.map((row: any) => {
     if (row.id === id) {
       const updatedRow = { ...row, purity: value };
-      // محاسبه مجدد سهم عناصر
+      // محاسبه ساده سهم عناصر
       if (updatedRow.elements && updatedRow.weight) {
         const newElements: Record<string, number> = {};
         for (const [el, pct] of Object.entries(updatedRow.elements)) {
@@ -295,13 +297,11 @@ const updateRowPurity = (id: string, event: Event) => {
     }
     return row;
   });
-  
   emit('update:calcRows', newRows);
 };
 
 const addFertilizersToCalc = () => {
   const selected = props.fertilizers.filter((f: any) => props.selectedFertilizers.includes(f.id));
-  
   const newRows = selected.map((f: any) => ({
     id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     materialName: f.name,
@@ -314,7 +314,6 @@ const addFertilizersToCalc = () => {
     isFixedRow: false,
     fertilizerId: f.id
   }));
-  
   emit('update:calcRows', [...props.calcRows, ...newRows]);
   emit('update:selectedFertilizers', []);
 };
@@ -323,7 +322,10 @@ const removeCalcRow = (id: string) => {
   emit('update:calcRows', props.calcRows.filter((r: any) => r.id !== id));
 };
 
-const calculateFertilizer = () => {
+/**
+ * 🎯 محاسبه نهایی - توزیع مخازن از طریق API بک‌اند
+ */
+const calculateFertilizer = async () => {
   const errors: string[] = [];
   const newRows = props.calcRows.map((row: any) => {
     if (!row.isFixedRow) {
@@ -333,16 +335,14 @@ const calculateFertilizer = () => {
       if (!row.purity || row.purity <= 0 || row.purity > 100) {
         errors.push(`خلوص کود "${row.materialName}" باید بین 1 تا 100 باشد`);
       }
-      
-      // محاسبه هزینه
+      // محاسبه ساده هزینه
       if (row.weight && row.weight > 0) {
         const fertilizer = props.fertilizers.find((f: any) => f.name === row.materialName);
         if (fertilizer) {
           row.cost = (row.weight / 1000) * fertilizer.pricePerKg;
         }
       }
-      
-      // محاسبه سهم عناصر
+      // محاسبه ساده سهم عناصر
       if (row.elements && row.weight && row.purity) {
         const newElements: Record<string, number> = {};
         for (const [el, pct] of Object.entries(row.elements)) {
@@ -355,54 +355,69 @@ const calculateFertilizer = () => {
     }
     return row;
   });
-  
+
   emit('update:calcRows', newRows);
   emit('update:calcErrors', errors);
-  
+
   if (errors.length === 0) {
     // ذخیره در calcStore
     calcStore.calculationRows = newRows;
-    calcStore.calculateReservoirData();
+    
+    // 🆕 محاسبه مخازن از طریق API بک‌اند
+    const fertilizers = newRows
+      .filter(row => row.weight && row.weight > 0)
+      .map(row => ({
+        fertilizer: {
+          name: row.materialName,
+          is_acid: row.isAcid || false
+        },
+        weight: row.weight,
+        purity: row.purity
+      }));
+
+    const reservoirResult = await calculateReservoir(fertilizers);
+    if (reservoirResult) {
+      calcStore.reservoirData = reservoirResult.reservoir_data;
+    }
   }
 };
 
 const resetFertilizerCalc = () => {
   const fixedRows = [
-    { 
-      id: 'fixed-h3po4', 
-      materialName: 'H3PO4', 
-      weight: 0, 
-      purity: 85, 
-      cost: 0, 
-      elements: {}, 
-      isAcid: true, 
-      acidType: 'H3PO4', 
-      isFixedRow: true 
+    {
+      id: 'fixed-h3po4',
+      materialName: 'H3PO4',
+      weight: 0,
+      purity: 85,
+      cost: 0,
+      elements: {},
+      isAcid: true,
+      acidType: 'H3PO4',
+      isFixedRow: true
     },
-    { 
-      id: 'fixed-hno3', 
-      materialName: 'HNO3', 
-      weight: 0, 
-      purity: 65, 
-      cost: 0, 
-      elements: {}, 
-      isAcid: true, 
-      acidType: 'HNO3', 
-      isFixedRow: true 
+    {
+      id: 'fixed-hno3',
+      materialName: 'HNO3',
+      weight: 0,
+      purity: 65,
+      cost: 0,
+      elements: {},
+      isAcid: true,
+      acidType: 'HNO3',
+      isFixedRow: true
     },
-    { 
-      id: 'fixed-h2so4', 
-      materialName: 'H2SO4', 
-      weight: 0, 
-      purity: 98, 
-      cost: 0, 
-      elements: {}, 
-      isAcid: true, 
-      acidType: 'H2SO4', 
-      isFixedRow: true 
+    {
+      id: 'fixed-h2so4',
+      materialName: 'H2SO4',
+      weight: 0,
+      purity: 98,
+      cost: 0,
+      elements: {},
+      isAcid: true,
+      acidType: 'H2SO4',
+      isFixedRow: true
     }
   ];
-  
   emit('update:calcRows', fixedRows);
   emit('update:calcErrors', []);
   emit('update:tankVolume', 1000);
@@ -414,3 +429,17 @@ const printReport = () => {
   window.print();
 };
 </script>
+
+<style scoped>
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
