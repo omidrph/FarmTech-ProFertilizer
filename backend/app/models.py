@@ -221,3 +221,36 @@ class Recipe(Base):
     
     def __repr__(self):
         return f"<Recipe {self.name}>"
+    
+# ============================================================
+# 🆕 مدل WaterAnalysisTemplate (قالب آنالیز آب کاربر)
+# ============================================================
+class WaterAnalysisTemplate(Base):
+    """مدل قالب‌های آنالیز آب کاربر (برای ذخیره و استفاده مجدد)"""
+    __tablename__ = "water_analysis_templates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)  # نام قالب (مثلاً: "آب چاه شماره ۱")
+    description = Column(Text, nullable=True)  # توضیحات
+    
+    # مقادیر آنالیز
+    water_percentage = Column(Float, default=100.0)
+    wastewater_percentage = Column(Float, default=0.0)
+    water_salinity = Column(Float, default=0.8)  # EC
+    water_salinity_unit = Column(String(10), default='dS/m')  # واحد EC
+    water_ph = Column(Float, nullable=True)  # pH آب
+    
+    # مقادیر عناصر
+    water_values = Column(JSON, nullable=True)  # {"N-NO3": 10, "P": 2, ...}
+    wastewater_values = Column(JSON, nullable=True)  # {"N-NO3": 20, "P": 5, ...}
+    
+    # تاریخ‌ها
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # ===== روابط =====
+    user = relationship("User", backref="water_templates")
+    
+    def __repr__(self):
+        return f"<WaterAnalysisTemplate {self.name}>"

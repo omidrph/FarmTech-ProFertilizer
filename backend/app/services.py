@@ -1,18 +1,14 @@
 # backend/app/services.py
 """منطق کسب‌وکار و محاسبات تخصصی نرم‌افزار تغذیه سبز"""
-
 import math
 from typing import Dict, List, Any, Optional, Tuple
 from sqlalchemy.orm import Session
-
 from app.models import User, Report, Fertilizer
 from app.schemas import InterpretationResponse, IonBalanceResponse, ElementStatusResponse
-
 
 # ============================================================
 # لیست عناصر و ثابت‌های محاسباتی
 # ============================================================
-
 ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo']
 
 # وزن مولکولی عناصر (برای تبدیل واحدها)
@@ -53,11 +49,112 @@ VALENCES = {
     'Mo': 2
 }
 
+# ============================================================
+# 🆕 ثابت‌های استاندارد EC (واحد پیش‌فرض: dS/m)
+# ============================================================
+EC_STANDARDS = {
+    # حداقل مقدار معتبر EC
+    'MIN_VALID_EC': 0.1,
+    # مقدار پیش‌فرض منطقی برای آب طبیعی
+    'DEFAULT_EC': 0.8,
+    # محدوده‌های استاندارد (دقیق‌تر)
+    'RANGES': [
+        {'min': 0, 'max': 0.75, 'level': 'excellent', 'label': 'عالی', 'color': 'success', 'description': 'مناسب برای همه گیاهان'},
+        {'min': 0.75, 'max': 2.0, 'level': 'good', 'label': 'قابل قبول', 'color': 'warning', 'description': 'نیاز به بررسی نوع گیاه'},
+        {'min': 2.0, 'max': 3.0, 'level': 'moderate', 'label': 'نیاز به توجه', 'color': 'warning', 'description': 'فقط گیاهان مقاوم به شوری'},
+        {'min': 3.0, 'max': float('inf'), 'level': 'critical', 'label': 'بحرانی', 'color': 'danger', 'description': 'نامناسب برای آبیاری'}
+    ]
+}
+
+# ============================================================
+# 🆕 توابع تبدیل واحد EC
+# ============================================================
+def convert_ec_unit(value: float, from_unit: str, to_unit: str) -> float:
+    """
+    تبدیل واحد EC
+    واحدها: dS/m, mS/cm, μS/cm
+    
+    روابط:
+    - 1 dS/m = 1 mS/cm
+    - 1 dS/m = 1000 μS/cm
+    """
+    if from_unit == to_unit:
+        return value
+    
+    # ابتدا به dS/m تبدیل می‌کنیم
+    if from_unit == 'dS/m':
+        ds_value = value
+    elif from_unit == 'mS/cm':
+        ds_value = value  # 1 mS/cm = 1 dS/m
+    elif from_unit == 'μS/cm':
+        ds_value = value / 1000
+    else:
+        return value
+    
+    # سپس به واحد مقصد تبدیل می‌کنیم
+    if to_unit == 'dS/m':
+        return ds_value
+    elif to_unit == 'mS/cm':
+        return ds_value  # 1 dS/m = 1 mS/cm
+    elif to_unit == 'μS/cm':
+        return ds_value * 1000
+    else:
+        return value
+
+def calculate_tds(ec_ds: float) -> float:
+    """
+    محاسبه TDS از روی EC
+    فرمول: TDS (mg/L) ≈ EC (dS/m) × 640
+    
+    Args:
+        ec_ds: مقدار EC بر حسب dS/m
+    
+    Returns:
+        مقدار TDS بر حسب mg/L
+    """
+    return ec_ds * 640
+
+def get_ec_status(ec_value: float, unit: str = 'dS/m') -> Dict[str, Any]:
+    """
+    دریافت وضعیت EC بر اساس مقدار
+    
+    Args:
+        ec_value: مقدار EC
+        unit: واحد EC
+    
+    Returns:
+        Dict با اطلاعات وضعیت
+    """
+    # تبدیل به dS/m برای مقایسه
+    ec_ds = convert_ec_unit(ec_value, unit, 'dS/m')
+    
+    if ec_ds <= 0:
+        return {
+            'level': 'invalid',
+            'label': 'نامعتبر',
+            'description': 'EC نمی‌تواند صفر باشد',
+            'color': 'danger'
+        }
+    
+    for range_info in EC_STANDARDS['RANGES']:
+        if ec_ds >= range_info['min'] and ec_ds < range_info['max']:
+            return {
+                'level': range_info['level'],
+                'label': range_info['label'],
+                'description': range_info['description'],
+                'color': range_info['color']
+            }
+    
+    return {
+        'level': 'critical',
+        'label': 'بحرانی',
+        'description': 'نامناسب برای آبیاری',
+        'color': 'danger'
+    }
 
 # ============================================================
 # توابع تبدیل واحدها
 # ============================================================
-
 def ppm_to_meq(ppm: float, element: str) -> float:
     """تبدیل PPM به MEQ/L"""
     mw = MOLECULAR_WEIGHTS.get(element, 0)
@@ -65,7 +162,6 @@ def ppm_to_meq(ppm: float, element: str) -> float:
     if mw == 0 or valence == 0:
         return 0
     return (ppm * valence) / mw
-
 
 def meq_to_ppm(meq: float, element: str) -> float:
     """تبدیل MEQ/L به PPM"""
@@ -75,7 +171,6 @@ def meq_to_ppm(meq: float, element: str) -> float:
         return 0
     return (meq * mw) / valence
 
-
 def ppm_to_mmol(ppm: float, element: str) -> float:
     """تبدیل PPM به MMOLS/L"""
     mw = MOLECULAR_WEIGHTS.get(element, 0)
@@ -83,41 +178,29 @@ def ppm_to_mmol(ppm: float, element: str) -> float:
         return 0
     return ppm / mw
 
-
 def mmol_to_ppm(mmol: float, element: str) -> float:
     """تبدیل MMOLS/L به PPM"""
     mw = MOLECULAR_WEIGHTS.get(element, 0)
     return mmol * mw
 
-
 # ============================================================
 # توابع محاسبه تعادل یونی
 # ============================================================
-
 def calculate_ion_balance(
     target_values: Dict[str, float],
     unit: str = "ppm"
 ) -> Tuple[float, float, bool]:
     """
     محاسبه تعادل کاتیون و آنیون
-    
-    Args:
-        target_values: مقادیر عناصر
-        unit: واحد (ppm, meq, mmol)
-    
-    Returns:
-        Tuple[float, float, bool]: (کاتیون, آنیون, آیا متعادل است)
     """
     cation = 0.0
     anion = 0.0
-    
     cations = ['K', 'Ca', 'Mg', 'Na']
     anions = ['N-NO3', 'P', 'S', 'N-NH4', 'Cl']
     
     for element, value in target_values.items():
         if value is None or value == 0:
             continue
-        
         if element not in ELEMENTS:
             continue
         
@@ -135,14 +218,11 @@ def calculate_ion_balance(
             anion += meq_value
     
     is_balanced = abs(cation - anion) < 0.5
-    
     return cation, anion, is_balanced
-
 
 # ============================================================
 # توابع محاسبه محلول نهایی
 # ============================================================
-
 def calculate_final_solution(
     target_values: Dict[str, float],
     water_values: Dict[str, float],
@@ -150,31 +230,18 @@ def calculate_final_solution(
 ) -> Dict[str, float]:
     """
     محاسبه مقدار نهایی هر عنصر
-    
-    Args:
-        target_values: مقادیر هدف
-        water_values: مقادیر موجود در آب
-        fertilizer_contributions: سهم هر عنصر از کودها
-    
-    Returns:
-        Dict[str, float]: مقادیر نهایی
     """
     final_values = {}
-    
     for element in ELEMENTS:
         target = target_values.get(element, 0)
         water = water_values.get(element, 0)
         fertilizer = fertilizer_contributions.get(element, 0)
-        
         final_values[element] = target - (water + fertilizer)
-    
     return final_values
-
 
 # ============================================================
 # توابع محاسبه مقدار کود
 # ============================================================
-
 def calculate_fertilizer_amount(
     fertilizer: Fertilizer,
     weight: float,
@@ -182,77 +249,47 @@ def calculate_fertilizer_amount(
 ) -> Dict[str, float]:
     """
     محاسبه سهم هر عنصر از یک کود
-    
-    Args:
-        fertilizer: کود مورد نظر
-        weight: وزن کود (گرم)
-        purity: خلوص کود (درصد)
-    
-    Returns:
-        Dict[str, float]: سهم هر عنصر
     """
     result = {}
     elements = fertilizer.elements or {}
-    
     for element, percentage in elements.items():
         if element in ELEMENTS and percentage:
             result[element] = (weight * (percentage / 100) * (purity / 100))
-    
     return result
-
 
 def calculate_total_fertilizer_contribution(
     fertilizers: List[Dict[str, Any]]
 ) -> Dict[str, float]:
     """
     محاسبه مجموع سهم همه کودها
-    
-    Args:
-        fertilizers: لیست کودها با وزن و خلوص
-    
-    Returns:
-        Dict[str, float]: مجموع سهم هر عنصر
     """
     total = {element: 0.0 for element in ELEMENTS}
-    
     for item in fertilizers:
         fertilizer = item.get('fertilizer')
         weight = item.get('weight', 0)
         purity = item.get('purity', 100)
-        
         if fertilizer and weight > 0:
             contributions = calculate_fertilizer_amount(fertilizer, weight, purity)
             for element, value in contributions.items():
                 total[element] = total.get(element, 0) + value
-    
     return total
-
 
 # ============================================================
 # توابع محاسبه اطلاعات مخازن
 # ============================================================
-
 def calculate_reservoir_data(
     fertilizers: List[Dict[str, Any]]
 ) -> Dict[str, List[Dict[str, Any]]]:
     """
     محاسبه اطلاعات مخازن A, B, C
-    
-    Args:
-        fertilizers: لیست کودها با وزن و خلوص
-    
-    Returns:
-        Dict[str, List[Dict]]: اطلاعات هر مخزن
     """
     reservoir_a = []
     reservoir_b = []
     reservoir_c = []
     
-    # تخصیص کودها به مخازن بر اساس نوع
     for item in fertilizers:
         fertilizer = item.get('fertilizer')
         weight = item.get('weight', 0)
-        
         if not fertilizer or weight <= 0:
             continue
         
@@ -281,11 +318,9 @@ def calculate_reservoir_data(
         'C': reservoir_c
     }
 
-
 # ============================================================
 # توابع تفسیر داده‌ها
 # ============================================================
-
 def generate_interpretation(
     target_values: Dict[str, float],
     final_values: Dict[str, float],
@@ -294,15 +329,6 @@ def generate_interpretation(
 ) -> Dict[str, Any]:
     """
     تولید تفسیر کامل از داده‌ها
-    
-    Args:
-        target_values: مقادیر هدف
-        final_values: مقادیر نهایی
-        water_analysis: اطلاعات آنالیز آب
-        ion_balance: تعادل یونی (کاتیون، آنیون، وضعیت)
-    
-    Returns:
-        Dict[str, Any]: تفسیر کامل
     """
     cation, anion, is_balanced = ion_balance
     
@@ -355,7 +381,6 @@ def generate_interpretation(
     
     # ===== توصیه‌های کودی =====
     recommendations = []
-    
     if not is_balanced:
         recommendations.append({
             'issue': 'عدم تعادل یونی',
@@ -377,7 +402,6 @@ def generate_interpretation(
     
     # ===== خلاصه =====
     problem_elements = [item['element'] for item in element_status if item['status'] != 'sufficient']
-    
     summary = f"""
 گزارش تفسیر تغذیه گیاه:
 - تعادل یونی: {'برقرار ✅' if is_balanced else 'نامتعادل ⚠️'}
@@ -402,11 +426,9 @@ def generate_interpretation(
         'summary': summary
     }
 
-
 # ============================================================
 # توابع کمکی محاسباتی
 # ============================================================
-
 def convert_units(
     value: float,
     from_unit: str,
@@ -415,15 +437,6 @@ def convert_units(
 ) -> float:
     """
     تبدیل واحدهای مختلف
-    
-    Args:
-        value: مقدار
-        from_unit: واحد مبدا (ppm, meq, mmol)
-        to_unit: واحد مقصد (ppm, meq, mmol)
-        element: نام عنصر
-    
-    Returns:
-        float: مقدار تبدیل شده
     """
     if from_unit == to_unit:
         return value
@@ -443,7 +456,6 @@ def convert_units(
         return ppm_to_mmol(ppm, element)
     else:
         return ppm
-
 
 def format_decimal(value: float, decimals: int = 2) -> str:
     """فرمت کردن اعداد با تعداد اعشار مشخص"""
