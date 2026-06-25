@@ -1,3 +1,4 @@
+<!-- frontend/src/views/MainLayout.vue -->
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200 flex flex-col">
     
@@ -370,8 +371,6 @@ const handleDeleteFertilizer = async (id: string) => {
 };
 
 const handleNewReport = () => {
-  // این تابع وقتی از AppHeader emit می‌شود فراخوانی می‌شود
-  // می‌توانید در اینجا اقدامات اضافی انجام دهید
   console.log('گزارش جدید ایجاد شد');
 };
 

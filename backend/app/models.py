@@ -185,3 +185,39 @@ class Calculation(Base):
     
     def __repr__(self):
         return f"<Calculation {self.id}>"
+    
+
+    # ============================================================
+# مدل Recipe (رسپی/فرمول غذایی)
+# ============================================================
+class Recipe(Base):
+    """مدل رسپی‌های غذایی (فرمول‌های از پیش تعیین شده)"""
+    
+    __tablename__ = "recipes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    
+    # ===== نوع رسپی =====
+    is_system = Column(Boolean, default=False)  # True: رسپی سیستمی، False: رسپی شخصی کاربر
+    
+    # ===== کاربر سازنده (فقط برای رسپی‌های شخصی) =====
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    
+    # ===== مقادیر هدف عناصر (JSON) =====
+    target_values = Column(JSON, nullable=False)  # {"N-NO3": 320, "P": 103, ...}
+    
+    # ===== دسته‌بندی =====
+    category = Column(String(50), nullable=True)  # مثلاً: "گوجه فرنگی", "خیار", "کاهو"
+    stage = Column(String(50), nullable=True)    # مرحله رشد: "گلدهی", "رویشی", "میوه‌دهی"
+    
+    # ===== تاریخ‌ها =====
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # ===== روابط =====
+    user = relationship("User", backref="recipes")
+    
+    def __repr__(self):
+        return f"<Recipe {self.name}>"

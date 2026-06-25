@@ -1,4 +1,5 @@
 // frontend/src/services/apiService.ts
+// frontend/src/services/apiService.ts
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -117,6 +118,43 @@ export interface ChangePasswordResponse {
 export interface UpdateProfileRequest {
     first_name?: string;
     last_name?: string;
+}
+
+// ============================================================
+// Recipe Types
+// ============================================================
+export interface Recipe {
+    id: number;
+    name: string;
+    description?: string;
+    target_values: Record<string, number>;
+    category?: string;
+    stage?: string;
+    is_system: boolean;
+    user_id?: number;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface RecipeCreate {
+    name: string;
+    description?: string;
+    target_values: Record<string, number>;
+    category?: string;
+    stage?: string;
+}
+
+export interface RecipeUpdate {
+    name?: string;
+    description?: string;
+    target_values?: Record<string, number>;
+    category?: string;
+    stage?: string;
+}
+
+export interface RecipeListResponse {
+    system_recipes: Recipe[];
+    user_recipes: Recipe[];
 }
 
 class ApiService {
@@ -247,9 +285,6 @@ class ApiService {
     // ============================================================
     // 🆕 Profile & User APIs
     // ============================================================
-    /**
-     * 🆕 به‌روزرسانی اطلاعات پروفایل کاربر
-     */
     async updateProfile(data: UpdateProfileRequest): Promise<any> {
         try {
             const response: AxiosResponse = await this.api.put('/users/me', data);
@@ -260,9 +295,6 @@ class ApiService {
         }
     }
 
-    /**
-     * 🆕 تغییر رمز عبور
-     */
     async changePassword(data: ChangePasswordRequest): Promise<ChangePasswordResponse> {
         try {
             const response: AxiosResponse<ChangePasswordResponse> = await this.api.post('/auth/change-password', data);
@@ -273,9 +305,6 @@ class ApiService {
         }
     }
 
-    /**
-     * 🆕 دریافت اطلاعات کاربر فعلی
-     */
     async getCurrentUser(): Promise<any> {
         try {
             const response: AxiosResponse = await this.api.get('/auth/me');
@@ -490,6 +519,127 @@ class ApiService {
             return response.data;
         } catch (error) {
             console.error('Error during logout:', error);
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🆕 Recipe APIs
+    // ============================================================
+    
+    /**
+     * دریافت همه رسپی‌ها (سیستمی + شخصی کاربر فعلی)
+     */
+    async getRecipes(): Promise<RecipeListResponse> {
+        try {
+            const response: AxiosResponse<RecipeListResponse> = await this.api.get('/recipes');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching recipes:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * دریافت رسپی‌های سیستمی
+     */
+    async getSystemRecipes(): Promise<Recipe[]> {
+        try {
+            const response: AxiosResponse<Recipe[]> = await this.api.get('/recipes/system');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching system recipes:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * دریافت رسپی‌های شخصی کاربر فعلی
+     */
+    async getUserRecipes(): Promise<Recipe[]> {
+        try {
+            const response: AxiosResponse<Recipe[]> = await this.api.get('/recipes/user');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching user recipes:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * دریافت یک رسپی با شناسه
+     */
+    async getRecipe(id: string): Promise<Recipe> {
+        try {
+            const response: AxiosResponse<Recipe> = await this.api.get(`/recipes/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching recipe:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * ایجاد رسپی شخصی جدید
+     */
+    async createRecipe(data: RecipeCreate): Promise<Recipe> {
+        try {
+            const response: AxiosResponse<Recipe> = await this.api.post('/recipes', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error creating recipe:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * به‌روزرسانی رسپی شخصی
+     */
+    async updateRecipe(id: string, data: RecipeUpdate): Promise<Recipe> {
+        try {
+            const response: AxiosResponse<Recipe> = await this.api.put(`/recipes/${id}`, data);
+            return response.data;
+        } catch (error) {
+            console.error('Error updating recipe:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * حذف رسپی شخصی
+     */
+    async deleteRecipe(id: string): Promise<any> {
+        try {
+            const response: AxiosResponse = await this.api.delete(`/recipes/${id}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error deleting recipe:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * اعمال رسپی به عناصر هدف کاربر
+     */
+    async applyRecipe(id: string): Promise<{ target_values: Record<string, number> }> {
+        try {
+            const response: AxiosResponse<{ target_values: Record<string, number> }> = await this.api.post(`/recipes/${id}/apply`);
+            return response.data;
+        } catch (error) {
+            console.error('Error applying recipe:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * کپی کردن رسپی سیستمی به عنوان رسپی شخصی
+     */
+    async copyRecipe(id: string): Promise<{ recipe: Recipe }> {
+        try {
+            const response: AxiosResponse<{ recipe: Recipe }> = await this.api.post(`/recipes/${id}/copy`);
+            return response.data;
+        } catch (error) {
+            console.error('Error copying recipe:', error);
             throw error;
         }
     }

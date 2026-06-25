@@ -1,11 +1,12 @@
 <template>
   <div class="space-y-6">
     <!-- ============================================================ -->
-    <!-- هدر با توضیحات -->
+    <!-- هدر با توضیحات (ادغام شده) -->
     <!-- ============================================================ -->
     <div class="bg-primary-50 dark:bg-primary-900/20 border-r-4 border-primary-500 rounded-lg p-4">
-      <p class="text-gray-700 dark:text-gray-300 text-sm">
+      <p class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
         مقادیر مورد نظر خود را برای هر عنصر در جدول زیر وارد کنید. نرم‌افزار به صورت خودکار تعادل یونی را بررسی می‌کند.
+        همچنین می‌توانید از رسپی‌های آماده (سیستمی) استفاده کنید یا رسپی‌های شخصی خود را بسازید، ویرایش و مدیریت کنید.
       </p>
     </div>
 
@@ -74,7 +75,7 @@
           </svg>
           <svg v-else class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
           </svg>
           {{ isSaving ? 'در حال ذخیره...' : 'ذخیره عناصر هدف' }}
         </button>
@@ -84,53 +85,117 @@
         >
           بازنشانی همه
         </button>
-        <button
-          @click="loadSampleTargets"
-          class="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors"
-        >
-          📥 بارگذاری نمونه
-        </button>
       </div>
     </div>
 
     <!-- ============================================================ -->
-    <!-- تعادل کاتیون و آنیون -->
+    <!-- تعادل کاتیون و آنیون (مینیمال و حرفه‌ای) -->
     <!-- ============================================================ -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-      <div class="bg-primary-50 dark:bg-primary-900/20 border-r-4 border-primary-500 rounded-lg p-4 mb-4">
-        <p class="text-gray-700 dark:text-gray-300 text-sm">
-          کاتیون و آنیون نشان‌دهنده مجموع بار الکتریکی عناصر بر اساس میلی‌اکی والان می‌باشد که باید برابر شوند.
-        </p>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="targetStore.isCalculatingBalance" class="flex items-center justify-center py-8">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-        <span class="mr-2 text-gray-600 dark:text-gray-400">در حال محاسبه تعادل یونی...</span>
-      </div>
-
-      <!-- Data Display -->
-      <div v-else class="flex flex-wrap items-center gap-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">کاتیون:</span>
-          <span class="text-lg font-bold text-primary-600 dark:text-primary-400 tabular-nums">
-            {{ ionBalance.cation.toFixed(2) }}
-          </span>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <!-- محتوای بدون هدر -->
+      <div class="p-5">
+        <!-- Loading State -->
+        <div v-if="targetStore.isCalculatingBalance" class="flex items-center justify-center py-6">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <span class="mr-3 text-gray-600 dark:text-gray-400 text-sm">در حال محاسبه تعادل یونی...</span>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-medium text-gray-600 dark:text-gray-400">آنیون:</span>
-          <span class="text-lg font-bold text-primary-600 dark:text-primary-400 tabular-nums">
-            {{ ionBalance.anion.toFixed(2) }}
-          </span>
-        </div>
-        <div
-          :class="ionBalance.isBalanced ? 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400' : 'bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-400'"
-          class="px-3 py-1 rounded-full text-sm font-medium"
-        >
-          {{ ionBalance.isBalanced ? '✅ تعادل برقرار' : '❌ تعادل برقرار نیست' }}
+
+        <!-- Data Display -->
+        <div v-else>
+          <!-- کارت‌های آماری مینیمال -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- کاتیون -->
+            <div class="bg-blue-50/30 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-800/20">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">کاتیون</p>
+                  <p class="text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
+                    {{ ionBalance.cation.toFixed(2) }}
+                  </p>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">meq/L</p>
+            </div>
+
+            <!-- آنیون -->
+            <div class="bg-purple-50/30 dark:bg-purple-900/10 rounded-lg p-3 border border-purple-100 dark:border-purple-800/20">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">آنیون</p>
+                  <p class="text-xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
+                    {{ ionBalance.anion.toFixed(2) }}
+                  </p>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">meq/L</p>
+            </div>
+
+            <!-- وضعیت نهایی -->
+            <div class="bg-gray-50/30 dark:bg-gray-800/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700/30">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">وضعیت</p>
+                  <p class="text-sm font-bold" :class="ionBalance.isBalanced ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                    {{ ionBalance.isBalanced ? '✓ متعادل' : '✗ نامتعادل' }}
+                  </p>
+                </div>
+                <div class="w-8 h-8 rounded-full flex items-center justify-center"
+                  :class="ionBalance.isBalanced ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'"
+                >
+                  <svg class="w-4 h-4" :class="ionBalance.isBalanced ? 'text-green-500' : 'text-red-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path v-if="ionBalance.isBalanced" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                  </svg>
+                </div>
+              </div>
+              <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                اختلاف: {{ Math.abs(ionBalance.cation - ionBalance.anion).toFixed(2) }} meq/L
+              </p>
+            </div>
+          </div>
+
+          <!-- نوار پیشرفت تعادل (مینیمال) -->
+          <div class="mt-4">
+            <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
+              <span class="text-blue-500">کاتیون</span>
+              <span class="text-purple-500">آنیون</span>
+            </div>
+            <div class="relative w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div class="absolute inset-0 flex items-center">
+                <div 
+                  class="h-full bg-blue-500 rounded-full transition-all duration-500"
+                  :style="{ width: Math.min((ionBalance.cation / (ionBalance.cation + ionBalance.anion + 0.01)) * 100, 100) + '%' }"
+                ></div>
+                <div 
+                  class="h-full bg-purple-500 rounded-full transition-all duration-500"
+                  :style="{ width: Math.min((ionBalance.anion / (ionBalance.cation + ionBalance.anion + 0.01)) * 100, 100) + '%', marginLeft: 'auto' }"
+                ></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+              <span>0</span>
+              <span>تعادل</span>
+              <span>{{ (ionBalance.cation + ionBalance.anion).toFixed(2) }} meq/L</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- ============================================================ -->
+    <!-- بخش مدیریت رسپی‌ها (بعد از کاتیون و آنیون) -->
+    <!-- ============================================================ -->
+    <RecipeManager @recipe-applied="loadConvertedValues" />
 
     <!-- ============================================================ -->
     <!-- جدول توازن عناصر (تبدیل واحدها از API) -->
@@ -148,7 +213,7 @@
           </svg>
           <svg v-else class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
           </svg>
           {{ isConverting ? 'در حال تبدیل...' : 'به‌روزرسانی' }}
         </button>
@@ -229,6 +294,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { apiService } from '@/services/apiService';
+import RecipeManager from './RecipeManager.vue';
 
 // ===== Stores =====
 const targetStore = useTargetStore();
@@ -276,12 +342,11 @@ const updateElementValue = (element: string, event: Event) => {
 const updateTargetUnit = (event: Event) => {
   const target = event.target as HTMLSelectElement;
   targetStore.setTargetUnit(target.value as any);
-  // بعد از تغییر واحد، مقادیر تبدیل شده را به‌روزرسانی کن
   loadConvertedValues();
 };
 
 /**
- * 🎯 ذخیره عناصر هدف
+ * ذخیره عناصر هدف
  */
 const saveTargets = async () => {
   saveSuccess.value = false;
@@ -289,7 +354,6 @@ const saveTargets = async () => {
   isSaving.value = true;
 
   try {
-    // اگر گزارش وجود ندارد، یک گزارش جدید ایجاد کن
     if (!reportStore.reportData.reportName) {
       reportStore.updateReportData({
         reportName: `گزارش ${new Date().toLocaleDateString('fa-IR')}`,
@@ -297,8 +361,6 @@ const saveTargets = async () => {
       });
     }
 
-    // اینجا باید گزارش را ایجاد کنید و سپس عناصر هدف را ذخیره کنید
-    // فعلاً فقط در store ذخیره می‌شود
     saveSuccess.value = true;
     setTimeout(() => {
       saveSuccess.value = false;
@@ -322,43 +384,7 @@ const resetTargets = () => {
 };
 
 /**
- * بارگذاری مقادیر نمونه
- */
-const loadSampleTargets = () => {
-  const samples: Record<string, number> = {
-    'N-NO3': 150,
-    'P': 40,
-    'S': 60,
-    'N-NH4': 10,
-    'K': 200,
-    'Ca': 180,
-    'Mg': 50,
-    'Na': 0,
-    'Cl': 0,
-    'Fe': 2.5,
-    'Mn': 0.5,
-    'Zn': 0.3,
-    'B': 0.2,
-    'Cu': 0.05,
-    'Mo': 0.02
-  };
-
-  for (const [element, value] of Object.entries(samples)) {
-    targetStore.setTargetElement(element as any, value);
-  }
-
-  saveSuccess.value = true;
-  setTimeout(() => {
-    saveSuccess.value = false;
-  }, 3000);
-
-  // بعد از بارگذاری نمونه، مقادیر تبدیل شده را به‌روزرسانی کن
-  loadConvertedValues();
-};
-
-/**
- * 🎯 دریافت مقادیر تبدیل شده از API
- * تمام محاسبات تبدیل واحد در بک‌اند انجام می‌شود
+ * دریافت مقادیر تبدیل شده از API
  */
 const loadConvertedValues = async () => {
   isConverting.value = true;
@@ -367,7 +393,6 @@ const loadConvertedValues = async () => {
   try {
     const result: Record<string, Record<string, number>> = {};
 
-    // برای هر عنصر، تبدیل به واحدهای مختلف را از API بگیر
     for (const element of elements) {
       const value = getElementValue(element);
       if (value === 0) {
@@ -379,7 +404,6 @@ const loadConvertedValues = async () => {
         continue;
       }
 
-      // تبدیل از واحد فعلی به PPM
       const ppmResult = await apiService.convertUnit({
         value,
         from_unit: targetStore.targetUnit,
@@ -387,7 +411,6 @@ const loadConvertedValues = async () => {
         element
       });
 
-      // تبدیل از PPM به MEQ
       const meqResult = await apiService.convertUnit({
         value: ppmResult.converted_value,
         from_unit: 'ppm',
@@ -395,7 +418,6 @@ const loadConvertedValues = async () => {
         element
       });
 
-      // تبدیل از PPM به MMOL
       const mmolResult = await apiService.convertUnit({
         value: ppmResult.converted_value,
         from_unit: 'ppm',
@@ -420,7 +442,7 @@ const loadConvertedValues = async () => {
 };
 
 /**
- * 🎯 دریافت مقدار تبدیل شده برای یک عنصر و واحد خاص
+ * دریافت مقدار تبدیل شده برای یک عنصر و واحد خاص
  */
 const getConvertedValue = (element: string, unit: string): string => {
   if (!convertedValues.value || !convertedValues.value[element]) {
@@ -436,12 +458,7 @@ const getConvertedValue = (element: string, unit: string): string => {
 };
 
 // ===== Watchers =====
-
-/**
- * وقتی مقادیر هدف تغییر می‌کند، مقادیر تبدیل شده را به‌روزرسانی کن
- */
 watch(targetValues, () => {
-  // Debounce برای جلوگیری از درخواست‌های مکرر
   setTimeout(() => {
     if (convertedValues.value) {
       loadConvertedValues();
@@ -451,7 +468,6 @@ watch(targetValues, () => {
 
 // ===== Lifecycle =====
 onMounted(() => {
-  // بارگذاری اولیه مقادیر تبدیل شده
   loadConvertedValues();
 });
 </script>

@@ -1,4 +1,4 @@
-// src/types/index.ts
+// frontend/src/types/index.ts
 
 // ============================================================
 // ENUMS
@@ -65,7 +65,6 @@ export interface Fertilizer {
     elements: Partial<Record<ElementName, number>>;
     isAcid?: boolean;
     acidType?: string;
-    // 🆕 فیلدهای جدید
     isSystemDefault?: boolean;
     brand?: string;
     category?: string;
@@ -167,6 +166,44 @@ export interface InterpretationResult {
         priority: 'low' | 'medium' | 'high';
     }[];
     summary: string;
+}
+
+// ============================================================
+// RECIPE TYPES (جدید)
+// ============================================================
+
+export interface Recipe {
+    id: number;
+    name: string;
+    description?: string;
+    target_values: Record<string, number>;
+    category?: string;
+    stage?: string;
+    is_system: boolean;
+    user_id?: number;
+    created_at: string;
+    updated_at?: string;
+}
+
+export interface RecipeCreate {
+    name: string;
+    description?: string;
+    target_values: Record<string, number>;
+    category?: string;
+    stage?: string;
+}
+
+export interface RecipeUpdate {
+    name?: string;
+    description?: string;
+    target_values?: Record<string, number>;
+    category?: string;
+    stage?: string;
+}
+
+export interface RecipeListResponse {
+    system_recipes: Recipe[];
+    user_recipes: Recipe[];
 }
 
 // ============================================================

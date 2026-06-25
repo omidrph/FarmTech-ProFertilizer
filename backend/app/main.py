@@ -13,7 +13,7 @@ import traceback
 import time
 from app.config import settings
 from app.database import create_tables, SessionLocal
-from app.routes import router  # ✅ از فولدر routes import می‌شود
+from app.routes import router
 from app.security import get_current_user
 from app.models import User
 
@@ -21,6 +21,12 @@ from app.models import User
 from app.seeds.fertilizer_seeds import (
     seed_system_fertilizers,
     get_system_fertilizers_count
+)
+
+# ===== 🆕 Import برای بارگذاری رسپی‌های سیستمی =====
+from app.seeds.recipe_seeds import (
+    seed_system_recipes,
+    get_system_recipes_count
 )
 
 # ===== تنظیمات Logger =====
@@ -153,6 +159,7 @@ async def startup_event():
     رویداد شروع برنامه:
     1. ساخت جداول دیتابیس
     2. بارگذاری خودکار کودهای سیستمی (در صورت عدم وجود)
+    3. بارگذاری خودکار رسپی‌های سیستمی (در صورت عدم وجود)
     """
     logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"🔧 Debug mode: {settings.DEBUG}")
@@ -165,34 +172,68 @@ async def startup_event():
         logger.error(f"❌ Failed to create tables: {e}")
         return
     
-    # ===== مرحله ۲: بارگذاری خودکار کودهای سیستمی =====
+    # ایجاد session برای عملیات بعدی
     db = SessionLocal()
+    
     try:
-        # بررسی تعداد کودهای سیستمی موجود
-        system_count = get_system_fertilizers_count(db)
-        logger.info(f"📊 تعداد کودهای سیستمی فعلی: {system_count}")
+        # ===== مرحله ۲: بارگذاری خودکار کودهای سیستمی =====
+        try:
+            # بررسی تعداد کودهای سیستمی موجود
+            fertilizer_count = get_system_fertilizers_count(db)
+            logger.info(f"📊 تعداد کودهای سیستمی فعلی: {fertilizer_count}")
+            
+            if fertilizer_count == 0:
+                # اگر کود سیستمی وجود ندارد، بارگذاری کن
+                logger.info("🌱 در حال بارگذاری کودهای سیستمی...")
+                stats = seed_system_fertilizers(db)
+                
+                logger.info(
+                    f"✅ کودهای سیستمی بارگذاری شدند - "
+                    f"اضافه شده: {stats['added']} | "
+                    f"رد شده: {stats['skipped']} | "
+                    f"خطا: {len(stats['errors'])}"
+                )
+                
+                if stats['errors']:
+                    for err in stats['errors']:
+                        logger.warning(f"⚠️  خطا در {err['name']}: {err['error']}")
+            else:
+                logger.info(f"✅ کودهای سیستمی از قبل موجود هستند ({fertilizer_count} مورد)")
+                
+        except Exception as e:
+            logger.error(f"❌ خطا در بارگذاری کودهای سیستمی: {e}")
+            db.rollback()
         
-        if system_count == 0:
-            # اگر کود سیستمی وجود ندارد، بارگذاری کن
-            logger.info("🌱 در حال بارگذاری کودهای سیستمی...")
-            stats = seed_system_fertilizers(db)
+        # ===== مرحله ۳: بارگذاری خودکار رسپی‌های سیستمی =====
+        try:
+            # بررسی تعداد رسپی‌های سیستمی موجود
+            recipe_count = get_system_recipes_count(db)
+            logger.info(f"📊 تعداد رسپی‌های سیستمی فعلی: {recipe_count}")
             
-            logger.info(
-                f"✅ کودهای سیستمی بارگذاری شدند - "
-                f"اضافه شده: {stats['added']} | "
-                f"رد شده: {stats['skipped']} | "
-                f"خطا: {len(stats['errors'])}"
-            )
-            
-            if stats['errors']:
-                for err in stats['errors']:
-                    logger.warning(f"⚠️  خطا در {err['name']}: {err['error']}")
-        else:
-            logger.info(f"✅ کودهای سیستمی از قبل موجود هستند ({system_count} مورد)")
+            if recipe_count == 0:
+                # اگر رسپی سیستمی وجود ندارد، بارگذاری کن
+                logger.info("📋 در حال بارگذاری رسپی‌های سیستمی...")
+                stats = seed_system_recipes(db)
+                
+                logger.info(
+                    f"✅ رسپی‌های سیستمی بارگذاری شدند - "
+                    f"اضافه شده: {stats['added']} | "
+                    f"رد شده: {stats['skipped']} | "
+                    f"خطا: {len(stats['errors'])}"
+                )
+                
+                if stats['errors']:
+                    for err in stats['errors']:
+                        logger.warning(f"⚠️  خطا در {err['name']}: {err['error']}")
+            else:
+                logger.info(f"✅ رسپی‌های سیستمی از قبل موجود هستند ({recipe_count} مورد)")
+                
+        except Exception as e:
+            logger.error(f"❌ خطا در بارگذاری رسپی‌های سیستمی: {e}")
+            db.rollback()
             
     except Exception as e:
-        logger.error(f"❌ خطا در بارگذاری کودهای سیستمی: {e}")
-        db.rollback()
+        logger.error(f"❌ خطا در فرآیند startup: {e}")
     finally:
         db.close()
     
