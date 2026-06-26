@@ -1,6 +1,11 @@
 // frontend/src/services/apiService.ts
-// frontend/src/services/apiService.ts
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
+import type {
+    OptimizationRequest,
+    OptimizationResponse,
+    PrecipitationCheckResponse,
+    OptimizationLogResponse
+} from '@/types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -194,7 +199,7 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 متدهای عمومی HTTP (برای انعطاف‌پذیری)
+    // متدهای عمومی HTTP (برای انعطاف‌پذیری)
     // ============================================================
     async get<T = any>(url: string, config?: any): Promise<T> {
         const response: AxiosResponse<T> = await this.api.get(url, config);
@@ -217,7 +222,63 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 APIهای محاسباتی
+    // 🆕 APIهای بهینه‌سازی
+    // ============================================================
+
+    /**
+     * 🚀 بهینه‌سازی خودکار فرمول کود
+     * 
+     * این تابع قلب تپنده جدید FarmTech است.
+     * با استفاده از الگوریتم NNLS، بهترین ترکیب کودها را محاسبه می‌کند.
+     */
+    async optimizeFertilizers(data: OptimizationRequest): Promise<OptimizationResponse> {
+        try {
+            const response: AxiosResponse<OptimizationResponse> = await this.api.post(
+                '/calculations/optimize',
+                data
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error optimizing fertilizers:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * بررسی رسوب احتمالی در ترکیب عناصر
+     */
+    async checkPrecipitation(concentrations: Record<string, number>, temperature: number = 25): Promise<PrecipitationCheckResponse> {
+        try {
+            const response: AxiosResponse<PrecipitationCheckResponse> = await this.api.post(
+                '/calculations/check-precipitation',
+                { concentrations, temperature }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error checking precipitation:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * دریافت تاریخچه بهینه‌سازی‌ها
+     */
+    async getOptimizationHistory(skip: number = 0, limit: number = 50, report_id?: number): Promise<OptimizationLogResponse[]> {
+        try {
+            let url = `/calculations/optimization-history?skip=${skip}&limit=${limit}`;
+            if (report_id) {
+                url += `&report_id=${report_id}`;
+            }
+            const response: AxiosResponse<OptimizationLogResponse[]> = await this.api.get(url);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching optimization history:', error);
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // APIهای محاسباتی
     // ============================================================
     async getHomeSummary(): Promise<HomeSummaryResponse> {
         try {
@@ -270,7 +331,7 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 System Fertilizers
+    // System Fertilizers
     // ============================================================
     async loadSystemFertilizers(): Promise<LoadSystemFertilizersResponse> {
         try {
@@ -283,7 +344,7 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 Profile & User APIs
+    // Profile & User APIs
     // ============================================================
     async updateProfile(data: UpdateProfileRequest): Promise<any> {
         try {
@@ -524,12 +585,9 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 Recipe APIs
+    // Recipe APIs
     // ============================================================
     
-    /**
-     * دریافت همه رسپی‌ها (سیستمی + شخصی کاربر فعلی)
-     */
     async getRecipes(): Promise<RecipeListResponse> {
         try {
             const response: AxiosResponse<RecipeListResponse> = await this.api.get('/recipes');
@@ -540,9 +598,6 @@ class ApiService {
         }
     }
 
-    /**
-     * دریافت رسپی‌های سیستمی
-     */
     async getSystemRecipes(): Promise<Recipe[]> {
         try {
             const response: AxiosResponse<Recipe[]> = await this.api.get('/recipes/system');
@@ -553,9 +608,6 @@ class ApiService {
         }
     }
 
-    /**
-     * دریافت رسپی‌های شخصی کاربر فعلی
-     */
     async getUserRecipes(): Promise<Recipe[]> {
         try {
             const response: AxiosResponse<Recipe[]> = await this.api.get('/recipes/user');
@@ -566,9 +618,6 @@ class ApiService {
         }
     }
 
-    /**
-     * دریافت یک رسپی با شناسه
-     */
     async getRecipe(id: string): Promise<Recipe> {
         try {
             const response: AxiosResponse<Recipe> = await this.api.get(`/recipes/${id}`);
@@ -579,9 +628,6 @@ class ApiService {
         }
     }
 
-    /**
-     * ایجاد رسپی شخصی جدید
-     */
     async createRecipe(data: RecipeCreate): Promise<Recipe> {
         try {
             const response: AxiosResponse<Recipe> = await this.api.post('/recipes', data);
@@ -592,9 +638,6 @@ class ApiService {
         }
     }
 
-    /**
-     * به‌روزرسانی رسپی شخصی
-     */
     async updateRecipe(id: string, data: RecipeUpdate): Promise<Recipe> {
         try {
             const response: AxiosResponse<Recipe> = await this.api.put(`/recipes/${id}`, data);
@@ -605,9 +648,6 @@ class ApiService {
         }
     }
 
-    /**
-     * حذف رسپی شخصی
-     */
     async deleteRecipe(id: string): Promise<any> {
         try {
             const response: AxiosResponse = await this.api.delete(`/recipes/${id}`);
@@ -618,9 +658,6 @@ class ApiService {
         }
     }
 
-    /**
-     * اعمال رسپی به عناصر هدف کاربر
-     */
     async applyRecipe(id: string): Promise<{ target_values: Record<string, number> }> {
         try {
             const response: AxiosResponse<{ target_values: Record<string, number> }> = await this.api.post(`/recipes/${id}/apply`);
@@ -631,9 +668,6 @@ class ApiService {
         }
     }
 
-    /**
-     * کپی کردن رسپی سیستمی به عنوان رسپی شخصی
-     */
     async copyRecipe(id: string): Promise<{ recipe: Recipe }> {
         try {
             const response: AxiosResponse<{ recipe: Recipe }> = await this.api.post(`/recipes/${id}/copy`);

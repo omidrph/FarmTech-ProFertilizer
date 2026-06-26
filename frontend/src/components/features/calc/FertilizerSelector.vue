@@ -9,15 +9,16 @@
         <h3 class="text-base font-semibold text-gray-900 dark:text-white">انتخاب کود</h3>
       </div>
       <div class="flex items-center gap-2">
+        <!-- 🆕 نمایش تعداد کودهای انتخاب شده -->
+        <span class="text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 px-2 py-0.5 rounded-full">
+          {{ selectedFertilizers.length }} از {{ userFertilizersList.length }}
+        </span>
         <button
           @click="toggleSelectAll"
           class="px-3 py-1.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors font-medium"
         >
           {{ isAllSelected ? 'لغو انتخاب همه' : 'انتخاب همه' }}
         </button>
-        <span class="text-xs text-gray-500 dark:text-gray-400">
-          {{ selectedFertilizers.length }} از {{ userFertilizersList.length }} کود
-        </span>
       </div>
     </div>
 
@@ -126,6 +127,9 @@
     <!-- راهنمای انتخاب -->
     <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-center text-xs text-gray-400 dark:text-gray-500">
       با کلیک روی هر کود، آن را انتخاب یا لغو انتخاب کنید
+      <span class="block text-[10px] text-primary-400 mt-1">
+        پس از انتخاب، روی "بهینه‌سازی خودکار" کلیک کنید
+      </span>
     </div>
   </div>
 </template>

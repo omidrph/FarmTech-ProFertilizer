@@ -583,10 +583,6 @@ const ionBalanceStatus = computed(() => {
 // Methods - فقط برای نمایش و فرمت‌بندی
 // ============================================================
 
-/**
- * 🎯 بارگذاری داده‌ها از API بک‌اند
- * تمام محاسبات در بک‌اند انجام می‌شود
- */
 const loadData = async () => {
   isLoading.value = true;
   error.value = null;
@@ -601,34 +597,22 @@ const loadData = async () => {
   }
 };
 
-/**
- * محاسبه مجموع وزن یک مخزن (فقط جمع ساده برای نمایش)
- */
 const getReservoirTotal = (reservoir: 'A' | 'B' | 'C'): number => {
   const data = summary.value?.reservoir_data?.[reservoir];
   if (!data || !Array.isArray(data) || data.length === 0) return 0;
   return data.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
 };
 
-/**
- * فرمت عدد با 2 اعشار
- */
 const formatNumber = (value: number | undefined | null): string => {
   if (value === undefined || value === null) return '0.00';
   return Number(value).toFixed(2);
 };
 
-/**
- * فرمت ارز به فارسی
- */
 const formatCurrency = (value: number | undefined | null): string => {
   if (value === undefined || value === null) return '0';
   return Math.round(value).toLocaleString('fa-IR');
 };
 
-/**
- * نماد عنصر برای نمایش در جدول
- */
 const getElementSymbol = (element: string): string => {
   const symbols: Record<string, string> = {
     'N-NO3': 'N', 'P': 'P', 'S': 'S', 'N-NH4': 'N', 'K': 'K',
@@ -638,9 +622,6 @@ const getElementSymbol = (element: string): string => {
   return symbols[element] || element.substring(0, 2);
 };
 
-/**
- * کلاس رنگی بر اساس نوع عنصر
- */
 const getElementBadgeClass = (element: string): string => {
   const macroElements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg'];
   const secondaryElements = ['Na', 'Cl'];
@@ -656,9 +637,6 @@ const getElementBadgeClass = (element: string): string => {
   return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400';
 };
 
-/**
- * کلاس رنگی نوار پیشرفت (بر اساس درصد از بک‌اند)
- */
 const getProgressClass = (percent: number): string => {
   if (percent >= 90 && percent <= 110) return 'bg-success-500';
   if (percent >= 70 && percent < 90) return 'bg-warning-500';

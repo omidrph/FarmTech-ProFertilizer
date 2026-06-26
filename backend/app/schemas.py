@@ -1,5 +1,5 @@
 # backend/app/schemas.py
-"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه نهایی"""
+"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه نهایی با مدل‌های بهینه‌سازی"""
 
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
@@ -96,7 +96,7 @@ class ReportResponse(BaseModel):
 
 
 # ============================================================
-# 🆕 طرح‌های مربوط به Fertilizer (کود) - نسخه نهایی
+# طرح‌های مربوط به Fertilizer (کود) - نسخه نهایی
 # ============================================================
 class FertilizerCreate(BaseModel):
     """طرح ایجاد کود جدید - فقط name اجباری است"""
@@ -467,3 +467,173 @@ class WaterAnalysisTemplateResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# ============================================================
+# 🆕 طرح‌های مربوط به بهینه‌سازی (Optimization)
+# ============================================================
+
+class OptimizationOptions(BaseModel):
+    """تنظیمات بهینه‌سازی"""
+    
+    # روش بهینه‌سازی
+    method: str = Field(
+        "nnls", 
+        description="روش بهینه‌سازی: nnls, lsq_linear, lsq_linear_with_cost"
+    )
+    
+    # وزن‌دهی به عناصر (اهمیت هر عنصر)
+    element_weights: Optional[Dict[str, float]] = Field(
+        None,
+        description="وزن اهمیت هر عنصر (پیش‌فرض: همه برابر)"
+    )
+    
+    # محدودیت‌ها
+    max_cost: Optional[float] = Field(None, ge=0, description="حداکثر هزینه مجاز (تومان)")
+    allow_zero_weights: bool = Field(True, description="آیا وزن صفر مجاز است؟")
+    
+    # پارامترهای الگوریتم
+    max_iterations: int = Field(1000, ge=1, description="حداکثر تعداد تکرار")
+    tolerance: float = Field(1e-6, ge=0, description="تلورانس همگرایی")
+    cost_weight: float = Field(0.01, ge=0, le=1, description="ضریب اهمیت هزینه در بهینه‌سازی")
+    
+    # تنظیمات پیشرفته
+    use_precipitation_check: bool = Field(True, description="بررسی رسوب")
+    use_ion_balance_check: bool = Field(True, description="بررسی تعادل یونی")
+    
+    # مخازن
+    reservoir_mode: str = Field(
+        "auto",
+        description="حالت مخازن: auto (خودکار), manual (دستی)"
+    )
+
+
+class OptimizationFertilizerInput(BaseModel):
+    """ورودی کود برای بهینه‌سازی"""
+    
+    id: str = Field(..., description="شناسه کود")
+    name: str = Field(..., description="نام کود")
+    elements: Dict[str, float] = Field(..., description="درصد عناصر تشکیل‌دهنده")
+    price_per_kg: float = Field(..., ge=0, description="قیمت هر کیلوگرم")
+    purity: float = Field(100.0, ge=0, le=100, description="درصد خلوص")
+    is_acid: bool = Field(False, description="آیا اسید است؟")
+    is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
+    fixed_weight: Optional[float] = Field(None, ge=0, description="وزن ثابت (اگر کاربر تعیین کرده باشد)")
+
+
+class OptimizationRequest(BaseModel):
+    """درخواست بهینه‌سازی فرمول کود"""
+    
+    # عناصر هدف (ضروری)
+    target_values: Dict[str, float] = Field(..., description="مقادیر هدف عناصر (ppm)")
+    
+    # کیفیت آب (اختیاری)
+    water_values: Optional[Dict[str, float]] = Field(
+        default_factory=dict, 
+        description="عناصر موجود در آب (ppm)"
+    )
+    
+    # کودهای موجود (ضروری)
+    fertilizers: List[OptimizationFertilizerInput] = Field(
+        ..., 
+        description="لیست کودهای موجود با عناصر و قیمت"
+    )
+    
+    # تنظیمات بهینه‌سازی (اختیاری)
+    options: Optional[OptimizationOptions] = Field(
+        default_factory=lambda: OptimizationOptions(),
+        description="تنظیمات بهینه‌سازی"
+    )
+    
+    # حجم مخزن (اختیاری)
+    tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن (لیتر)")
+    stock_volume: float = Field(100.0, ge=1, description="حجم استوک (لیتر)")
+    injection_ratio: float = Field(100.0, ge=1, description="نسبت تزریق (1:X)")
+
+
+class OptimizationResponse(BaseModel):
+    """پاسخ بهینه‌سازی"""
+    
+    # نتایج اصلی
+    weights: Dict[str, float] = Field(..., description="وزن بهینه هر کود (گرم)")
+    concentrations: Dict[str, float] = Field(..., description="غلظت نهایی عناصر (ppm)")
+    
+    # تحلیل
+    residual_error: float = Field(..., description="خطای باقی‌مانده")
+    cost_total: float = Field(..., description="هزینه کل (تومان)")
+    ion_balance: IonBalanceResponse = Field(..., description="تعادل یونی")
+    
+    # وضعیت نزدیکی به هدف
+    target_achievement: Dict[str, float] = Field(
+        ..., 
+        description="درصد تحقق هر عنصر (۰ تا ۱۰۰)"
+    )
+    
+    # توصیه‌ها و هشدارها
+    warnings: List[str] = Field(default_factory=list, description="هشدارها")
+    suggestions: List[str] = Field(default_factory=list, description="پیشنهادات")
+    
+    # اطلاعات مخازن (خودکار)
+    reservoir_data: Dict[str, List[Dict[str, Any]]] = Field(
+        default_factory=dict,
+        description="توزیع مواد در مخازن A, B, C"
+    )
+    
+    # آمار عملکرد
+    iterations: int = Field(..., description="تعداد تکرارها")
+    convergence_time_ms: float = Field(..., description="زمان محاسبه (میلی‌ثانیه)")
+    is_converged: bool = Field(True, description="آیا الگوریتم به جواب رسید؟")
+    
+    # خلاصه
+    summary: str = Field(..., description="خلاصه نتیجه به‌صورت متنی")
+
+
+class OptimizationLogResponse(BaseModel):
+    """پاسخ تاریخچه بهینه‌سازی"""
+    
+    id: int
+    user_id: int
+    report_id: Optional[int]
+    target_values: Dict[str, float]
+    water_values: Optional[Dict[str, float]]
+    fertilizers_selected: Optional[Dict[str, Any]]
+    optimized_weights: Optional[Dict[str, float]]
+    final_concentrations: Optional[Dict[str, float]]
+    residual_error: Optional[float]
+    cost_total: Optional[float]
+    iterations: Optional[int]
+    convergence_time_ms: Optional[float]
+    ion_balance: Optional[Dict[str, Any]]
+    warnings: Optional[List[str]]
+    suggestions: Optional[List[str]]
+    is_successful: bool
+    error_message: Optional[str]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class PrecipitationCheckRequest(BaseModel):
+    """درخواست بررسی رسوب"""
+    
+    concentrations: Dict[str, float] = Field(..., description="غلظت عناصر (ppm)")
+    temperature: float = Field(25.0, ge=0, le=100, description="دما (درجه سانتی‌گراد)")
+
+
+class PrecipitationRiskItem(BaseModel):
+    """یک خطر رسوب"""
+    
+    compound: str = Field(..., description="نام ترکیب رسوب‌کننده")
+    ion_product: float = Field(..., description="حاصل‌ضرب یونی فعلی")
+    ksp: float = Field(..., description="ثابت حلالیت")
+    is_risky: bool = Field(..., description="آیا خطرناک است؟")
+    suggestion: str = Field(..., description="پیشنهاد اصلاحی")
+
+
+class PrecipitationCheckResponse(BaseModel):
+    """پاسخ بررسی رسوب"""
+    
+    is_safe: bool = Field(..., description="آیا ترکیب ایمن است؟")
+    risks: List[PrecipitationRiskItem] = Field(default_factory=list, description="خطرات احتمالی")
+    suggestions: List[str] = Field(default_factory=list, description="پیشنهادات اصلاحی")

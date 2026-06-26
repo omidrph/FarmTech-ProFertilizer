@@ -1,17 +1,18 @@
 # backend/app/crud.py
-"""عملیات پایه دیتابیس (CRUD) برای همه مدل‌ها"""
+"""عملیات پایه دیتابیس (CRUD) برای همه مدل‌ها - نسخه با OptimizationLog"""
 
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
 import logging
+import json
 
 # ============================================================
 # Import مدل‌ها
 # ============================================================
 from app.models import (
     User, Report, Fertilizer, WaterAnalysis, Calculation, 
-    UserSession, Recipe, WaterAnalysisTemplate
+    UserSession, Recipe, WaterAnalysisTemplate, OptimizationLog
 )
 
 # ============================================================
@@ -228,7 +229,7 @@ def delete_report(db: Session, report_id: int) -> bool:
 
 
 # ============================================================
-# 🆕 CRUD برای Fertilizer (کود) - نسخه نهایی
+# CRUD برای Fertilizer (کود) - نسخه نهایی
 # ============================================================
 
 def create_fertilizer(db: Session, fertilizer_data: FertilizerCreate, user_id: int) -> Fertilizer:
@@ -569,7 +570,7 @@ def delete_water_analysis(db: Session, analysis_id: int) -> bool:
 
 
 # ============================================================
-# CRUD برای Calculation (محاسبات)
+# CRUD برای Calculation (محاسبات) - **نسخه اصلاح شده**
 # ============================================================
 
 def create_calculation(db: Session, calc_data: CalculationCreate, report_id: int) -> Calculation:
@@ -597,9 +598,74 @@ def create_calculation(db: Session, calc_data: CalculationCreate, report_id: int
 
 
 def get_calculation_by_report(db: Session, report_id: int) -> Optional[Calculation]:
-    """دریافت محاسبات بر اساس گزارش"""
+    """
+    دریافت محاسبات بر اساس گزارش
+    
+    این تابع اصلاح شده است تا مطمئن شود target_values به صورت دیکشنری برگردانده می‌شود
+    """
     try:
-        return db.query(Calculation).filter(Calculation.report_id == report_id).first()
+        calc = db.query(Calculation).filter(Calculation.report_id == report_id).first()
+        
+        if calc:
+            # اطمینان از اینکه target_values یک دیکشنری است
+            if calc.target_values is not None:
+                # اگر به صورت رشته JSON ذخیره شده بود، تبدیل کن
+                if isinstance(calc.target_values, str):
+                    try:
+                        import json
+                        calc.target_values = json.loads(calc.target_values)
+                        logger.info(f"Converted target_values from JSON string for calculation {calc.id}")
+                    except json.JSONDecodeError as e:
+                        logger.error(f"Failed to parse target_values JSON for calculation {calc.id}: {e}")
+                        calc.target_values = {}
+                # اگر دیکشنری نبود، به دیکشنری خالی تبدیل کن
+                elif not isinstance(calc.target_values, dict):
+                    logger.warning(f"target_values is not a dict for calculation {calc.id}, type: {type(calc.target_values)}")
+                    calc.target_values = {}
+            else:
+                logger.info(f"target_values is None for calculation {calc.id}, setting to empty dict")
+                calc.target_values = {}
+            
+            # همین کار را برای final_values انجام بده
+            if calc.final_values is not None:
+                if isinstance(calc.final_values, str):
+                    try:
+                        import json
+                        calc.final_values = json.loads(calc.final_values)
+                    except json.JSONDecodeError:
+                        calc.final_values = {}
+                elif not isinstance(calc.final_values, dict):
+                    calc.final_values = {}
+            else:
+                calc.final_values = {}
+            
+            # همین کار را برای reservoir_data انجام بده
+            if calc.reservoir_data is not None:
+                if isinstance(calc.reservoir_data, str):
+                    try:
+                        import json
+                        calc.reservoir_data = json.loads(calc.reservoir_data)
+                    except json.JSONDecodeError:
+                        calc.reservoir_data = {}
+                elif not isinstance(calc.reservoir_data, dict):
+                    calc.reservoir_data = {}
+            else:
+                calc.reservoir_data = {}
+            
+            # همین کار را برای calc_rows انجام بده
+            if calc.calc_rows is not None:
+                if isinstance(calc.calc_rows, str):
+                    try:
+                        import json
+                        calc.calc_rows = json.loads(calc.calc_rows)
+                    except json.JSONDecodeError:
+                        calc.calc_rows = []
+                elif not isinstance(calc.calc_rows, list):
+                    calc.calc_rows = []
+            else:
+                calc.calc_rows = []
+        
+        return calc
     except Exception as e:
         logger.error(f"Error getting calculation by report: {e}")
         return None
@@ -876,4 +942,129 @@ def delete_water_template(db: Session, template_id: int) -> bool:
     except Exception as e:
         db.rollback()
         logger.error(f"Error deleting water template: {e}")
+        raise e
+
+
+# ============================================================
+# 🆕 CRUD برای OptimizationLog (تاریخچه بهینه‌سازی)
+# ============================================================
+
+def save_optimization_log(
+    db: Session,
+    user_id: int,
+    report_id: Optional[int],
+    target_values: Dict[str, float],
+    water_values: Optional[Dict[str, float]],
+    fertilizers_selected: List[Dict[str, Any]],
+    optimization_options: Optional[Dict[str, Any]],
+    result: Dict[str, Any]
+) -> OptimizationLog:
+    """
+    ذخیره تاریخچه بهینه‌سازی
+    
+    Args:
+        db: Session دیتابیس
+        user_id: شناسه کاربر
+        report_id: شناسه گزارش (اختیاری)
+        target_values: عناصر هدف
+        water_values: کیفیت آب
+        fertilizers_selected: لیست کودهای انتخاب شده
+        optimization_options: تنظیمات بهینه‌سازی
+        result: نتیجه بهینه‌سازی
+    
+    Returns:
+        OptimizationLog: شیء ذخیره شده
+    """
+    try:
+        log = OptimizationLog(
+            user_id=user_id,
+            report_id=report_id,
+            target_values=target_values,
+            water_values=water_values or {},
+            fertilizers_selected=fertilizers_selected,
+            optimization_options=optimization_options or {},
+            optimized_weights=result.get('weights', {}),
+            final_concentrations=result.get('concentrations', {}),
+            residual_error=result.get('residual_error', 0),
+            cost_total=result.get('cost_total', 0),
+            iterations=result.get('iterations', 0),
+            convergence_time_ms=result.get('convergence_time_ms', 0),
+            ion_balance=result.get('ion_balance', {}),
+            warnings=result.get('warnings', []),
+            suggestions=result.get('suggestions', []),
+            is_successful=True,
+            error_message=None
+        )
+        
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+        
+        logger.info(f"Optimization log saved: {log.id}")
+        return log
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error saving optimization log: {e}")
+        raise e
+
+
+def get_optimization_history(
+    db: Session,
+    user_id: int,
+    skip: int = 0,
+    limit: int = 100,
+    report_id: Optional[int] = None
+) -> List[OptimizationLog]:
+    """
+    دریافت تاریخچه بهینه‌سازی کاربر
+    
+    Args:
+        db: Session دیتابیس
+        user_id: شناسه کاربر
+        skip: تعداد رد شدن
+        limit: تعداد دریافت
+        report_id: فیلتر بر اساس گزارش (اختیاری)
+    
+    Returns:
+        List[OptimizationLog]: لیست تاریخچه
+    """
+    try:
+        query = db.query(OptimizationLog).filter(OptimizationLog.user_id == user_id)
+        
+        if report_id is not None:
+            query = query.filter(OptimizationLog.report_id == report_id)
+        
+        return query.order_by(desc(OptimizationLog.created_at)).offset(skip).limit(limit).all()
+        
+    except Exception as e:
+        logger.error(f"Error getting optimization history: {e}")
+        return []
+
+
+def get_optimization_log_by_id(db: Session, log_id: int) -> Optional[OptimizationLog]:
+    """دریافت یک تاریخچه بهینه‌سازی با شناسه"""
+    try:
+        return db.query(OptimizationLog).filter(OptimizationLog.id == log_id).first()
+    except Exception as e:
+        logger.error(f"Error getting optimization log: {e}")
+        return None
+
+
+def delete_optimization_log(db: Session, log_id: int) -> bool:
+    """حذف یک تاریخچه بهینه‌سازی"""
+    try:
+        log = get_optimization_log_by_id(db, log_id)
+        if not log:
+            return False
+        
+        db.delete(log)
+        db.commit()
+        
+        logger.info(f"Optimization log deleted: {log_id}")
+        return True
+        
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting optimization log: {e}")
         raise e

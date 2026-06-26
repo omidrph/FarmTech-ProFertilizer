@@ -59,6 +59,7 @@ export const useTargetStore = defineStore('target', () => {
   }
 
   function setTargetElement(element: ElementName, value: number) {
+    console.log(`Setting target element: ${element} = ${value}`);
     targetElements.value[element] = value;
     debounceCalculateBalance();
   }
@@ -75,6 +76,25 @@ export const useTargetStore = defineStore('target', () => {
 
   function getTargetElement(element: ElementName): number {
     return targetElements.value[element] || 0;
+  }
+
+  /**
+   * 🆕 بارگذاری دستی عناصر هدف از یک شیء
+   * این تابع برای بارگذاری داده‌های ذخیره شده از دیتابیس استفاده می‌شود
+   */
+  function loadTargetsFromObject(data: Record<string, number>) {
+    console.log('Loading targets from object:', data);
+    if (data && typeof data === 'object') {
+      for (const [key, value] of Object.entries(data)) {
+        if (ELEMENTS.includes(key as any) && value !== undefined && value !== null && value > 0) {
+          targetElements.value[key as ElementName] = value;
+        }
+      }
+      // محاسبه تعادل یونی پس از بارگذاری
+      calculateIonBalanceFromAPI();
+    } else {
+      console.warn('Invalid data for loadTargetsFromObject:', data);
+    }
   }
 
   // ===== Debounce =====
@@ -100,7 +120,8 @@ export const useTargetStore = defineStore('target', () => {
     setTargetUnit,
     resetTargets,
     getTargetElement,
-    calculateIonBalanceFromAPI
+    calculateIonBalanceFromAPI,
+    loadTargetsFromObject  // 🆕 تابع جدید
   };
 });
 

@@ -263,7 +263,30 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- پیام موفقیت -->
+    <!-- پیام موفقیت (Toast) -->
+    <!-- ============================================================ -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="toastMessage"
+          class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2"
+          :class="toastType === 'success' 
+            ? 'bg-success-600 text-white' 
+            : 'bg-danger-600 text-white'"
+        >
+          <svg v-if="toastType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span class="text-sm font-medium">{{ toastMessage }}</span>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- ============================================================ -->
+    <!-- پیام موفقیت (قدیمی - برای سازگاری) -->
     <!-- ============================================================ -->
     <div v-if="saveSuccess" class="bg-success-50 dark:bg-success-900/20 border-r-4 border-success-500 rounded-lg p-4 animate-fade-in">
       <p class="text-success-700 dark:text-success-400 text-sm flex items-center gap-2">
@@ -307,6 +330,10 @@ const isConverting = ref(false);
 const errorMessage = ref<string | null>(null);
 const convertedValues = ref<Record<string, Record<string, number>> | null>(null);
 
+// ===== Toast State =====
+const toastMessage = ref<string | null>(null);
+const toastType = ref<'success' | 'error'>('success');
+
 const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
 // ===== Computed =====
@@ -317,6 +344,15 @@ const targetUnit = computed({
 
 const targetValues = computed(() => targetStore.targetElements);
 const ionBalance = computed(() => targetStore.ionBalance);
+
+// ===== Toast Functions =====
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = message;
+  toastType.value = type;
+  setTimeout(() => {
+    toastMessage.value = null;
+  }, 3000);
+};
 
 // ===== Methods =====
 
@@ -354,6 +390,14 @@ const saveTargets = async () => {
   isSaving.value = true;
 
   try {
+    // بررسی اینکه آیا حداقل یک عنصر با مقدار مثبت وجود دارد
+    const hasPositiveValue = Object.values(targetValues.value).some(v => v > 0);
+    if (!hasPositiveValue) {
+      showToast('لطفاً حداقل یک عنصر با مقدار مثبت وارد کنید', 'error');
+      return;
+    }
+
+    // اگر گزارش وجود نداشت، یک گزارش جدید ایجاد کن
     if (!reportStore.reportData.reportName) {
       reportStore.updateReportData({
         reportName: `گزارش ${new Date().toLocaleDateString('fa-IR')}`,
@@ -361,15 +405,24 @@ const saveTargets = async () => {
       });
     }
 
-    saveSuccess.value = true;
-    setTimeout(() => {
-      saveSuccess.value = false;
-    }, 3000);
-
-    console.log('عناصر هدف ذخیره شد:', targetValues.value);
+    // ذخیره گزارش
+    const success = await reportStore.saveCurrentReport();
+    
+    if (success) {
+      saveSuccess.value = true;
+      showToast('✅ عناصر هدف با موفقیت ذخیره شدند!', 'success');
+      
+      // پس از 3 ثانیه پیام موفقیت را مخفی کن
+      setTimeout(() => {
+        saveSuccess.value = false;
+      }, 3000);
+    } else {
+      showToast('❌ خطا در ذخیره عناصر هدف: ' + (reportStore.error || 'خطای ناشناخته'), 'error');
+    }
   } catch (error: any) {
     console.error('خطا در ذخیره عناصر هدف:', error);
     errorMessage.value = 'خطا در ذخیره عناصر هدف. لطفاً دوباره تلاش کنید.';
+    showToast('❌ خطا در ذخیره عناصر هدف', 'error');
   } finally {
     isSaving.value = false;
   }
@@ -381,6 +434,7 @@ const saveTargets = async () => {
 const resetTargets = () => {
   targetStore.resetTargets();
   convertedValues.value = null;
+  showToast('همه مقادیر بازنشانی شدند', 'success');
 };
 
 /**
@@ -436,6 +490,7 @@ const loadConvertedValues = async () => {
   } catch (error: any) {
     console.error('خطا در تبدیل واحدها:', error);
     errorMessage.value = 'خطا در تبدیل واحدها. لطفاً دوباره تلاش کنید.';
+    showToast('❌ خطا در تبدیل واحدها', 'error');
   } finally {
     isConverting.value = false;
   }
@@ -504,5 +559,16 @@ onMounted(() => {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 10px);
 }
 </style>

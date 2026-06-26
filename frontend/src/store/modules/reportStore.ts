@@ -177,10 +177,35 @@ export const useReportStore = defineStore('report', () => {
       }
 
       // 3. ذخیره محاسبات (عناصر هدف + نتایج)
-      if (Object.keys(targetStore.targetElements).length > 0 || calcStore.calculationRows.length > 0) {
+      const targetKeys = Object.keys(targetStore.targetElements);
+      const hasTargets = targetKeys.some(key => {
+        const value = targetStore.targetElements[key as keyof typeof targetStore.targetElements];
+        // اصلاح: بررسی نوع value قبل از مقایسه
+        if (value === undefined || value === null) {
+          return false;
+        }
+        if (typeof value === 'number') {
+          return value > 0;
+        }
+        return false;
+      });
+
+      if (hasTargets || calcStore.calculationRows.length > 0) {
         try {
+          // اطمینان از اینکه targetElements به درستی ذخیره می‌شود
+          const targetValues: Record<string, number> = {};
+          for (const [key, value] of Object.entries(targetStore.targetElements)) {
+            // اصلاح: بررسی نوع value قبل از استفاده
+            if (value === undefined || value === null) {
+              continue;
+            }
+            if (typeof value === 'number' && value > 0) {
+              targetValues[key] = value;
+            }
+          }
+
           const calcPayload = {
-            target_values: targetStore.targetElements,
+            target_values: targetValues,
             final_values: {},
             reservoir_data: calcStore.reservoirData,
             calc_rows: calcStore.calculationRows,
@@ -198,6 +223,9 @@ export const useReportStore = defineStore('report', () => {
         }
       }
 
+      // بارگذاری مجدد گزارش‌ها
+      await loadReports();
+      
       return true;
     } catch (err: any) {
       error.value = err.message || 'خطا در ذخیره گزارش';
@@ -264,20 +292,62 @@ export const useReportStore = defineStore('report', () => {
       try {
         const calculation = await apiService.getCalculation(String(reportId));
         if (calculation) {
+          // ===== اصلاح: اطمینان از اینکه target_values به درستی در targetStore قرار می‌گیرد =====
           if (calculation.target_values) {
-            for (const [key, value] of Object.entries(calculation.target_values)) {
-              targetStore.setTargetElement(key as any, value as number);
+            let targetValues = calculation.target_values;
+            
+            // اگر target_values رشته JSON است، آن را تبدیل کن
+            if (typeof targetValues === 'string') {
+              try {
+                targetValues = JSON.parse(targetValues);
+              } catch (e) {
+                console.error('Error parsing target_values JSON:', e);
+                targetValues = {};
+              }
             }
+            
+            // اگر target_values دیکشنری است، آن را در targetStore قرار بده
+            if (typeof targetValues === 'object' && targetValues !== null) {
+              console.log('Loading target_values into store:', targetValues);
+              for (const [key, value] of Object.entries(targetValues)) {
+                // اصلاح: بررسی نوع value قبل از استفاده
+                if (value === undefined || value === null) {
+                  continue;
+                }
+                if (typeof value === 'number' && value > 0) {
+                  targetStore.setTargetElement(key as any, value as number);
+                }
+              }
+            } else {
+              console.warn('target_values is not an object:', typeof targetValues);
+            }
+          } else {
+            console.warn('calculation.target_values is null or undefined');
           }
+          
+          // بارگذاری calc_rows
           if (calculation.calc_rows && Array.isArray(calculation.calc_rows)) {
             calcStore.calculationRows = calculation.calc_rows;
           }
+          
+          // بارگذاری reservoir_data
           if (calculation.reservoir_data) {
-            calcStore.reservoirData = calculation.reservoir_data;
+            let reservoirData = calculation.reservoir_data;
+            if (typeof reservoirData === 'string') {
+              try {
+                reservoirData = JSON.parse(reservoirData);
+              } catch (e) {
+                console.error('Error parsing reservoir_data JSON:', e);
+                reservoirData = { A: [], B: [], C: [] };
+              }
+            }
+            calcStore.reservoirData = reservoirData;
           }
+        } else {
+          console.warn('No calculation found for report:', reportId);
         }
       } catch (err) {
-        console.warn('محاسبات برای این گزارش وجود ندارد');
+        console.warn('محاسبات برای این گزارش وجود ندارد:', err);
       }
 
       return true;

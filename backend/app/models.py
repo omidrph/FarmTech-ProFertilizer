@@ -1,5 +1,5 @@
 # backend/app/models.py
-"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه نهایی"""
+"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه نهایی با OptimizationLog"""
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
@@ -31,6 +31,7 @@ class User(Base):
     reports = relationship("Report", back_populates="user", cascade="all, delete-orphan")
     fertilizers = relationship("Fertilizer", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    optimizations = relationship("OptimizationLog", back_populates="user", cascade="all, delete-orphan")
     
     @property
     def full_name(self) -> str:
@@ -85,13 +86,14 @@ class Report(Base):
     user = relationship("User", back_populates="reports")
     water_analysis = relationship("WaterAnalysis", back_populates="report", uselist=False, cascade="all, delete-orphan")
     calculation = relationship("Calculation", back_populates="report", uselist=False, cascade="all, delete-orphan")
+    optimizations = relationship("OptimizationLog", back_populates="report", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Report {self.id} - {self.report_name}>"
 
 
 # ============================================================
-# 🆕 مدل Fertilizer (کود) - نسخه نهایی با فیلدهای بهینه‌شده
+# مدل Fertilizer (کود) - نسخه نهایی با فیلدهای بهینه‌شده
 # ============================================================
 class Fertilizer(Base):
     """
@@ -260,3 +262,53 @@ class WaterAnalysisTemplate(Base):
     
     def __repr__(self):
         return f"<WaterAnalysisTemplate {self.name}>"
+
+
+# ============================================================
+# 🆕 مدل OptimizationLog (برای ثبت تاریخچه بهینه‌سازی)
+# ============================================================
+class OptimizationLog(Base):
+    """مدل ثبت تاریخچه بهینه‌سازی فرمول کود"""
+    
+    __tablename__ = "optimization_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=True)
+    
+    # ===== ورودی‌ها =====
+    target_values = Column(JSON, nullable=False)  # عناصر هدف
+    water_values = Column(JSON, nullable=True)    # کیفیت آب
+    fertilizers_selected = Column(JSON, nullable=True)  # لیست کودهای انتخاب شده
+    
+    # ===== تنظیمات بهینه‌سازی =====
+    optimization_options = Column(JSON, nullable=True)  # تنظیمات (وزن‌ها، روش، ...)
+    
+    # ===== خروجی‌ها =====
+    optimized_weights = Column(JSON, nullable=True)  # وزن‌های بهینه هر کود
+    final_concentrations = Column(JSON, nullable=True)  # غلظت نهایی عناصر
+    residual_error = Column(Float, nullable=True)  # خطای باقی‌مانده
+    cost_total = Column(Float, nullable=True)  # هزینه کل
+    
+    # ===== متریک‌های عملکرد =====
+    iterations = Column(Integer, nullable=True)  # تعداد تکرارها
+    convergence_time_ms = Column(Float, nullable=True)  # زمان همگرایی (میلی‌ثانیه)
+    
+    # ===== تحلیل =====
+    ion_balance = Column(JSON, nullable=True)  # {"cation": 12.3, "anion": 12.1, "is_balanced": True}
+    warnings = Column(JSON, nullable=True)  # لیست هشدارها
+    suggestions = Column(JSON, nullable=True)  # لیست پیشنهادات
+    
+    # ===== وضعیت =====
+    is_successful = Column(Boolean, default=True)
+    error_message = Column(Text, nullable=True)
+    
+    # ===== تاریخ‌ها =====
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # ===== روابط =====
+    user = relationship("User", back_populates="optimizations")
+    report = relationship("Report", back_populates="optimizations")
+    
+    def __repr__(self):
+        return f"<OptimizationLog {self.id}>"

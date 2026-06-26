@@ -59,7 +59,7 @@ export interface WaterAnalysisRow {
 }
 
 // ============================================================
-// 🆕 Fertilizer Interface - نسخه نهایی
+// Fertilizer Interface - نسخه نهایی
 // ============================================================
 export interface Fertilizer {
     id: string;
@@ -245,6 +245,95 @@ export interface RecipeUpdate {
 export interface RecipeListResponse {
     system_recipes: Recipe[];
     user_recipes: Recipe[];
+}
+
+// ============================================================
+// 🆕 OPTIMIZATION TYPES (بهینه‌سازی خودکار)
+// ============================================================
+
+export interface OptimizationOptions {
+    method?: 'nnls' | 'lsq_linear' | 'lsq_linear_with_cost';
+    element_weights?: Record<string, number>;
+    max_cost?: number;
+    allow_zero_weights?: boolean;
+    max_iterations?: number;
+    tolerance?: number;
+    cost_weight?: number;
+    use_precipitation_check?: boolean;
+    use_ion_balance_check?: boolean;
+    reservoir_mode?: 'auto' | 'manual';
+}
+
+export interface OptimizationFertilizerInput {
+    id: string;
+    name: string;
+    elements: Record<string, number>;
+    price_per_kg: number;
+    purity: number;
+    is_acid: boolean;
+    is_system_default: boolean;
+    fixed_weight?: number;
+}
+
+export interface OptimizationRequest {
+    target_values: Record<string, number>;
+    water_values?: Record<string, number>;
+    fertilizers: OptimizationFertilizerInput[];
+    options?: OptimizationOptions;
+    tank_volume?: number;
+    stock_volume?: number;
+    injection_ratio?: number;
+}
+
+export interface OptimizationResponse {
+    weights: Record<string, number>;
+    concentrations: Record<string, number>;
+    residual_error: number;
+    cost_total: number;
+    ion_balance: IonBalance;
+    target_achievement: Record<string, number>;
+    warnings: string[];
+    suggestions: string[];
+    reservoir_data: ReservoirData;
+    iterations: number;
+    convergence_time_ms: number;
+    is_converged: boolean;
+    summary: string;
+}
+
+export interface PrecipitationRiskItem {
+    compound: string;
+    ion_product: number;
+    ksp: number;
+    is_risky: boolean;
+    suggestion: string;
+}
+
+export interface PrecipitationCheckResponse {
+    is_safe: boolean;
+    risks: PrecipitationRiskItem[];
+    suggestions: string[];
+}
+
+export interface OptimizationLogResponse {
+    id: number;
+    user_id: number;
+    report_id?: number;
+    target_values: Record<string, number>;
+    water_values?: Record<string, number>;
+    fertilizers_selected?: Record<string, any>;
+    optimized_weights?: Record<string, number>;
+    final_concentrations?: Record<string, number>;
+    residual_error?: number;
+    cost_total?: number;
+    iterations?: number;
+    convergence_time_ms?: number;
+    ion_balance?: IonBalance;
+    warnings?: string[];
+    suggestions?: string[];
+    is_successful: boolean;
+    error_message?: string;
+    created_at: string;
 }
 
 // ============================================================
