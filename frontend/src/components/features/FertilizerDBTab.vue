@@ -1,13 +1,90 @@
 <template>
   <div class="space-y-6">
     <!-- ============================================================ -->
-    <!-- هدر با توضیحات (آیکون حذف شد) -->
+    <!-- هدر با توضیحات -->
     <!-- ============================================================ -->
     <div class="bg-primary-50 dark:bg-primary-900/20 border-r-4 border-primary-500 rounded-lg p-4">
       <p class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-        اطلاعات مربوط به کودها در جدول زیر قابل مشاهده و ویرایش است. با فشردن دکمه "افزودن" می‌توانید کود جدید اضافه کنید.
-        همچنین می‌توانید از دکمه "بارگذاری کودهای سیستمی" برای شروع سریع‌تر استفاده نمایید.
+        در این بخش می‌توانید کودهای شخصی خود را مدیریت کنید.
+        همچنین با کلیک روی دکمه "کپی کودهای سیستمی" می‌توانید کودهای استاندارد را به بخش شخصی خود اضافه کنید.
       </p>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- بخش کودهای سیستمی - دکمه کپی -->
+    <!-- ============================================================ -->
+    <div class="bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/20 dark:to-gray-800 rounded-xl shadow-sm border border-indigo-200 dark:border-indigo-800 p-5">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-900 dark:text-white">کودهای سیستمی</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              {{ systemFertilizers.length }} کود استاندارد آماده برای کپی
+              <span v-if="copyStatus.copiedCount > 0" class="text-success-600 dark:text-success-400">
+                ({{ copyStatus.copiedCount }} مورد کپی شده)
+              </span>
+            </p>
+          </div>
+        </div>
+        
+        <button
+          @click="handleCopyAllSystemFertilizers"
+          :disabled="isCopying || systemFertilizers.length === 0"
+          class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
+        >
+          <svg v-if="!isCopying" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+          </svg>
+          <svg v-else class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          {{ isCopying ? 'در حال کپی...' : 'کپی همه کودهای سیستمی' }}
+        </button>
+      </div>
+
+      <!-- نمایش کودهای سیستمی (به صورت جمع‌شده) -->
+      <div class="mt-4">
+        <button
+          @click="showSystemFertilizers = !showSystemFertilizers"
+          class="text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 flex items-center gap-1"
+        >
+          <svg class="w-4 h-4 transition-transform" :class="{ 'rotate-180': showSystemFertilizers }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+          {{ showSystemFertilizers ? 'بستن لیست کودهای سیستمی' : 'مشاهده کودهای سیستمی' }}
+        </button>
+
+        <div v-if="showSystemFertilizers" class="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+          <div
+            v-for="fert in systemFertilizers"
+            :key="fert.id"
+            class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-200 dark:border-gray-600 flex items-center justify-between"
+          >
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ fert.name }}</p>
+              <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                <span class="text-[10px] px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">{{ fert.category || 'متفرقه' }}</span>
+                <span class="text-[10px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded">{{ fert.form || 'جامد' }}</span>
+              </div>
+            </div>
+            <button
+              @click="handleCopySingleSystemFertilizer(fert.id)"
+              class="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+              title="کپی این کود"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ============================================================ -->
@@ -36,28 +113,14 @@
             v-model="filterType"
             class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           >
-            <option value="all">همه انواع</option>
+            <option value="all">همه کودها</option>
             <option value="fertilizer">فقط کودها</option>
             <option value="acid">فقط اسیدها</option>
-            <option value="system">کودهای سیستمی</option>
           </select>
         </div>
 
         <!-- بخش چپ: دکمه‌های عملیاتی -->
         <div class="flex flex-wrap gap-2 w-full lg:w-auto justify-end">
-          <!-- 🆕 دکمه بارگذاری کودهای سیستمی -->
-          <button
-            @click="loadSystemFertilizers"
-            :disabled="isLoading || hasSystemFertilizers"
-            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
-            :title="hasSystemFertilizers ? 'کودهای سیستمی قبلاً بارگذاری شده‌اند' : 'بارگذاری ۴۲ کود پرکاربرد سیستمی برای شروع سریع'"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
-            {{ hasSystemFertilizers ? 'کودهای سیستمی موجود است' : 'بارگذاری کودهای سیستمی' }}
-          </button>
-
           <!-- دکمه افزودن دستی -->
           <button
             @click="openAddModal"
@@ -66,7 +129,7 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            افزودن کود جدید
+            افزودن کود شخصی
           </button>
 
           <!-- دکمه بروزرسانی -->
@@ -99,8 +162,8 @@
           </svg>
         </div>
         <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">کل کودها</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{{ fertilizers.length }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">کل کودهای شخصی</p>
+          <p class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{{ userFertilizers.length }}</p>
         </div>
       </div>
       
@@ -135,54 +198,16 @@
           </svg>
         </div>
         <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">سیستمی</p>
-          <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">{{ systemFertilizersCount }}</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">کودهای سیستمی</p>
+          <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">{{ systemFertilizers.length }}</p>
         </div>
       </div>
     </div>
 
     <!-- ============================================================ -->
-    <!-- پیام خالی بودن دیتابیس -->
+    <!-- جدول کودهای شخصی -->
     <!-- ============================================================ -->
-    <div v-if="filteredFertilizers.length === 0 && !isLoading" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-      <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-        <svg class="w-10 h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-        </svg>
-      </div>
-      <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-        {{ searchQuery || filterType !== 'all' ? 'نتیجه‌ای یافت نشد' : 'هیچ کودی در دیتابیس وجود ندارد' }}
-      </h4>
-      <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-        {{ searchQuery || filterType !== 'all' ? 'لطفاً عبارت جستجو یا فیلتر را تغییر دهید.' : 'برای شروع، روی دکمه "بارگذاری کودهای سیستمی" کلیک کنید یا اولین کود خود را اضافه نمایید.' }}
-      </p>
-      <div class="mt-6 flex justify-center gap-3 flex-wrap">
-        <button
-          v-if="!searchQuery && filterType === 'all'"
-          @click="loadSystemFertilizers"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-          </svg>
-          بارگذاری سیستمی
-        </button>
-        <button
-          @click="openAddModal"
-          class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center gap-2"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          افزودن دستی
-        </button>
-      </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- جدول کودها -->
-    <!-- ============================================================ -->
-    <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div v-if="filteredFertilizers.length > 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       <!-- هدر جدول -->
       <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50">
         <div class="flex items-center gap-2">
@@ -190,7 +215,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
           </svg>
           <h3 class="text-base font-semibold text-gray-900 dark:text-white">
-            لیست کودها
+            کودهای شخصی
             <span class="text-sm font-normal text-gray-500 dark:text-gray-400 mr-2">({{ filteredFertilizers.length }} مورد)</span>
           </h3>
         </div>
@@ -209,29 +234,20 @@
                   نام کود / برند
                 </div>
               </th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[120px]">
-                <div class="flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                  قیمت (تومان)
-                </div>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[70px]">
+                فرم
+              </th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px]">
+                خلوص %
               </th>
               <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[100px]">
-                <div class="flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-                  </svg>
-                  نوع
-                </div>
+                pH
               </th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[250px]">
-                <div class="flex items-center justify-center gap-2">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                  </svg>
-                  عناصر تشکیل‌دهنده
-                </div>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[120px]">
+                قیمت (تومان)
+              </th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[200px]">
+                عناصر
               </th>
               <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[100px]">
                 عملیات
@@ -249,11 +265,11 @@
                 <div class="flex items-center gap-3">
                   <div
                     class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                    :class="fertilizer.isAcid ? 'bg-warning-50 dark:bg-warning-900/30' : fertilizer.isSystemDefault ? 'bg-indigo-50 dark:bg-indigo-900/30' : 'bg-primary-50 dark:bg-primary-900/30'"
+                    :class="fertilizer.isAcid ? 'bg-warning-50 dark:bg-warning-900/30' : 'bg-primary-50 dark:bg-primary-900/30'"
                   >
                     <svg
                       class="w-5 h-5"
-                      :class="fertilizer.isAcid ? 'text-warning-600 dark:text-warning-400' : fertilizer.isSystemDefault ? 'text-indigo-600 dark:text-indigo-400' : 'text-primary-600 dark:text-primary-400'"
+                      :class="fertilizer.isAcid ? 'text-warning-600 dark:text-warning-400' : 'text-primary-600 dark:text-primary-400'"
                       fill="none" stroke="currentColor" viewBox="0 0 24 24"
                     >
                       <path v-if="fertilizer.isAcid" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
@@ -266,34 +282,40 @@
                       <span v-if="fertilizer.brand" class="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
                         {{ fertilizer.brand }}
                       </span>
-                      <span v-if="fertilizer.isSystemDefault" class="text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">
-                        سیستمی
+                      <span v-if="fertilizer.sourceSystemId" class="text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-1.5 py-0.5 rounded border border-indigo-100 dark:border-indigo-800">
+                        کپی از سیستمی
                       </span>
                     </div>
                   </div>
                 </div>
               </td>
               
+              <!-- فرم -->
+              <td class="px-4 py-3 text-center">
+                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  {{ getFormLabel(fertilizer.form) }}
+                </span>
+              </td>
+              
+              <!-- خلوص -->
+              <td class="px-4 py-3 text-center">
+                <span class="font-semibold text-gray-900 dark:text-white tabular-nums">
+                  {{ fertilizer.concentration || 100 }}%
+                </span>
+              </td>
+              
+              <!-- pH -->
+              <td class="px-4 py-3 text-center">
+                <span v-if="fertilizer.phLevel !== undefined && fertilizer.phLevel !== null" class="font-semibold text-gray-900 dark:text-white tabular-nums">
+                  {{ fertilizer.phLevel }}
+                </span>
+                <span v-else class="text-gray-400 dark:text-gray-500 text-xs">-</span>
+              </td>
+              
               <!-- قیمت -->
               <td class="px-4 py-3 text-center">
                 <span class="font-semibold text-gray-900 dark:text-white tabular-nums">
                   {{ Number(fertilizer.pricePerKg || 0).toLocaleString('fa-IR') }}
-                </span>
-              </td>
-              
-              <!-- نوع -->
-              <td class="px-4 py-3 text-center">
-                <span
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-                  :class="fertilizer.isAcid
-                    ? 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400'
-                    : 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400'"
-                >
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path v-if="fertilizer.isAcid" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                  </svg>
-                  {{ fertilizer.isAcid ? 'اسید' : 'کود' }}
                 </span>
               </td>
               
@@ -312,7 +334,7 @@
                       <span>{{ percentage }}%</span>
                     </span>
                   </template>
-                  <span v-else class="text-xs text-gray-400 dark:text-gray-500 italic">بدون عنصر ثبت شده</span>
+                  <span v-else class="text-xs text-gray-400 dark:text-gray-500 italic">بدون عنصر</span>
                 </div>
               </td>
               
@@ -329,7 +351,7 @@
                     </svg>
                   </button>
                   <button
-                    @click="deleteFertilizer(fertilizer.id, fertilizer.isSystemDefault)"
+                    @click="deleteFertilizer(fertilizer.id)"
                     class="p-1.5 rounded-lg text-danger-600 hover:text-danger-800 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors"
                     title="حذف"
                   >
@@ -345,8 +367,44 @@
       </div>
     </div>
 
+    <!-- پیام خالی بودن -->
+    <div v-else-if="!isLoading" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+      <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+        <svg class="w-10 h-10 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+      <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        {{ searchQuery || filterType !== 'all' ? 'نتیجه‌ای یافت نشد' : 'هنوز کود شخصی ایجاد نکرده‌اید' }}
+      </h4>
+      <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+        {{ searchQuery || filterType !== 'all' ? 'لطفاً عبارت جستجو یا فیلتر را تغییر دهید.' : 'برای شروع، روی دکمه "کپی کودهای سیستمی" کلیک کنید یا اولین کود شخصی خود را اضافه نمایید.' }}
+      </p>
+      <div class="mt-6 flex justify-center gap-3 flex-wrap">
+        <button
+          v-if="!searchQuery && filterType === 'all'"
+          @click="handleCopyAllSystemFertilizers"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors inline-flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+          </svg>
+          کپی کودهای سیستمی
+        </button>
+        <button
+          @click="openAddModal"
+          class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          افزودن دستی
+        </button>
+      </div>
+    </div>
+
     <!-- ============================================================ -->
-    <!-- مودال افزودن/ویرایش کود (بهبود یافته - بدون خطا) -->
+    <!-- مودال افزودن/ویرایش کود -->
     <!-- ============================================================ -->
     <Teleport to="body">
       <div 
@@ -362,10 +420,10 @@
           @click="closeModal"
         ></div>
 
-        <!-- کانتینر مودال - دسکتاپ: وسط‌چین، موبایل: تمام صفحه -->
+        <!-- کانتینر مودال -->
         <div class="flex min-h-full items-center justify-center p-0 sm:p-4 text-center sm:text-left">
           <div 
-            class="relative transform overflow-hidden bg-white dark:bg-gray-800 text-right shadow-2xl transition-all w-full h-full sm:h-auto sm:my-8 sm:max-w-5xl sm:rounded-2xl"
+            class="relative transform overflow-hidden bg-white dark:bg-gray-800 text-right shadow-2xl transition-all w-full h-full sm:h-auto sm:my-8 sm:max-w-4xl sm:rounded-2xl"
           >
             <!-- هدر مودال -->
             <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10">
@@ -373,7 +431,7 @@
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                 </svg>
-                {{ isEditing ? 'ویرایش کود' : 'افزودن کود جدید' }}
+                {{ isEditing ? 'ویرایش کود' : 'افزودن کود شخصی جدید' }}
               </h3>
               <button 
                 @click="closeModal" 
@@ -445,37 +503,15 @@
                         <option value="نیترات"></option>
                         <option value="سولفات"></option>
                         <option value="فسفات"></option>
-                        <option value="کلات EDTA"></option>
-                        <option value="کلات EDDHA"></option>
-                        <option value="کلات آمینو اسیدی"></option>
+                        <option value="کلات"></option>
                         <option value="ریزمغذی"></option>
-                        <option value="ریزمغذی کامل"></option>
                         <option value="اسید"></option>
                         <option value="محرک رشد"></option>
-                        <option value="کلسیم-بور"></option>
-                        <option value="پتاسیم مایع"></option>
-                        <option value="روی-نیتروژن"></option>
                       </datalist>
                     </div>
                   </div>
 
-                  <!-- قیمت -->
-                  <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      قیمت هر کیلوگرم (تومان) <span class="text-danger-500">*</span>
-                    </label>
-                    <div class="relative">
-                      <input 
-                        type="number" 
-                        v-model.number="formData.price_per_kg" 
-                        placeholder="مثال: ۸۵۰۰۰" 
-                        class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all pl-16"
-                      />
-                      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">تومان</span>
-                    </div>
-                  </div>
-
-                  <!-- فرم فیزیکی و حلالیت -->
+                  <!-- فرم فیزیکی و خلوص -->
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -494,40 +530,50 @@
                     </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        حلالیت
+                        خلوص / غلظت (%)
                       </label>
                       <input 
-                        type="text" 
-                        v-model="formData.solubility" 
-                        placeholder="مثال: 250 g/L" 
+                        type="number" 
+                        v-model.number="formData.concentration" 
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="مثال: 99" 
                         class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                       />
                     </div>
                   </div>
 
-                  <!-- نسبت NPK و pH -->
+                  <!-- pH و قیمت -->
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        نسبت NPK
-                      </label>
-                      <input 
-                        type="text" 
-                        v-model="formData.npk_ratio" 
-                        placeholder="مثال: 20-20-20" 
-                        class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                      />
-                    </div>
                     <div>
                       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         pH محلول
                       </label>
                       <input 
-                        type="text" 
-                        v-model="formData.ph_level" 
+                        type="number" 
+                        v-model.number="formData.ph_level" 
+                        min="0"
+                        max="14"
+                        step="0.1"
                         placeholder="مثال: 6.5" 
                         class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                       />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        قیمت هر کیلوگرم (تومان) <span class="text-danger-500">*</span>
+                      </label>
+                      <div class="relative">
+                        <input 
+                          type="number" 
+                          v-model.number="formData.price_per_kg" 
+                          min="0"
+                          placeholder="مثال: 85000" 
+                          class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all pl-16"
+                        />
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">تومان</span>
+                      </div>
                     </div>
                   </div>
 
@@ -538,8 +584,8 @@
                     </label>
                     <textarea 
                       v-model="formData.description" 
-                      rows="3" 
-                      placeholder="توضیحات درباره کاربرد، ویژگی‌ها یا نحوه مصرف..." 
+                      rows="2" 
+                      placeholder="توضیحات درباره کاربرد، ویژگی‌ها..." 
                       class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
                     ></textarea>
                   </div>
@@ -614,38 +660,6 @@
                       مقادیر را بر اساس درصد وزنی وارد کنید (مثلاً ۲۰ برای ۲۰٪)
                     </p>
                   </div>
-
-                  <!-- فیلدهای اضافی -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">بسته‌بندی</label>
-                      <input 
-                        type="text" 
-                        list="packaging-list"
-                        v-model="formData.packaging" 
-                        placeholder="مثال: 1 کیلویی" 
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                      <datalist id="packaging-list">
-                        <option value="1 کیلویی"></option>
-                        <option value="5 کیلویی"></option>
-                        <option value="10 کیلویی"></option>
-                        <option value="25 کیلویی"></option>
-                        <option value="1 لیتری"></option>
-                        <option value="5 لیتری"></option>
-                        <option value="20 لیتری"></option>
-                      </datalist>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">کد ثبت</label>
-                      <input 
-                        type="text" 
-                        v-model="formData.registration_code" 
-                        placeholder="مثال: IR-12345" 
-                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -665,7 +679,7 @@
               >
                 <svg v-if="isSaving" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                 </svg>
                 {{ isSaving ? 'در حال ذخیره...' : (isEditing ? 'ذخیره تغییرات' : 'افزودن کود') }}
               </button>
@@ -674,33 +688,77 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- ============================================================ -->
+    <!-- پیام موفقیت/خطا (Toast) -->
+    <!-- ============================================================ -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="toastMessage"
+          class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2"
+          :class="toastType === 'success' 
+            ? 'bg-success-600 text-white' 
+            : 'bg-danger-600 text-white'"
+        >
+          <svg v-if="toastType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <span class="text-sm font-medium">{{ toastMessage }}</span>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, onMounted, watch } from 'vue';
 import { useFertilizerStore } from '@/store/modules/fertilizerStore';
-import { apiService } from '@/services/apiService';
 
-// ===== Props & Emits =====
+// ============================================================
+// Props & Emits
+// ============================================================
 const props = defineProps<{
   fertilizers: any[];
 }>();
 
 const emit = defineEmits<{
   (e: 'update:fertilizers', value: any[]): void;
+  (e: 'show-add-modal'): void;
+  (e: 'delete-fertilizer', id: string): void;
 }>();
 
-// ===== Store =====
+// ============================================================
+// Store
+// ============================================================
 const fertilizerStore = useFertilizerStore();
 
-// ===== State =====
+// ============================================================
+// State
+// ============================================================
 const isLoading = ref(false);
 const isSaving = ref(false);
+const isCopying = ref(false);
 const searchQuery = ref('');
-const filterType = ref<'all' | 'fertilizer' | 'acid' | 'system'>('all');
+const filterType = ref<'all' | 'fertilizer' | 'acid'>('all');
 const showModal = ref(false);
 const isEditing = ref(false);
+const showSystemFertilizers = ref(false);
+
+// Toast State
+const toastMessage = ref<string | null>(null);
+const toastType = ref<'success' | 'error'>('success');
+
+// Copy Status
+const copyStatus = ref({
+  hasSystemFertilizers: false,
+  hasCopiedSystemFertilizers: false,
+  systemCount: 0,
+  copiedCount: 0
+});
 
 // لیست عناصر برای فرم
 const elementsList = [
@@ -714,58 +772,55 @@ const initialFormData = {
   name: '',
   brand: '',
   category: '',
-  form: '',
+  form: '' as '' | 'liquid' | 'powder' | 'crystal' | 'granular',
+  concentration: 100,
   price_per_kg: 0,
   elements: {} as Record<string, number>,
   is_acid: false,
   acid_type: '',
+  ph_level: null as number | null,
   description: '',
-  solubility: '',
-  ph_level: '',
-  npk_ratio: '',
-  packaging: '',
-  registration_code: '',
-  is_system_default: false
+  is_system_default: false,
+  source_system_id: null as number | null
 };
 
 const formData = reactive({ ...initialFormData });
 
-// ===== Computed =====
+// ============================================================
+// Computed
+// ============================================================
+const userFertilizers = computed(() => {
+  return fertilizerStore.userFertilizers;
+});
+
+const systemFertilizers = computed(() => {
+  return fertilizerStore.systemFertilizers;
+});
+
 const normalFertilizersCount = computed(() => {
-  return props.fertilizers.filter((f: any) => !f.isAcid && !f.isSystemDefault).length;
+  return userFertilizers.value.filter(f => !f.isAcid).length;
 });
 
 const acidFertilizersCount = computed(() => {
-  return props.fertilizers.filter((f: any) => f.isAcid).length;
-});
-
-const systemFertilizersCount = computed(() => {
-  return props.fertilizers.filter((f: any) => f.isSystemDefault).length;
-});
-
-const hasSystemFertilizers = computed(() => {
-  return systemFertilizersCount.value > 0;
+  return userFertilizers.value.filter(f => f.isAcid).length;
 });
 
 const filteredFertilizers = computed(() => {
-  let result = props.fertilizers;
+  let result = userFertilizers.value;
   
   // فیلتر بر اساس نوع
   if (filterType.value === 'fertilizer') {
-    result = result.filter((f: any) => !f.isAcid);
+    result = result.filter(f => !f.isAcid);
   } else if (filterType.value === 'acid') {
-    result = result.filter((f: any) => f.isAcid);
-  } else if (filterType.value === 'system') {
-    result = result.filter((f: any) => f.isSystemDefault);
+    result = result.filter(f => f.isAcid);
   }
   
   // فیلتر بر اساس جستجو
   if (searchQuery.value.trim()) {
     const query = searchQuery.value.trim().toLowerCase();
-    result = result.filter((f: any) =>
+    result = result.filter(f =>
       f.name.toLowerCase().includes(query) ||
       (f.brand && f.brand.toLowerCase().includes(query)) ||
-      (f.acidType && f.acidType.toLowerCase().includes(query)) ||
       (f.category && f.category.toLowerCase().includes(query))
     );
   }
@@ -773,165 +828,26 @@ const filteredFertilizers = computed(() => {
   return result;
 });
 
-// ===== Methods =====
+// ============================================================
+// Methods
+// ============================================================
 
-/**
- * بارگذاری کودهای سیستمی از بک‌اند
- */
-const loadSystemFertilizers = async () => {
-  if (!confirm('آیا می‌خواهید ۴۲ کود پرکاربرد سیستمی را بارگذاری کنید؟\n\nاین کار باعث می‌شود شروع کار با برنامه راحت‌تر شود و نیازی به ورود دستی همه کودها نداشته باشید.')) {
-    return;
-  }
-  
-  isLoading.value = true;
-  try {
-    const result = await apiService.loadSystemFertilizers();
-    
-    if (result.success) {
-      if (result.already_loaded) {
-        alert(`✅ ${result.message}`);
-      } else {
-        alert(`🎉 ${result.message}\n\nتعداد کودهای اضافه شده: ${result.stats?.added || 0}`);
-      }
-      // رفرش لیست
-      await refreshFertilizers();
-    }
-  } catch (error: any) {
-    console.error(error);
-    const errorMsg = error.response?.data?.detail || error.message || 'خطا در بارگذاری کودهای سیستمی';
-    alert(`❌ ${errorMsg}`);
-  } finally {
-    isLoading.value = false;
-  }
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = message;
+  toastType.value = type;
+  setTimeout(() => {
+    toastMessage.value = null;
+  }, 3000);
 };
 
-const refreshFertilizers = async () => {
-  isLoading.value = true;
-  try {
-    await fertilizerStore.loadFertilizers();
-    emit('update:fertilizers', fertilizerStore.fertilizers);
-  } catch (error) {
-    console.error('Error refreshing fertilizers:', error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const openAddModal = () => {
-  isEditing.value = false;
-  Object.assign(formData, { ...initialFormData, elements: {} });
-  showModal.value = true;
-};
-
-const editFertilizer = (fertilizer: any) => {
-  isEditing.value = true;
-  Object.assign(formData, {
-    id: fertilizer.id,
-    name: fertilizer.name || '',
-    brand: fertilizer.brand || '',
-    category: fertilizer.category || '',
-    form: fertilizer.form || '',
-    price_per_kg: fertilizer.pricePerKg || fertilizer.price_per_kg || 0,
-    elements: { ...(fertilizer.elements || {}) },
-    is_acid: fertilizer.isAcid || fertilizer.is_acid || false,
-    acid_type: fertilizer.acidType || fertilizer.acid_type || '',
-    description: fertilizer.description || '',
-    solubility: fertilizer.solubility || '',
-    ph_level: fertilizer.phLevel || fertilizer.ph_level || '',
-    npk_ratio: fertilizer.npkRatio || fertilizer.npk_ratio || '',
-    packaging: fertilizer.packaging || '',
-    registration_code: fertilizer.registrationCode || fertilizer.registration_code || '',
-    is_system_default: fertilizer.isSystemDefault || fertilizer.is_system_default || false
-  });
-  showModal.value = true;
-};
-
-const closeModal = () => {
-  showModal.value = false;
-};
-
-const clearElements = () => {
-  if (confirm('آیا از پاک کردن تمام عناصر اطمینان دارید؟')) {
-    formData.elements = {};
-  }
-};
-
-const saveFertilizer = async () => {
-  if (!formData.name) {
-    alert('لطفاً نام کود را وارد کنید.');
-    return;
-  }
-
-  if (Number(formData.price_per_kg) < 0) {
-    alert('قیمت نمی‌تواند منفی باشد.');
-    return;
-  }
-
-  isSaving.value = true;
-  try {
-    // پاک کردن مقادیر خالی از elements
-    const cleanElements: Record<string, number> = {};
-for (const [key, value] of Object.entries(formData.elements)) {
-  const numValue = Number(value);
-  if (!isNaN(numValue) && numValue > 0) {
-    cleanElements[key] = numValue;
-  }
-}
-
-    const payload = {
-      name: formData.name,
-      brand: formData.brand || null,
-      category: formData.category || null,
-      form: formData.form || null,
-      pricePerKg: Number(formData.price_per_kg),
-      elements: cleanElements,
-      isAcid: formData.is_acid,
-      acidType: formData.acid_type || null,
-      description: formData.description || null,
-      solubility: formData.solubility || null,
-      phLevel: formData.ph_level || null,
-      npkRatio: formData.npk_ratio || null,
-      packaging: formData.packaging || null,
-      registrationCode: formData.registration_code || null
-    };
-
-    if (isEditing.value && formData.id) {
-      await fertilizerStore.updateFertilizer(String(formData.id), payload);
-    } else {
-      await fertilizerStore.addFertilizer(payload);
-    }
-
-    closeModal();
-    await refreshFertilizers();
-    
-  } catch (error: any) {
-    console.error('Error saving fertilizer:', error);
-    const errorMsg = error.response?.data?.detail || error.message || 'خطا در ذخیره‌سازی. لطفاً دوباره تلاش کنید.';
-    alert(`❌ ${errorMsg}`);
-  } finally {
-    isSaving.value = false;
-  }
-};
-
-const deleteFertilizer = async (id: string, isSystemDefault: boolean = false) => {
-  let message = 'آیا از حذف این کود اطمینان دارید؟ این عملیات غیرقابل بازگشت است.';
-  
-  if (isSystemDefault) {
-    message = '⚠️ این یک کود سیستمی است و قابل حذف نیست.\n\nاگر می‌خواهید تغییراتی روی آن اعمال کنید، از دکمه ویرایش استفاده کنید تا یک کپی شخصی برای شما ساخته شود.';
-    alert(message);
-    return;
-  }
-  
-  if (confirm(message)) {
-    try {
-      await fertilizerStore.deleteFertilizer(id);
-      await refreshFertilizers();
-    } catch (error: any) {
-      console.error('Error deleting fertilizer:', error);
-      const errorMsg = error.response?.data?.detail || error.message || 'خطا در حذف کود.';
-      alert(`❌ ${errorMsg}`);
-    }
-  }
+const getFormLabel = (form: string | undefined): string => {
+  const labels: Record<string, string> = {
+    liquid: 'مایع',
+    powder: 'پودر',
+    crystal: 'کریستال',
+    granular: 'گرانول'
+  };
+  return form ? labels[form] || form : 'نامشخص';
 };
 
 const hasElements = (fertilizer: any): boolean => {
@@ -950,13 +866,206 @@ const getActiveElements = (fertilizer: any): Record<string, number> => {
   return result;
 };
 
-// ===== Lifecycle =====
-onMounted(() => {
-  // بارگذاری اولیه کودها در صورت خالی بودن
-  if (props.fertilizers.length === 0) {
-    refreshFertilizers();
+const clearElements = () => {
+  if (confirm('آیا از پاک کردن تمام عناصر اطمینان دارید؟')) {
+    formData.elements = {};
   }
+};
+
+const resetForm = () => {
+  Object.assign(formData, { ...initialFormData, elements: {} });
+  isEditing.value = false;
+};
+
+const openAddModal = () => {
+  resetForm();
+  showModal.value = true;
+};
+
+const closeModal = () => {
+  showModal.value = false;
+  resetForm();
+};
+
+const editFertilizer = (fertilizer: any) => {
+  isEditing.value = true;
+  Object.assign(formData, {
+    id: fertilizer.id,
+    name: fertilizer.name || '',
+    brand: fertilizer.brand || '',
+    category: fertilizer.category || '',
+    form: fertilizer.form || '',
+    concentration: fertilizer.concentration || 100,
+    price_per_kg: fertilizer.pricePerKg || fertilizer.price_per_kg || 0,
+    elements: { ...(fertilizer.elements || {}) },
+    is_acid: fertilizer.isAcid || fertilizer.is_acid || false,
+    acid_type: fertilizer.acidType || fertilizer.acid_type || '',
+    ph_level: fertilizer.phLevel || fertilizer.ph_level || null,
+    description: fertilizer.description || '',
+    is_system_default: fertilizer.isSystemDefault || fertilizer.is_system_default || false,
+    source_system_id: fertilizer.sourceSystemId || fertilizer.source_system_id || null
+  });
+  showModal.value = true;
+};
+
+const saveFertilizer = async () => {
+  if (!formData.name) {
+    showToast('لطفاً نام کود را وارد کنید', 'error');
+    return;
+  }
+
+  if (Number(formData.price_per_kg) < 0) {
+    showToast('قیمت نمی‌تواند منفی باشد', 'error');
+    return;
+  }
+
+  if (formData.concentration < 0 || formData.concentration > 100) {
+    showToast('خلوص باید بین 0 تا 100 باشد', 'error');
+    return;
+  }
+
+  isSaving.value = true;
+
+  try {
+    // پاک کردن مقادیر خالی از elements
+    const cleanElements: Record<string, number> = {};
+    for (const [key, value] of Object.entries(formData.elements)) {
+      const numValue = Number(value);
+      if (!isNaN(numValue) && numValue > 0) {
+        cleanElements[key] = numValue;
+      }
+    }
+
+    // 🆕 اصلاح: استفاده از undefined به جای null برای تطابق با تایپ‌ها
+    const payload = {
+      name: formData.name,
+      brand: formData.brand || undefined,
+      category: formData.category || undefined,
+      form: formData.form || undefined,
+      concentration: formData.concentration,
+      pricePerKg: Number(formData.price_per_kg),
+      elements: cleanElements,
+      isAcid: formData.is_acid,
+      acidType: formData.acid_type || undefined,
+      phLevel: formData.ph_level || undefined,
+      description: formData.description || undefined
+    };
+
+    let success = false;
+
+    if (isEditing.value && formData.id) {
+      success = await fertilizerStore.updateFertilizer(String(formData.id), payload);
+      if (success) {
+        showToast('کود با موفقیت به‌روزرسانی شد', 'success');
+      }
+    } else {
+      success = await fertilizerStore.addFertilizer(payload);
+      if (success) {
+        showToast('کود با موفقیت افزوده شد', 'success');
+      }
+    }
+
+    if (success) {
+      closeModal();
+      await refreshFertilizers();
+    }
+  } catch (error: any) {
+    showToast(error.message || 'خطا در ذخیره‌سازی', 'error');
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const deleteFertilizer = async (id: string) => {
+  if (!confirm('آیا از حذف این کود اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')) {
+    return;
+  }
+
+  try {
+    const success = await fertilizerStore.deleteFertilizer(id);
+    if (success) {
+      showToast('کود با موفقیت حذف شد', 'success');
+      await refreshFertilizers();
+    }
+  } catch (error: any) {
+    showToast(error.message || 'خطا در حذف کود', 'error');
+  }
+};
+
+// ============================================================
+// 🆕 توابع مربوط به کودهای سیستمی
+// ============================================================
+
+const loadSystemFertilizers = async () => {
+  await fertilizerStore.loadSystemFertilizers();
+  copyStatus.value = await fertilizerStore.checkSystemCopyStatus();
+};
+
+const handleCopyAllSystemFertilizers = async () => {
+  if (!confirm('آیا می‌خواهید همه کودهای سیستمی را به بخش شخصی خود کپی کنید؟')) {
+    return;
+  }
+
+  isCopying.value = true;
+  try {
+    const result = await fertilizerStore.copyAllSystemFertilizers();
+    if (result.success) {
+      showToast(result.message || 'کودهای سیستمی با موفقیت کپی شدند', 'success');
+      await refreshFertilizers();
+      await loadSystemFertilizers();
+    } else {
+      showToast(result.message || 'خطا در کپی کودهای سیستمی', 'error');
+    }
+  } catch (error: any) {
+    showToast(error.message || 'خطا در کپی کودهای سیستمی', 'error');
+  } finally {
+    isCopying.value = false;
+  }
+};
+
+const handleCopySingleSystemFertilizer = async (systemFertilizerId: string) => {
+  try {
+    const result = await fertilizerStore.copySystemFertilizer(systemFertilizerId);
+    if (result) {
+      showToast(`کود "${result.name}" با موفقیت کپی شد`, 'success');
+      await refreshFertilizers();
+      await loadSystemFertilizers();
+    } else {
+      showToast('خطا در کپی کود', 'error');
+    }
+  } catch (error: any) {
+    showToast(error.message || 'خطا در کپی کود', 'error');
+  }
+};
+
+// ============================================================
+// توابع عمومی
+// ============================================================
+
+const refreshFertilizers = async () => {
+  isLoading.value = true;
+  try {
+    await fertilizerStore.loadFertilizers(true);
+    emit('update:fertilizers', fertilizerStore.fertilizers);
+  } catch (error) {
+    console.error('Error refreshing fertilizers:', error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// ============================================================
+// Lifecycle
+// ============================================================
+onMounted(async () => {
+  await refreshFertilizers();
+  await loadSystemFertilizers();
 });
+
+// Watch for changes in store fertilizers to emit
+watch(() => fertilizerStore.fertilizers, (newVal) => {
+  emit('update:fertilizers', newVal);
+}, { deep: true });
 </script>
 
 <style scoped>
@@ -965,18 +1074,20 @@ onMounted(() => {
   font-feature-settings: "tnum";
 }
 
-/* Custom Scrollbar for Modal */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: #f1f1f1;
   border-radius: 3px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 3px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #a1a1a1;
 }
@@ -984,11 +1095,20 @@ onMounted(() => {
 .dark .custom-scrollbar::-webkit-scrollbar-track {
   background: #374151;
 }
+
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #4b5563;
 }
 
-/* Animation for Acid Section */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
@@ -998,18 +1118,28 @@ onMounted(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* حذف اسپینر input number */
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+}
+
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 input[type=number] {
   -moz-appearance: textfield;
   appearance: textfield;
 }
 
-/* استایل datalist */
 input[list] {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   background-repeat: no-repeat;

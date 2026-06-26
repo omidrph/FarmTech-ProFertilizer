@@ -17,13 +17,13 @@ from app.routes import router
 from app.security import get_current_user
 from app.models import User
 
-# ===== 🆕 Import برای بارگذاری کودهای سیستمی =====
+# ===== Import برای بارگذاری کودهای سیستمی =====
 from app.seeds.fertilizer_seeds import (
     seed_system_fertilizers,
     get_system_fertilizers_count
 )
 
-# ===== 🆕 Import برای بارگذاری رسپی‌های سیستمی =====
+# ===== Import برای بارگذاری رسپی‌های سیستمی =====
 from app.seeds.recipe_seeds import (
     seed_system_recipes,
     get_system_recipes_count
@@ -134,7 +134,6 @@ async def health_check():
 async def auth_test(current_user: User = Depends(get_current_user)):
     """
     تست get_current_user - اگر این کار کند یعنی همه چیز درست است
-    نکته: این endpoint تکراری با routes/auth.py است اما برای backward compatibility نگه داشته شده
     """
     return {
         "message": "✅ احراز هویت موفق",
@@ -178,12 +177,10 @@ async def startup_event():
     try:
         # ===== مرحله ۲: بارگذاری خودکار کودهای سیستمی =====
         try:
-            # بررسی تعداد کودهای سیستمی موجود
             fertilizer_count = get_system_fertilizers_count(db)
             logger.info(f"📊 تعداد کودهای سیستمی فعلی: {fertilizer_count}")
             
             if fertilizer_count == 0:
-                # اگر کود سیستمی وجود ندارد، بارگذاری کن
                 logger.info("🌱 در حال بارگذاری کودهای سیستمی...")
                 stats = seed_system_fertilizers(db)
                 
@@ -206,12 +203,10 @@ async def startup_event():
         
         # ===== مرحله ۳: بارگذاری خودکار رسپی‌های سیستمی =====
         try:
-            # بررسی تعداد رسپی‌های سیستمی موجود
             recipe_count = get_system_recipes_count(db)
             logger.info(f"📊 تعداد رسپی‌های سیستمی فعلی: {recipe_count}")
             
             if recipe_count == 0:
-                # اگر رسپی سیستمی وجود ندارد، بارگذاری کن
                 logger.info("📋 در حال بارگذاری رسپی‌های سیستمی...")
                 stats = seed_system_recipes(db)
                 

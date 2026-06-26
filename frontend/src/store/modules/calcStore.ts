@@ -46,45 +46,21 @@ export const useCalcStore = defineStore('calc', () => {
 
   // ===== Actions =====
 
+  /**
+   * 🆕 تابع مقداردهی اولیه ردیف‌های ثابت - دیگر استفاده نمی‌شود
+   * این تابع برای backward compatibility نگه داشته شده اما کاربردی ندارد
+   * @deprecated دیگر از این تابع استفاده نمی‌شود
+   */
   function initializeFixedRows() {
-    const fixedRows: CalculationRow[] = [
-      {
-        id: 'fixed-h3po4',
-        materialName: 'H3PO4',
-        weight: 0,
-        purity: 85,
-        cost: 0,
-        elements: {},
-        isAcid: true,
-        acidType: 'H3PO4',
-        isFixedRow: true
-      },
-      {
-        id: 'fixed-hno3',
-        materialName: 'HNO3',
-        weight: 0,
-        purity: 65,
-        cost: 0,
-        elements: {},
-        isAcid: true,
-        acidType: 'HNO3',
-        isFixedRow: true
-      },
-      {
-        id: 'fixed-h2so4',
-        materialName: 'H2SO4',
-        weight: 0,
-        purity: 98,
-        cost: 0,
-        elements: {},
-        isAcid: true,
-        acidType: 'H2SO4',
-        isFixedRow: true
-      }
-    ];
-    calculationRows.value = [...fixedRows];
+    // ⚠️ این تابع دیگر ردیف‌های ثابت را ایجاد نمی‌کند
+    // کاربر باید خودش کودهای مورد نظر را انتخاب کند
+    calculationRows.value = [];
   }
 
+  /**
+   * 🆕 افزودن ردیف جدید به جدول محاسبه
+   * این تابع توسط کامپوننت FertilizerCalcTab فراخوانی می‌شود
+   */
   function addCalculationRow(fertilizerName: string, elements: Partial<Record<ElementName, number>>, fertilizerId?: string) {
     const newRow: CalculationRow = {
       id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -101,6 +77,9 @@ export const useCalcStore = defineStore('calc', () => {
     return newRow;
   }
 
+  /**
+   * به‌روزرسانی یک ردیف موجود
+   */
   function updateCalculationRow(id: string, data: Partial<Omit<CalculationRow, 'id' | 'isFixedRow'>>) {
     const index = calculationRows.value.findIndex((row: CalculationRow) => row.id === id);
     if (index !== -1) {
@@ -118,6 +97,10 @@ export const useCalcStore = defineStore('calc', () => {
     return false;
   }
 
+  /**
+   * حذف یک ردیف از جدول
+   * فقط ردیف‌های غیرثابت (isFixedRow === false) قابل حذف هستند
+   */
   function removeCalculationRow(id: string) {
     const index = calculationRows.value.findIndex((row: CalculationRow) => row.id === id);
     if (index !== -1 && !calculationRows.value[index].isFixedRow) {
@@ -127,6 +110,16 @@ export const useCalcStore = defineStore('calc', () => {
     return false;
   }
 
+  /**
+   * 🆕 حذف همه ردیف‌ها (به جز ردیف‌های ثابت - که الان وجود ندارند)
+   */
+  function clearAllRows() {
+    calculationRows.value = [];
+  }
+
+  /**
+   * به‌روزرسانی تنظیمات ورودی محاسبه
+   */
   function updateCalculationInputs(inputs: Partial<CalculationInputs>) {
     const newTankVolume = inputs.tankVolume !== undefined ? inputs.tankVolume : calculationInputs.value.tankVolume;
     const newDilutionFactor = inputs.dilutionFactor !== undefined ? inputs.dilutionFactor : calculationInputs.value.dilutionFactor;
@@ -212,6 +205,9 @@ export const useCalcStore = defineStore('calc', () => {
     }
   }
 
+  /**
+   * بارگذاری محاسبات از دیتابیس
+   */
   async function loadCalculation(reportId: string): Promise<boolean> {
     isLoading.value = true;
     errorMessages.value = [];
@@ -247,6 +243,9 @@ export const useCalcStore = defineStore('calc', () => {
     }
   }
 
+  /**
+   * 🆕 بازنشانی کامل - بدون ردیف‌های ثابت
+   */
   function resetCalculation() {
     calculationRows.value = [];
     errorMessages.value = [];
@@ -258,7 +257,7 @@ export const useCalcStore = defineStore('calc', () => {
     };
     currentReportId.value = null;
     totalCost.value = 0;
-    initializeFixedRows();
+    // دیگر initializeFixedRows() اجرا نمی‌شود
   }
 
   function addError(message: string) {
@@ -279,9 +278,12 @@ export const useCalcStore = defineStore('calc', () => {
   }
 
   // ===== Initialize =====
-  initializeFixedRows();
+  // ⚠️ دیگر initializeFixedRows() در ابتدا اجرا نمی‌شود
+  // جدول محاسبه خالی شروع می‌شود و کاربر باید کودهای خود را انتخاب کند
+  calculationRows.value = [];
 
   return {
+    // State
     calculationRows,
     calculationInputs,
     errorMessages,
@@ -289,22 +291,27 @@ export const useCalcStore = defineStore('calc', () => {
     currentReportId,
     reservoirData,
     totalCost,
+    
+    // Getters
     elementTotals,
     hasErrors,
     fixedRows,
     dynamicRows,
-    initializeFixedRows,
+    
+    // Actions
+    initializeFixedRows,      // نگه داشته شده برای backward compatibility
     addCalculationRow,
     updateCalculationRow,
     removeCalculationRow,
+    clearAllRows,             // 🆕 تابع جدید
     updateCalculationInputs,
     calculateReservoirDataFromAPI,
     calculateAndSave,
     loadCalculation,
+    resetCalculation,         // 🆕 تغییر داده شده
     addError,
     removeError,
-    clearErrors,
-    resetCalculation
+    clearErrors
   };
 });
 

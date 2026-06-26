@@ -1,5 +1,5 @@
 # backend/app/models.py
-"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه اصلاح شده"""
+"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه نهایی"""
 
 from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
@@ -91,42 +91,46 @@ class Report(Base):
 
 
 # ============================================================
-# مدل Fertilizer (کود) - اصلاح شده با فیلدهای جدید
+# 🆕 مدل Fertilizer (کود) - نسخه نهایی با فیلدهای بهینه‌شده
 # ============================================================
 class Fertilizer(Base):
-    """مدل کودها و اسیدها - نسخه کامل"""
+    """
+    مدل کودها - نسخه نهایی با فیلدهای ضروری
+    
+    فیلدهای جدید:
+    - concentration: درصد خلوص/غلظت (برای محاسبات دقیق)
+    - source_system_id: برای ردیابی کپی از کودهای سیستمی
+    - ph_level: برای محاسبات تعادل یونی و pH
+    """
     
     __tablename__ = "fertilizers"
     
     # ===== فیلدهای اصلی =====
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)  # ✅ nullable شد
-    name = Column(String(100), nullable=False)  # ✅ تنها فیلد اجباری
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    name = Column(String(100), nullable=False, index=True)
     
-    # ===== فیلدهای مالی =====
-    price_per_kg = Column(Float, default=0.0)
+    # ===== فیلدهای اطلاعاتی =====
+    brand = Column(String(100), nullable=True)          # برند (مثلاً: رازاک شیمی، اطلس)
+    category = Column(String(50), nullable=True)        # دسته‌بندی: NPK, کلات, سولفات, اسید, ریزمغذی, ...
+    form = Column(String(20), nullable=True)            # فرم فیزیکی: liquid, powder, crystal, granular
     
-    # ===== فیلدهای عناصر =====
-    elements = Column(JSON, nullable=True)  # {"N-NO3": 15.5, "Ca": 19, ...}
+    # ===== فیلدهای محاسباتی (مهم) =====
+    concentration = Column(Float, default=100.0)        # درصد خلوص/غلظت (برای مایعات و جامدات)
+    elements = Column(JSON, nullable=True)              # {"N-NO3": 15.5, "P": 20, ...}
+    price_per_kg = Column(Float, default=0.0)           # قیمت هر کیلوگرم
     
-    # ===== فیلدهای اسیدی =====
+    # ===== فیلدهای اسید و pH =====
     is_acid = Column(Boolean, default=False)
-    acid_type = Column(String(10), nullable=True)  # H3PO4, HNO3, H2SO4
+    acid_type = Column(String(10), nullable=True)       # H3PO4, HNO3, H2SO4
+    ph_level = Column(Float, nullable=True)             # pH محلول (برای محاسبات)
     
-    # ===== 🆕 فیلدهای جدید - همه اختیاری =====
+    # ===== توضیحات =====
+    description = Column(Text, nullable=True)           # توضیحات کوتاه و مفید
+    
+    # ===== سیستم =====
     is_system_default = Column(Boolean, default=False)  # آیا کود سیستمی است؟
-    brand = Column(String(100), nullable=True)  # برند/شرکت (مثلاً: اطلس، رازاک شیمی)
-    category = Column(String(50), nullable=True)  # دسته‌بندی (NPK, کلات, سولفات, ...)
-    form = Column(String(20), nullable=True)  # حالت فیزیکی (powder, liquid, crystal)
-    solubility = Column(String(50), nullable=True)  # حلالیت (مثلاً: 250 g/L)
-    ph_level = Column(String(20), nullable=True)  # pH محلول (مثلاً: 6-7)
-    description = Column(Text, nullable=True)  # توضیحات کامل
-    application_method = Column(String(100), nullable=True)  # روش مصرف (محلول‌پاشی، آبیاری)
-    packaging = Column(String(50), nullable=True)  # بسته‌بندی (1 کیلویی، 10 کیلویی)
-    registration_code = Column(String(20), nullable=True)  # کد ثبت ماده کودی
-    npk_ratio = Column(String(20), nullable=True)  # نسبت NPK (مثلاً: 20-20-20)
-    organic_matter = Column(Float, nullable=True)  # درصد مواد آلی
-    chelating_agent = Column(String(20), nullable=True)  # عامل کلات‌کننده (EDTA, EDDHA, ...)
+    source_system_id = Column(Integer, nullable=True)   # اگر از کود سیستمی کپی شده باشد (ID منبع)
     
     # ===== تاریخ‌ها =====
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -136,7 +140,7 @@ class Fertilizer(Base):
     user = relationship("User", back_populates="fertilizers")
     
     def __repr__(self):
-        return f"<Fertilizer {self.name}>"
+        return f"<Fertilizer {self.name} (ID:{self.id})>"
 
 
 # ============================================================
@@ -187,7 +191,7 @@ class Calculation(Base):
         return f"<Calculation {self.id}>"
     
 
-    # ============================================================
+# ============================================================
 # مدل Recipe (رسپی/فرمول غذایی)
 # ============================================================
 class Recipe(Base):
@@ -222,11 +226,13 @@ class Recipe(Base):
     def __repr__(self):
         return f"<Recipe {self.name}>"
     
+
 # ============================================================
-# 🆕 مدل WaterAnalysisTemplate (قالب آنالیز آب کاربر)
+# مدل WaterAnalysisTemplate (قالب آنالیز آب کاربر)
 # ============================================================
 class WaterAnalysisTemplate(Base):
     """مدل قالب‌های آنالیز آب کاربر (برای ذخیره و استفاده مجدد)"""
+    
     __tablename__ = "water_analysis_templates"
     
     id = Column(Integer, primary_key=True, index=True)

@@ -58,30 +58,72 @@ export interface WaterAnalysisRow {
     finalValue: number;
 }
 
+// ============================================================
+// 🆕 Fertilizer Interface - نسخه نهایی
+// ============================================================
 export interface Fertilizer {
     id: string;
+    user_id: number | null;
     name: string;
-    pricePerKg: number;
-    elements: Partial<Record<ElementName, number>>;
-    isAcid?: boolean;
-    acidType?: string;
-    isSystemDefault?: boolean;
+    
+    // فیلدهای اطلاعاتی
     brand?: string;
     category?: string;
-    form?: string;
-    solubility?: string;
-    phLevel?: string;
+    form?: 'liquid' | 'powder' | 'crystal' | 'granular';
+    
+    // فیلدهای محاسباتی
+    concentration: number;          // درصد خلوص/غلظت
+    elements: Partial<Record<ElementName, number>>;
+    pricePerKg: number;
+    
+    // فیلدهای اسید و pH
+    isAcid: boolean;
+    acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
+    phLevel?: number;               // pH محلول
+    
+    // توضیحات
     description?: string;
-    applicationMethod?: string;
-    packaging?: string;
-    registrationCode?: string;
-    npkRatio?: string;
-    organicMatter?: number;
-    chelatingAgent?: string;
+    
+    // فیلدهای سیستمی
+    isSystemDefault: boolean;
+    sourceSystemId?: number;        // ID کود سیستمی مبدا
+    
+    // تاریخ‌ها
     createdAt: Date;
     updatedAt: Date;
 }
 
+export interface FertilizerCreate {
+    name: string;
+    brand?: string;
+    category?: string;
+    form?: 'liquid' | 'powder' | 'crystal' | 'granular';
+    concentration?: number;
+    elements?: Partial<Record<ElementName, number>>;
+    pricePerKg?: number;
+    isAcid?: boolean;
+    acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
+    phLevel?: number;
+    description?: string;
+}
+
+export interface FertilizerUpdate {
+    name?: string;
+    brand?: string;
+    category?: string;
+    form?: 'liquid' | 'powder' | 'crystal' | 'granular';
+    concentration?: number;
+    elements?: Partial<Record<ElementName, number>>;
+    pricePerKg?: number;
+    isAcid?: boolean;
+    acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
+    phLevel?: number;
+    description?: string;
+}
+
+// ============================================================
+// Interfaces مربوط به محاسبات
+// ============================================================
 export interface ReservoirItem {
     name: string;
     amount: number;
@@ -169,9 +211,8 @@ export interface InterpretationResult {
 }
 
 // ============================================================
-// RECIPE TYPES (جدید)
+// RECIPE TYPES
 // ============================================================
-
 export interface Recipe {
     id: number;
     name: string;
