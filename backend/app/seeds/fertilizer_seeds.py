@@ -6,7 +6,7 @@ Seed داده‌های اولیه کودهای سیستمی
 منبع: جداول استاندارد کودهای شیمیایی و نرخنامه سال ۱۴۰۵ وزارت جهاد کشاورزی
 آخرین به‌روزرسانی: تیرماه ۱۴۰۵
 
-تعداد کودها: ۴۲+ کود پرکاربرد
+تعداد کودها: ۳۵ کود پرکاربرد
 """
 
 from typing import List, Dict, Any
@@ -18,515 +18,461 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# 🆕 لیست کامل کودهای سیستمی (فقط برای کپی کردن)
+# 🆕 لیست کامل کودهای سیستمی (مرتب‌سازی شده بر اساس حروف الفبای انگلیسی)
 # ============================================================
 SYSTEM_FERTILIZERS: List[Dict[str, Any]] = [
     
     # ============================================================
-    # 🟢 کودهای نیتروژنه (Nitrogen Fertilizers)
+    # 🔵 کودهای با حرف A
     # ============================================================
     {
-        "name": "نیترات آمونیوم (NH4NO3)",
+        "name": "Ammonium Chloride (NH₄Cl)",
         "brand": "استاندارد",
-        "category": "نیتروژنه",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 99.5,
+        "price_per_kg": 350000,
+        "elements": {"N-NH4": 26.187, "Cl": 66.282},
+        "is_acid": False,
+        "ph_level": 5.0,
+        "description": "کلرید آمونیوم (Ammonium Chloride) - تامین نیتروژن آمونیومی و کلر - مناسب برنج و محصولات خاص - دارای خاصیت اسیدی"
+    },
+    {
+        "name": "Ammonium Dibasic Phosphate ((NH₄)₂HPO₄)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 800000,
+        "elements": {"N-NH4": 21.213, "P": 23.481},
+        "is_acid": False,
+        "ph_level": 8.0,
+        "description": "دی‌فسفات آمونیوم (Ammonium Dibasic Phosphate) - تامین فسفر و نیتروژن - افزایش عملکرد و کیفیت محصول - دارای خاصیت قلیایی"
+    },
+    {
+        "name": "Ammonium Monobasic Phosphate (NH₄H₂PO₄)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 750000,
+        "elements": {"N-NH4": 12.177, "P": 26.928},
+        "is_acid": False,
+        "ph_level": 4.5,
+        "description": "مونوفسفات آمونیوم (Ammonium Monobasic Phosphate) - تامین فسفر و نیتروژن - مناسب شروع رشد و ریشه‌زایی - دارای خاصیت اسیدی"
+    },
+    {
+        "name": "Ammonium Nitrate (NH₄NO₃)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
         "form": "crystal",
         "concentration": 99.0,
         "price_per_kg": 500000,
         "elements": {"N-NO3": 17.499, "N-NH4": 17.499},
         "is_acid": False,
         "ph_level": 5.5,
-        "description": "کود نیتروژنی با دو فرم نیترات و آمونیوم - جذب سریع و پایدار - مناسب برای مراحل رشد رویشی"
+        "description": "نیترات آمونیوم (Ammonium Nitrate) - کود نیتروژنی با دو فرم نیترات و آمونیوم - جذب سریع و پایدار - مناسب برای مراحل رشد رویشی"
     },
     {
-        "name": "سولفات آمونیوم ((NH4)2SO4)",
+        "name": "Ammonium Sulfate ((NH₄)₂SO₄)",
         "brand": "استاندارد",
-        "category": "نیتروژنه",
+        "category": "ماکرو",
         "form": "crystal",
         "concentration": 99.0,
         "price_per_kg": 450000,
-        "elements": {"N-NH4": 21.200, "S": 24.266},
+        "elements": {"N-NH4": 21.201, "S": 24.264},
         "is_acid": False,
         "ph_level": 5.0,
-        "description": "تامین نیتروژن آمونیومی و گوگرد - کاهش pH خاک - مناسب برای خاک‌های آهکی"
+        "description": "سولفات آمونیوم (Ammonium Sulfate) - تامین نیتروژن آمونیومی و گوگرد - کاهش pH خاک - مناسب برای خاک‌های آهکی"
     },
+
+    # ============================================================
+    # 🔵 کودهای با حرف B
+    # ============================================================
     {
-        "name": "کلرید آمونیوم (NH4Cl)",
+        "name": "Boric Acid (H₃BO₃)",
         "brand": "استاندارد",
-        "category": "نیتروژنه",
-        "form": "crystal",
+        "category": "ریزمغذی",
+        "form": "powder",
         "concentration": 99.5,
-        "price_per_kg": 350000,
-        "elements": {"N-NH4": 26.185, "Cl": 66.275},
+        "price_per_kg": 1200000,
+        "elements": {"B": 17.483},
         "is_acid": False,
         "ph_level": 5.0,
-        "description": "تامین نیتروژن آمونیومی و کلر - مناسب برنج و محصولات خاص - دارای خاصیت اسیدی"
+        "description": "اسید بوریک (Boric Acid) - تامین بور - بهبود گرده‌افشانی و تشکیل میوه - افزایش کیفیت محصول"
     },
+
+    # ============================================================
+    # 🔵 کودهای با حرف C
+    # ============================================================
     {
-        "name": "نیترات سدیم (NaNO3)",
+        "name": "Calcium Carbonate (CaCO₃)",
         "brand": "استاندارد",
-        "category": "نیتروژنه",
-        "form": "crystal",
-        "concentration": 99.0,
-        "price_per_kg": 350000,
-        "elements": {"N-NO3": 16.480, "Na": 27.048},
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 98.0,
+        "price_per_kg": 200000,
+        "elements": {"Ca": 40.043},
         "is_acid": False,
-        "ph_level": 7.0,
-        "description": "تامین نیتروژن نیتراتی و سدیم - مناسب خاک‌های اسیدی - جذب سریع"
+        "ph_level": 9.0,
+        "description": "کربنات کلسیم (Calcium Carbonate) - تامین کلسیم - افزایش pH خاک - مناسب خاک‌های اسیدی"
     },
     {
-        "name": "نیترات کلسیم (Ca(NO3)2.4H2O)",
+        "name": "Calcium Monobasic Phosphate (Ca(H₂PO₄)₂·H₂O)",
         "brand": "استاندارد",
-        "category": "کلسیمی",
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 95.0,
+        "price_per_kg": 650000,
+        "elements": {"P": 24.579, "Ca": 17.088},
+        "is_acid": False,
+        "ph_level": 3.0,
+        "description": "مونوفسفات کلسیم (Calcium Monobasic Phosphate) - تامین فسفر و کلسیم - مناسب خاک‌های اسیدی - دارای خاصیت اسیدی"
+    },
+    {
+        "name": "Calcium Nitrate (Ca(NO₃)₂·4H₂O)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
         "form": "crystal",
         "concentration": 99.0,
         "price_per_kg": 550000,
         "elements": {"N-NO3": 11.861, "Ca": 16.963},
         "is_acid": False,
         "ph_level": 6.5,
-        "description": "تامین کلسیم و نیتروژن نیتراتی - افزایش استحکام گیاه و دیواره سلولی"
-    },
-
-    # ============================================================
-    # 🟣 کودهای فسفاته (Phosphate Fertilizers)
-    # ============================================================
-    {
-        "name": "مونو آمونیوم فسفات (NH4H2PO4)",
-        "brand": "استاندارد",
-        "category": "فسفاته",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 750000,
-        "elements": {"N-NH4": 12.178, "P": 26.930},
-        "is_acid": False,
-        "ph_level": 4.5,
-        "description": "تامین فسفر و نیتروژن - مناسب شروع رشد و ریشه‌زایی - دارای خاصیت اسیدی"
+        "description": "نیترات کلسیم (Calcium Nitrate) - تامین کلسیم و نیتروژن نیتراتی - افزایش استحکام گیاه و دیواره سلولی"
     },
     {
-        "name": "دی آمونیوم فسفات ((NH4)2HPO4)",
+        "name": "Calcium Sulfate (CaSO₄·2H₂O)",
         "brand": "استاندارد",
-        "category": "فسفاته",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 800000,
-        "elements": {"N-NH4": 21.216, "P": 23.478},
-        "is_acid": False,
-        "ph_level": 8.0,
-        "description": "تامین فسفر و نیتروژن - افزایش عملکرد و کیفیت محصول - دارای خاصیت قلیایی"
-    },
-    {
-        "name": "سوپر فسفات تریپل (TSP)",
-        "brand": "استاندارد",
-        "category": "فسفاته",
-        "form": "powder",
-        "concentration": 92.0,
-        "price_per_kg": 1432169,
-        "elements": {"P": 20.000, "Ca": 15.000},
-        "is_acid": False,
-        "ph_level": 3.0,
-        "description": "کود فسفاته با درصد بالای فسفر - تقویت ریشه و گلدهی - دارای خاصیت اسیدی قوی"
-    },
-    {
-        "name": "فسفات ساده (SSP)",
-        "brand": "استاندارد",
-        "category": "فسفاته",
-        "form": "powder",
-        "concentration": 85.0,
-        "price_per_kg": 673944,
-        "elements": {"P": 8.000, "Ca": 19.000, "S": 11.000},
-        "is_acid": False,
-        "ph_level": 3.5,
-        "description": "کود فسفاته ساده - تامین فسفر و گوگرد مورد نیاز گیاه - اقتصادی"
-    },
-    {
-        "name": "فسفات کلسیم مونوبازیک (Ca(H2PO4)2.H2O)",
-        "brand": "استاندارد",
-        "category": "فسفاته",
+        "category": "ماکرو",
         "form": "powder",
         "concentration": 95.0,
-        "price_per_kg": 650000,
-        "elements": {"Ca": 17.072, "P": 26.387},
+        "price_per_kg": 350000,
+        "elements": {"Ca": 23.283, "S": 18.624},
         "is_acid": False,
-        "ph_level": 3.0,
-        "description": "تامین فسفر و کلسیم - مناسب خاک‌های اسیدی - دارای خاصیت اسیدی"
+        "ph_level": 6.5,
+        "description": "سولفات کلسیم (Calcium Sulfate) - تامین کلسیم و گوگرد - بهبود ساختار خاک - مناسب خاک‌های شور"
     },
-
-    # ============================================================
-    # 🔴 کودهای پتاسیمی (Potassium Fertilizers)
-    # ============================================================
     {
-        "name": "نیترات پتاسیم (KNO3)",
+        "name": "Copper EDTA (CuEDTA)",
         "brand": "استاندارد",
-        "category": "پتاسیمی",
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 14.5,
+        "price_per_kg": 2000000,
+        "elements": {"Cu": 14.500},
+        "is_acid": False,
+        "ph_level": 7.0,
+        "description": "مس EDTA (Copper EDTA) - کلات مس با پایه EDTA - افزایش مقاومت به بیماری‌ها - خاصیت ضدقارچی"
+    },
+    {
+        "name": "Copper Nitrate (Cu(NO₃)₂·3H₂O)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
         "form": "crystal",
         "concentration": 99.0,
         "price_per_kg": 750000,
-        "elements": {"N-NO3": 13.854, "K": 38.667},
+        "elements": {"N-NO3": 11.381, "Cu": 26.030},
         "is_acid": False,
-        "ph_level": 7.0,
-        "description": "تامین پتاسیم و نیتروژن - مناسب گلدهی و میوه‌دهی - بدون کلر"
+        "ph_level": 4.0,
+        "description": "نیترات مس (Copper Nitrate) - تامین مس و نیتروژن - مناسب محلول‌های غذایی - جذب سریع"
     },
     {
-        "name": "سولفات پتاسیم (K2SO4)",
+        "name": "Copper Sulfate (CuSO₄·5H₂O)",
         "brand": "استاندارد",
-        "category": "پتاسیمی",
-        "form": "powder",
-        "concentration": 98.0,
-        "price_per_kg": 1369999,
-        "elements": {"K": 44.874, "S": 18.399},
-        "is_acid": False,
-        "ph_level": 5.5,
-        "description": "تامین پتاسیم و گوگرد - فاقد کلر - مناسب خاک‌های شور - کیفیت بالا"
-    },
-    {
-        "name": "کلرید پتاسیم (KCl)",
-        "brand": "استاندارد",
-        "category": "پتاسیمی",
+        "category": "ریزمغذی",
         "form": "crystal",
-        "concentration": 99.5,
-        "price_per_kg": 933620,
-        "elements": {"K": 52.446, "Cl": 47.554},
-        "is_acid": False,
-        "ph_level": 7.0,
-        "description": "تامین پتاسیم و کلر - اقتصادی‌ترین منبع پتاسیم - دارای کلر"
-    },
-    {
-        "name": "مونو پتاسیم فسفات (KH2PO4)",
-        "brand": "استاندارد",
-        "category": "فسفاته",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 680000,
-        "elements": {"P": 22.765, "K": 28.728},
-        "is_acid": False,
-        "ph_level": 4.5,
-        "description": "تامین فسفر و پتاسیم - تحریک گلدهی و میوه‌دهی - دارای خاصیت اسیدی"
-    },
-    {
-        "name": "دی پتاسیم فسفات (K2HPO4)",
-        "brand": "استاندارد",
-        "category": "فسفاته",
-        "form": "powder",
         "concentration": 98.0,
-        "price_per_kg": 700000,
-        "elements": {"P": 17.768, "K": 44.830},
+        "price_per_kg": 650000,
+        "elements": {"Cu": 25.450, "S": 12.841},
         "is_acid": False,
-        "ph_level": 9.0,
-        "description": "تامین فسفر و پتاسیم - مناسب محلول‌های غذایی با pH متعادل - خاصیت قلیایی"
-    },
-    {
-        "name": "کربنات پتاسیم (K2CO3)",
-        "brand": "استاندارد",
-        "category": "پتاسیمی",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 800000,
-        "elements": {"K": 56.579},
-        "is_acid": False,
-        "ph_level": 11.5,
-        "description": "تامین پتاسیم - افزایش pH محلول - مناسب تنظیم pH - خاصیت قلیایی قوی"
+        "ph_level": 3.5,
+        "description": "سولفات مس (Copper Sulfate) - تامین مس و گوگرد - خاصیت ضدقارچی و باکتری‌کشی - رفع کمبود مس"
     },
 
     # ============================================================
-    # 🟤 کودهای منیزیم (Magnesium Fertilizers)
+    # 🔵 کودهای با حرف I
     # ============================================================
     {
-        "name": "سولفات منیزیم (MgSO4.7H2O)",
+        "name": "Iron DTPA (FeDTPA)",
         "brand": "استاندارد",
-        "category": "منیزیمی",
-        "form": "crystal",
-        "concentration": 99.5,
-        "price_per_kg": 400000,
-        "elements": {"Mg": 9.861, "S": 13.010},
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 10.0,
+        "price_per_kg": 2500000,
+        "elements": {"Fe": 10.000},
         "is_acid": False,
-        "ph_level": 6.0,
-        "description": "تامین منیزیم و گوگرد - افزایش کلروفیل و فتوسنتز - رفع زردی برگ‌ها"
+        "ph_level": 7.0,
+        "description": "آهن DTPA (Iron DTPA) - کلات آهن با پایه DTPA - پایداری تا pH 8.5 - مناسب خاک‌های نیمه آهکی"
     },
     {
-        "name": "نیترات منیزیم (Mg(NO3)2.6H2O)",
-        "brand": "استاندارد",
-        "category": "منیزیمی",
-        "form": "crystal",
-        "concentration": 99.0,
-        "price_per_kg": 480000,
-        "elements": {"N-NO3": 10.922, "Mg": 9.464},
-        "is_acid": False,
-        "ph_level": 6.0,
-        "description": "تامین منیزیم و نیتروژن - افزایش فتوسنتز و سبزینگی - جذب سریع"
-    },
-
-    # ============================================================
-    # 🟠 کودهای آهن (Iron Fertilizers - Chelated)
-    # ============================================================
-    {
-        "name": "کلات آهن EDDHA (Fe-EDDHA 6%)",
+        "name": "Iron EDDHA (FeEDDHA)",
         "brand": "استاندارد",
         "category": "ریزمغذی",
         "form": "powder",
         "concentration": 6.0,
         "price_per_kg": 3000000,
-        "elements": {"Fe": 13.706},
+        "elements": {"Fe": 6.000},
         "is_acid": False,
         "ph_level": 7.0,
-        "description": "کلات آهن با پایه EDDHA - پایداری تا pH 9 - مناسب خاک‌های آهکی - رفع کلروز شدید"
+        "description": "آهن EDDHA (Iron EDDHA) - کلات آهن با پایه EDDHA - پایداری تا pH 9 - مناسب خاک‌های آهکی - رفع کلروز شدید"
     },
     {
-        "name": "کلات آهن DTPA (Fe-DTPA 7%)",
+        "name": "Iron EDTA (FeEDTA)",
         "brand": "استاندارد",
         "category": "ریزمغذی",
         "form": "powder",
-        "concentration": 7.0,
-        "price_per_kg": 2500000,
-        "elements": {"Fe": 10.955},
-        "is_acid": False,
-        "ph_level": 7.0,
-        "description": "کلات آهن با پایه DTPA - پایداری تا pH 8.5 - مناسب خاک‌های نیمه آهکی"
-    },
-    {
-        "name": "کلات آهن EDTA (Fe-EDTA 13%)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 13.0,
+        "concentration": 9.0,
         "price_per_kg": 1900000,
-        "elements": {"Fe": 13.691},
+        "elements": {"Fe": 9.000},
         "is_acid": False,
         "ph_level": 7.0,
-        "description": "کلات آهن با پایه EDTA - پایداری تا pH 8 - رفع کلروز آهن - جذب بالا"
+        "description": "آهن EDTA (Iron EDTA) - کلات آهن با پایه EDTA - پایداری تا pH 8 - رفع کلروز آهن - جذب بالا"
     },
     {
-        "name": "سولفات آهن (FeSO4.7H2O)",
+        "name": "Iron II Sulfate (FeSO₄·7H₂O)",
         "brand": "استاندارد",
         "category": "ریزمغذی",
         "form": "crystal",
         "concentration": 98.0,
         "price_per_kg": 500000,
-        "elements": {"Fe": 20.086, "S": 11.528},
+        "elements": {"Fe": 20.088, "S": 11.532},
         "is_acid": False,
         "ph_level": 3.5,
-        "description": "تامین آهن و گوگرد - کاهش pH خاک - مناسب کشت ارگانیک - اقتصادی"
+        "description": "سولفات آهن (Iron II Sulfate) - تامین آهن و گوگرد - کاهش pH خاک - مناسب کشت ارگانیک - اقتصادی"
     },
 
     # ============================================================
-    # 🟡 کودهای روی (Zinc Fertilizers)
+    # 🔵 کودهای با حرف M
     # ============================================================
     {
-        "name": "کلات روی EDTA (Zn-EDTA 15%)",
+        "name": "Magnesium Carbonate (MgCO₃)",
         "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 15.0,
-        "price_per_kg": 1900000,
-        "elements": {"Zn": 14.422},
-        "is_acid": False,
-        "ph_level": 7.0,
-        "description": "کلات روی با پایه EDTA - جذب بالا - رفع کمبود روی و کوچکی برگ"
-    },
-    {
-        "name": "سولفات روی مونوهیدرات (ZnSO4.H2O)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
+        "category": "ماکرو",
         "form": "powder",
         "concentration": 98.0,
-        "price_per_kg": 600000,
-        "elements": {"Zn": 36.436, "S": 17.878},
+        "price_per_kg": 350000,
+        "elements": {"Mg": 28.827},
         "is_acid": False,
-        "ph_level": 4.5,
-        "description": "تامین روی و گوگرد - رفع علائم کمبود روی - اقتصادی"
+        "ph_level": 9.5,
+        "description": "کربنات منیزیم (Magnesium Carbonate) - تامین منیزیم - افزایش pH خاک - مناسب خاک‌های اسیدی"
     },
     {
-        "name": "نیترات روی (Zn(NO3)2.6H2O)",
+        "name": "Magnesium Nitrate (Mg(NO₃)₂·6H₂O)",
         "brand": "استاندارد",
-        "category": "ریزمغذی",
+        "category": "ماکرو",
         "form": "crystal",
         "concentration": 99.0,
-        "price_per_kg": 700000,
-        "elements": {"Zn": 21.980, "N-NO3": 9.418},
-        "is_acid": False,
-        "ph_level": 5.5,
-        "description": "تامین روی و نیتروژن - مناسب محلول‌های غذایی - جذب سریع"
-    },
-
-    # ============================================================
-    # 🟢 کودهای منگنز (Manganese Fertilizers)
-    # ============================================================
-    {
-        "name": "کلات منگنز EDTA (Mn-EDTA 13%)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 13.0,
-        "price_per_kg": 1850000,
-        "elements": {"Mn": 13.694},
-        "is_acid": False,
-        "ph_level": 7.0,
-        "description": "کلات منگنز با پایه EDTA - رفع زردی بین رگبرگ - افزایش فتوسنتز"
-    },
-
-    # ============================================================
-    # 🔴 کودهای مس (Copper Fertilizers)
-    # ============================================================
-    {
-        "name": "کلات مس EDTA (Cu-EDTA 14%)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 14.0,
-        "price_per_kg": 2000000,
-        "elements": {"Cu": 14.087},
-        "is_acid": False,
-        "ph_level": 7.0,
-        "description": "کلات مس با پایه EDTA - افزایش مقاومت به بیماری‌ها - خاصیت ضدقارچی"
-    },
-    {
-        "name": "سولفات مس (CuSO4.5H2O)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "crystal",
-        "concentration": 98.0,
-        "price_per_kg": 650000,
-        "elements": {"Cu": 25.455, "S": 12.846},
-        "is_acid": False,
-        "ph_level": 3.5,
-        "description": "تامین مس و گوگرد - خاصیت ضدقارچی و باکتری‌کشی - رفع کمبود مس"
-    },
-    {
-        "name": "نیترات مس (Cu(NO3)2.3H2O)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "crystal",
-        "concentration": 99.0,
-        "price_per_kg": 750000,
-        "elements": {"Cu": 26.228, "N-NO3": 11.565},
-        "is_acid": False,
-        "ph_level": 4.0,
-        "description": "تامین مس و نیتروژن - مناسب محلول‌های غذایی - جذب سریع"
-    },
-
-    # ============================================================
-    # 🟡 کودهای بور (Boron Fertilizers)
-    # ============================================================
-    {
-        "name": "اسید بوریک (H3BO3)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 99.5,
-        "price_per_kg": 1200000,
-        "elements": {"B": 17.480},
-        "is_acid": False,
-        "ph_level": 5.0,
-        "description": "تامین بور - بهبود گرده‌افشانی و تشکیل میوه - افزایش کیفیت محصول"
-    },
-    {
-        "name": "بوراکس (Na2B4O7.10H2O)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 1100000,
-        "elements": {"B": 11.352, "Na": 12.080},
-        "is_acid": False,
-        "ph_level": 9.0,
-        "description": "تامین بور و سدیم - مناسب خاک‌های اسیدی - خاصیت قلیایی"
-    },
-
-    # ============================================================
-    # 🟡 کودهای مولیبدن (Molybdenum Fertilizers)
-    # ============================================================
-    {
-        "name": "مولیبدات سدیم (Na2MoO4.2H2O)",
-        "brand": "استاندارد",
-        "category": "ریزمغذی",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 2800000,
-        "elements": {"Mo": 39.650, "Na": 19.001},
-        "is_acid": False,
-        "ph_level": 8.0,
-        "description": "تامین مولیبدن و سدیم - افزایش تثبیت نیتروژن - برای حبوبات ضروری"
-    },
-
-    # ============================================================
-    # 🟣 کودهای NPK کامل
-    # ============================================================
-    {
-        "name": "کود کامل 20-20-20",
-        "brand": "استاندارد",
-        "category": "NPK کامل",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 950000,
-        "elements": {"N-NO3": 10.000, "N-NH4": 10.000, "P": 8.733, "K": 16.600},
-        "is_acid": False,
-        "ph_level": 6.5,
-        "description": "کود کامل NPK با نسبت مساوی - مناسب رشد عمومی گیاه - متعادل"
-    },
-    {
-        "name": "کود کامل 20-20-20 (مایع)",
-        "brand": "استاندارد",
-        "category": "NPK کامل",
-        "form": "liquid",
-        "concentration": 35.0,
-        "price_per_kg": 1200000,
-        "elements": {"N-NO3": 7.000, "N-NH4": 7.000, "P": 5.500, "K": 12.000},
-        "is_acid": False,
-        "ph_level": 6.5,
-        "description": "کود کامل NPK مایع با نسبت مساوی - جذب سریع - مناسب محلول‌پاشی"
-    },
-    {
-        "name": "کود 12-12-36 (پتاسیم بالا)",
-        "brand": "استاندارد",
-        "category": "NPK کامل",
-        "form": "powder",
-        "concentration": 99.0,
-        "price_per_kg": 1100000,
-        "elements": {"N-NO3": 6.000, "N-NH4": 6.000, "P": 5.240, "K": 29.880},
+        "price_per_kg": 480000,
+        "elements": {"N-NO3": 10.925, "Mg": 9.479},
         "is_acid": False,
         "ph_level": 6.0,
-        "description": "کود NPK با پتاسیم بالا - مناسب گلدهی و میوه‌دهی - افزایش کیفیت میوه"
+        "description": "نیترات منیزیم (Magnesium Nitrate) - تامین منیزیم و نیتروژن - افزایش فتوسنتز و سبزینگی - جذب سریع"
+    },
+    {
+        "name": "Magnesium Sulfate (MgSO₄·7H₂O)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 99.5,
+        "price_per_kg": 400000,
+        "elements": {"Mg": 9.861, "S": 13.008},
+        "is_acid": False,
+        "ph_level": 6.0,
+        "description": "سولفات منیزیم (Magnesium Sulfate) - تامین منیزیم و گوگرد - افزایش کلروفیل و فتوسنتز - رفع زردی برگ‌ها"
+    },
+    {
+        "name": "Mn EDTA (MnEDTA)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 12.0,
+        "price_per_kg": 1850000,
+        "elements": {"Mn": 12.000},
+        "is_acid": False,
+        "ph_level": 7.0,
+        "description": "منگنز EDTA (Mn EDTA) - کلات منگنز با پایه EDTA - رفع زردی بین رگبرگ - افزایش فتوسنتز"
     },
 
     # ============================================================
-    # 🟠 اسیدها (Acids)
+    # 🔵 کودهای با حرف P
     # ============================================================
     {
-        "name": "اسید فسفریک 75% (H3PO4)",
+        "name": "Phosphoric Acid 75% (H₃PO₄)",
         "brand": "استاندارد",
         "category": "اسید",
         "form": "liquid",
         "concentration": 75.0,
         "price_per_kg": 3450000,
-        "elements": {"P": 23.684},
+        "elements": {"P": 23.447},
         "is_acid": True,
         "acid_type": "H3PO4",
         "ph_level": 1.5,
-        "description": "اسید فسفریک 75% - برای تنظیم pH و تامین فسفر - مناسب سیستم‌های آبیاری"
+        "description": "اسید فسفریک ۷۵٪ (Phosphoric Acid 75%) - تنظیم pH و تامین فسفر - مناسب سیستم‌های آبیاری"
     },
     {
-        "name": "اسید نیتریک 63% (HNO3)",
+        "name": "Potassium Carbonate (K₂CO₃)",
         "brand": "استاندارد",
-        "category": "اسید",
-        "form": "liquid",
-        "concentration": 63.0,
-        "price_per_kg": 4800000,
-        "elements": {"N-NO3": 13.997},
-        "is_acid": True,
-        "acid_type": "HNO3",
-        "ph_level": 1.0,
-        "description": "اسید نیتریک 63% - منبع نیتروژن نیتراتی و تنظیم‌کننده pH - قوی"
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 800000,
+        "elements": {"K": 56.589},
+        "is_acid": False,
+        "ph_level": 11.5,
+        "description": "کربنات پتاسیم (Potassium Carbonate) - تامین پتاسیم - افزایش pH محلول - مناسب تنظیم pH - خاصیت قلیایی قوی"
     },
     {
-        "name": "اسید سولفوریک 98% (H2SO4)",
+        "name": "Potassium Chloride (KCl)",
         "brand": "استاندارد",
-        "category": "اسید",
-        "form": "liquid",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 99.5,
+        "price_per_kg": 933620,
+        "elements": {"K": 52.445, "Cl": 47.555},
+        "is_acid": False,
+        "ph_level": 7.0,
+        "description": "کلرید پتاسیم (Potassium Chloride) - تامین پتاسیم و کلر - اقتصادی‌ترین منبع پتاسیم - دارای کلر"
+    },
+    {
+        "name": "Potassium Citrate (K₃C₆H₅O₇·H₂O)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 900000,
+        "elements": {"K": 36.155},
+        "is_acid": False,
+        "ph_level": 8.0,
+        "description": "سیترات پتاسیم (Potassium Citrate) - تامین پتاسیم - منبع آلی پتاسیم - مناسب سیستم‌های آبیاری"
+    },
+    {
+        "name": "Potassium Dibasic Phosphate (K₂HPO₄)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "powder",
         "concentration": 98.0,
-        "price_per_kg": 1500000,
-        "elements": {"S": 31.997},
-        "is_acid": True,
-        "acid_type": "H2SO4",
-        "ph_level": 1.0,
-        "description": "اسید سولفوریک 98% - تنظیم‌کننده pH و تامین گوگرد - بسیار قوی"
+        "price_per_kg": 700000,
+        "elements": {"P": 17.783, "K": 44.895},
+        "is_acid": False,
+        "ph_level": 9.0,
+        "description": "دی‌فسفات پتاسیم (Potassium Dibasic Phosphate) - تامین فسفر و پتاسیم - مناسب محلول‌های غذایی با pH متعادل - خاصیت قلیایی"
+    },
+    {
+        "name": "Potassium Monobasic Phosphate (KH₂PO₄)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 680000,
+        "elements": {"P": 22.762, "K": 28.731},
+        "is_acid": False,
+        "ph_level": 4.5,
+        "description": "مونوفسفات پتاسیم (Potassium Monobasic Phosphate) - تامین فسفر و پتاسیم - تحریک گلدهی و میوه‌دهی - دارای خاصیت اسیدی"
+    },
+    {
+        "name": "Potassium Nitrate (KNO₃)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 99.0,
+        "price_per_kg": 750000,
+        "elements": {"N-NO3": 13.854, "K": 38.672},
+        "is_acid": False,
+        "ph_level": 7.0,
+        "description": "نیترات پتاسیم (Potassium Nitrate) - تامین پتاسیم و نیتروژن - مناسب گلدهی و میوه‌دهی - بدون کلر"
+    },
+    {
+        "name": "Potassium Sulfate (K₂SO₄)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "powder",
+        "concentration": 98.0,
+        "price_per_kg": 1369999,
+        "elements": {"K": 44.874, "S": 18.401},
+        "is_acid": False,
+        "ph_level": 5.5,
+        "description": "سولفات پتاسیم (Potassium Sulfate) - تامین پتاسیم و گوگرد - فاقد کلر - مناسب خاک‌های شور - کیفیت بالا"
+    },
+
+    # ============================================================
+    # 🔵 کودهای با حرف S
+    # ============================================================
+    {
+        "name": "Sodium Borate (Na₂B₄O₇·10H₂O)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 1100000,
+        "elements": {"B": 11.338, "Na": 12.057},
+        "is_acid": False,
+        "ph_level": 9.0,
+        "description": "بوراکس (Sodium Borate) - تامین بور و سدیم - مناسب خاک‌های اسیدی - خاصیت قلیایی"
+    },
+    {
+        "name": "Sodium Molybdate (Na₂MoO₄·2H₂O)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 99.0,
+        "price_per_kg": 2800000,
+        "elements": {"Mo": 39.656, "Na": 19.003},
+        "is_acid": False,
+        "ph_level": 8.0,
+        "description": "مولیبدات سدیم (Sodium Molybdate) - تامین مولیبدن و سدیم - افزایش تثبیت نیتروژن - برای حبوبات ضروری"
+    },
+    {
+        "name": "Sodium Nitrate (NaNO₃)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 99.0,
+        "price_per_kg": 350000,
+        "elements": {"N-NO3": 16.479, "Na": 27.052},
+        "is_acid": False,
+        "ph_level": 7.0,
+        "description": "نیترات سدیم (Sodium Nitrate) - تامین نیتروژن نیتراتی و سدیم - مناسب خاک‌های اسیدی - جذب سریع"
+    },
+
+    # ============================================================
+    # 🔵 کودهای با حرف Z
+    # ============================================================
+    {
+        "name": "Zinc EDTA (ZnEDTA)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 14.0,
+        "price_per_kg": 1900000,
+        "elements": {"Zn": 14.000},
+        "is_acid": False,
+        "ph_level": 7.0,
+        "description": "روی EDTA (Zinc EDTA) - کلات روی با پایه EDTA - جذب بالا - رفع کمبود روی و کوچکی برگ"
+    },
+    {
+        "name": "Zinc Nitrate (Zn(NO₃)₂·6H₂O)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
+        "form": "crystal",
+        "concentration": 99.0,
+        "price_per_kg": 700000,
+        "elements": {"N-NO3": 9.150, "Zn": 21.978},
+        "is_acid": False,
+        "ph_level": 5.5,
+        "description": "نیترات روی (Zinc Nitrate) - تامین روی و نیتروژن - مناسب محلول‌های غذایی - جذب سریع"
+    },
+    {
+        "name": "Zinc Sulfate (ZnSO₄·7H₂O)",
+        "brand": "استاندارد",
+        "category": "ریزمغذی",
+        "form": "powder",
+        "concentration": 98.0,
+        "price_per_kg": 600000,
+        "elements": {"Zn": 22.744, "S": 11.153},
+        "is_acid": False,
+        "ph_level": 4.5,
+        "description": "سولفات روی (Zinc Sulfate) - تامین روی و گوگرد - رفع علائم کمبود روی - اقتصادی"
     }
 ]
 
