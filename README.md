@@ -1,285 +1,217 @@
 # 🌱 FarmTech - ProFertilizer
 
-**Smart Digital Fertilizer Prescription System**
+**سیستم هوشمند نسخه‌نویسی کود برای گلخانه‌ها و کشت‌های بدون خاک**
 
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Vue](https://img.shields.io/badge/Vue-3.4.0-4FC08D?logo=vuedotjs)](https://vuejs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4.0-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
 [![SQLite](https://img.shields.io/badge/SQLite-3.0-003B57?logo=sqlite)](https://sqlite.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)](https://python.org)
 [![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
 
 ---
 
-## 📋 Overview
+## 📋 نمای کلی
 
-**FarmTech - ProFertilizer** is a specialized software for calculating, analyzing, and managing plant nutrition formulas in soilless cultivation systems, hydroponics, and greenhouses. It provides water and wastewater analysis, target element determination, automatic fertilizer calculation, fertilizer database management, and intelligent data interpretation.
-
----
-
-## ⚠️ Important Notice
-
-**This software is proprietary and NOT open source.**
-
-- © 2025 FarmTech. All rights reserved.
-- No part of this software may be reproduced, distributed, or transmitted in any form or by any means without the prior written permission of the copyright holder.
-- Unauthorized copying, modification, distribution, or use of this software is strictly prohibited.
-- For licensing inquiries, please contact: info@farmtech.ir
+**FarmTech - ProFertilizer** یک نرم‌افزار تخصصی برای **محاسبه، تحلیل و مدیریت فرمول‌های تغذیه گیاه** در سیستم‌های کشت بدون خاک، هیدروپونیک و گلخانه‌های مدرن است. این نرم‌افزار با بهره‌گیری از الگوریتم‌های علمی معتبر و پایگاه داده‌ای جامع از کودهای ایرانی، امکان محاسبه دقیق فرمول غذایی، تحلیل آب و پساب، تعادل یونی و بهینه‌سازی هزینه را فراهم می‌کند.
 
 ---
 
-## ✨ Features
+## 🚀 ویژگی‌های کلیدی
 
-- 🔐 **User Authentication** – Secure login and registration with session-based tokens
-- 💧 **Water & Wastewater Analysis** – Calculate final values based on water mixing ratios
-- 🎯 **Target Elements** – Set desired nutrient levels with ion balance validation
-- 🧮 **Automatic Fertilizer Calculation** – Calculate exact fertilizer amounts based on target values
-- 📚 **Fertilizer Database** – Manage fertilizers, acids, and their elemental compositions
-- 📊 **Data Interpretation** – Generate comprehensive reports with smart recommendations
-- 🌓 **Light/Dark Theme** – Comfortable viewing in any lighting condition
-- 🌐 **Persian & English** – Full bilingual support
-- 🖨️ **Print Reports** – Export any page as a printable report
+| ویژگی | توضیح |
+|-------|-------|
+| 🔐 **احراز هویت امن** | ثبت‌نام و ورود با توکن‌های نشست ذخیره‌شده در دیتابیس |
+| 💧 **آنالیز آب و پساب** | محاسبه خودکار مقادیر تامینی بر اساس درصد اختلاط آب و پساب |
+| 🎯 **عناصر هدف** | تعیین سطح دقیق عناصر غذایی با اعتبارسنجی تعادل یونی |
+| 🧠 **بهینه‌سازی خودکار** | استفاده از الگوریتم NNLS برای محاسبه بهترین ترکیب کودها |
+| 🧪 **پایگاه داده کودها** | بیش از ۴۲ کود ایرانی به‌همراه ترکیب عناصر و قیمت |
+| 📊 **تفسیر هوشمند** | تولید گزارش‌های جامع با توصیه‌های اصلاحی |
+| 🗄️ **مدیریت مخازن** | تقسیم خودکار کودها در مخازن A، B و C بر اساس سازگاری شیمیایی |
+| 🌓 **حالت روشن/تاریک** | نمایش مطابق با نور محیط |
+| 🌐 **دو زبانه** | پشتیبانی کامل از زبان‌های فارسی و انگلیسی |
+| 🖨️ **چاپ گزارش** | خروجی قابل چاپ از تمام بخش‌ها |
 
 ---
 
-## 🏗️ Tech Stack
+## 🏗️ معماری فنی
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | Vue 3, TypeScript, Tailwind CSS, Vite |
-| **Backend** | FastAPI, Python 3.11, SQLAlchemy |
-| **Database** | SQLite |
-| **Authentication** | Session-based tokens with database storage |
-| **State Management** | Pinia |
+| لایه | فناوری |
+|------|--------|
+| **فرانت‌اند** | Vue 3، TypeScript، Tailwind CSS، Vite، Pinia |
+| **بک‌اند** | FastAPI، Python 3.11، SQLAlchemy |
+| **دیتابیس** | SQLite (محلی و بدون نیاز به سرور) |
+| **احراز هویت** | توکن‌های نشست با ذخیره‌سازی در دیتابیس |
+| **بهینه‌سازی** | NumPy، SciPy (الگوریتم NNLS) |
 | **HTTP Client** | Axios |
 
 ---
 
-## 📁 Project Structure
-
+## 📁 ساختار پروژه
 FarmTech-ProFertilizer/
 │
-├── .vscode/                          📁 تنظیمات VS Code
-│   └── settings.json                 🔧 تنظیمات ویرایشگر
+├── backend/ 📁 بک‌اند FastAPI
+│ ├── app/
+│ │ ├── main.py 🚀 نقطه ورود برنامه
+│ │ ├── config.py ⚙️ تنظیمات (SQLite)
+│ │ ├── models.py 📊 مدل‌های دیتابیس
+│ │ ├── schemas.py 📝 طرح‌های Pydantic
+│ │ ├── crud.py 📂 عملیات CRUD
+│ │ ├── services.py 🧮 الگوریتم‌های محاسباتی (NNLS)
+│ │ ├── security.py 🔒 احراز هویت و توکن
+│ │ ├── routes/ 🛣️ مسیرهای API
+│ │ └── seeds/ 🌱 داده‌های اولیه (کودها، رسپی‌ها)
+│ │
+│ ├── tests/ 🧪 تست‌های جامع
+│ ├── requirements.txt 📦 وابستگی‌ها
+│ └── farmtech.db 🗄️ فایل دیتابیس
 │
-├── backend/                          📁 بک‌اند FastAPI
-│   ├── app/                          📁 کدهای اصلی برنامه
-│   │   ├── __init__.py               📄 پکیج اصلی
-│   │   ├── config.py                 ⚙️ تنظیمات برنامه (SQLite)
-│   │   ├── crud.py                   📂 عملیات پایه دیتابیس
-│   │   ├── database.py               🗄️ اتصال به SQLite
-│   │   ├── main.py                   🚀 نقطه ورود اصلی
-│   │   ├── models.py                 📊 مدل‌های دیتابیس
-│   │   ├── routes.py                 🛣️ مسیرهای API
-│   │   ├── schemas.py                📝 طرح‌های Pydantic
-│   │   ├── security.py               🔒 امنیت و احراز هویت
-│   │   ├── services.py               🧮 منطق کسب‌وکار
-│   │   └── utils.py                  🛠️ ابزارهای کمکی
-│   │
-│   ├── tests/                        📁 تست‌ها
-│   │   ├── test_api.py               🧪 تست API
-│   │   └── test_services.py          🧪 تست سرویس‌ها
-│   │
-│   ├── .env                          🔐 متغیرهای محیطی
-│   ├── .env.example                  📄 نمونه متغیرهای محیطی
-│   ├── .gitignore                    📄 نادیده‌گرفتن فایل‌ها
-│   └── requirements.txt              📦 وابستگی‌های پایتون
+├── frontend/ 📁 فرانت‌اند Vue 3
+│ ├── src/
+│ │ ├── components/ 📁 کامپوننت‌ها
+│ │ │ ├── features/ ویژگی‌های اصلی
+│ │ │ ├── common/ کامپوننت‌های عمومی
+│ │ │ └── layout/ چیدمان (هدر، فوتر)
+│ │ │
+│ │ ├── store/ 📁 مدیریت State (Pinia)
+│ │ ├── composables/ 📁 توابع ترکیبی
+│ │ ├── services/ 📁 ارتباط با API
+│ │ ├── types/ 📁 تعاریف TypeScript
+│ │ ├── utils/ 📁 ابزارهای کمکی
+│ │ └── views/ 📁 صفحات اصلی
+│ │
+│ ├── public/fonts/ 📁 فونت‌های فارسی (۲۳ فایل)
+│ ├── index.html 📄 صفحه اصلی
+│ ├── package.json 📦 وابستگی‌ها
+│ └── vite.config.ts ⚙️ تنظیمات Vite
 │
-├── frontend/                         📁 فرانت‌اند Vue.js
-│   ├── .vscode/                      📁 تنظیمات VS Code
-│   │   └── extensions.json           🔧 اکستنشن‌های پیشنهادی
-│   │
-│   ├── public/                       📁 فایل‌های عمومی
-│   │   ├── fonts/                    📁 فونت‌های فارسی (۲۳ فایل)
-│   │   ├── favicon.webp              🖼️ آیکون مرورگر
-│   │   └── Logo.webp                 🖼️ لوگوی برنامه
-│   │
-│   ├── src/                          📁 کدهای اصلی فرانت‌اند
-│   │   ├── assets/                   📁 فایل‌های استاتیک
-│   │   │   ├── css/                  📁 استایل‌های CSS
-│   │   │   │   └── main.css          🎨 استایل اصلی
-│   │   │   ├── styles/               📁 استایل‌های اضافی
-│   │   │   │   ├── fonts.css         🎨 تنظیمات فونت
-│   │   │   │   ├── main.css          🎨 استایل اصلی
-│   │   │   │   └── print.css         🖨️ استایل چاپ
-│   │   │   ├── hero.png              🖼️ تصویر هدر
-│   │   │   ├── vite.svg              🖼️ آیکون Vite
-│   │   │   └── vue.svg               🖼️ آیکون Vue
-│   │   │
-│   │   ├── components/               📁 کامپوننت‌ها
-│   │   │   ├── common/               📁 کامپوننت‌های عمومی
-│   │   │   │   ├── AppButton.vue     🔘 دکمه سفارشی
-│   │   │   │   ├── AppInput.vue      📝 ورودی سفارشی
-│   │   │   │   └── AppSelect.vue     📋 انتخابگر سفارشی
-│   │   │   │
-│   │   │   ├── features/             📁 کامپوننت‌های ویژگی‌ها
-│   │   │   │   ├── FertilizerCalcTab.vue    🧮 محاسبه کود
-│   │   │   │   ├── FertilizerDBTab.vue      📚 پایگاه داده کودها
-│   │   │   │   ├── HomeTab.vue              🏠 صفحه اصلی
-│   │   │   │   ├── InterpretationTab.vue    📊 تفسیر داده‌ها
-│   │   │   │   ├── ReportHeader.vue         📋 هدر گزارش
-│   │   │   │   ├── TargetElementsTab.vue    🎯 عناصر هدف
-│   │   │   │   └── WaterAnalysisTab.vue     💧 آنالیز آب
-│   │   │   │
-│   │   │   └── layout/               📁 کامپوننت‌های چیدمان
-│   │   │       ├── AppFooter.vue     🦶 فوتر
-│   │   │       └── AppHeader.vue     📌 هدر
-│   │   │
-│   │   ├── composables/              📁 توابع ترکیبی
-│   │   │   ├── useCalculations.ts    🧮 محاسبات
-│   │   │   ├── usePrint.ts           🖨️ چاپ
-│   │   │   └── useValidation.ts      ✅ اعتبارسنجی
-│   │   │
-│   │   ├── router/                   📁 مسیریابی
-│   │   │   └── index.ts              🛣️ مسیرها
-│   │   │
-│   │   ├── store/                    📁 مدیریت state
-│   │   │   ├── modules/              📁 ماژول‌های store
-│   │   │   │   ├── appStore.ts       🌐 تنظیمات برنامه
-│   │   │   │   ├── calcStore.ts      🧮 محاسبات
-│   │   │   │   ├── fertilizerStore.ts🧪 کودها
-│   │   │   │   ├── reportStore.ts    📋 گزارش‌ها
-│   │   │   │   ├── targetStore.ts    🎯 عناصر هدف
-│   │   │   │   └── waterStore.ts     💧 آنالیز آب
-│   │   │   └── index.ts              📄 نقطه ورود store
-│   │   │
-│   │   ├── types/                    📁 تعاریف TypeScript
-│   │   │   └── index.ts              📄 نوع‌های全局
-│   │   │
-│   │   ├── utils/                    📁 ابزارهای کمکی
-│   │   │   ├── constants.ts          📌 ثابت‌ها
-│   │   │   └── helpers.ts            🛠️ توابع کمکی
-│   │   │
-│   │   ├── views/                    📁 صفحات اصلی
-│   │   │   └── MainLayout.vue        📄 چیدمان اصلی
-│   │   │
-│   │   ├── App.vue                   📄 کامپوننت ریشه
-│   │   ├── main.ts                   🚀 نقطه ورود
-│   │   └── style.css                 🎨 استایل سراسری
-│   │
-│   ├── .env                          🔐 متغیرهای محیطی
-│   ├── .gitignore                    📄 نادیده‌گرفتن فایل‌ها
-│   ├── index.html                    📄 صفحه اصلی HTML
-│   ├── package.json                  📦 وابستگی‌های Node.js
-│   ├── postcss.config.js             ⚙️ تنظیمات PostCSS
-│   ├── tailwind.config.js            ⚙️ تنظیمات Tailwind
-│   ├── tsconfig.json                 ⚙️ تنظیمات TypeScript
-│   └── vite.config.ts                ⚙️ تنظیمات Vite
+├── scripts/ 📁 اسکریپت‌های مدیریتی
+│ ├── cli.py 🖥️ منوی خط فرمان (CLI)
+│ ├── deploy.sh 🚀 استقرار در لینوکس
+│ └── deploy.bat 🚀 استقرار در ویندوز
 │
-├── scripts/                          📁 اسکریپت‌های کمکی (جدید)
-│   ├── deploy.sh                     🚀 اسکریپت استقرار لینوکس
-│   ├── deploy.bat                    🚀 اسکریپت استقرار ویندوز
-│   └── cli.py                        🖥️ منوی CLI
-│
-├── docker-compose.yml                🐳 Docker Compose (جدید)
-├── Dockerfile                        🐳 Dockerfile (جدید)
-├── .env                              🔐 متغیرهای محیطی اصلی
-├── int_DB.txt                        📄 اطلاعات دیتابیس (قابل نگهداری)
-├── README.md                         📄 مستندات پروژه
-└── setup.py                          📄 اسکریپت نصب
-
+├── docker-compose.yml 🐳 Docker Compose
+├── Dockerfile 🐳 Dockerfile
+└── README.md 📄 این مستندات
 ---
 
-## 🚀 Quick Start
+## 🚀 نصب و راه‌اندازی
 
-### Prerequisites
+### پیش‌نیازها
 
-- Python 3.11+
-- Node.js 18+
-- npm or yarn
+- Python 3.11 یا بالاتر
+- Node.js 18 یا بالاتر
+- npm یا yarn
 
-### Installation & Setup
+### روش سریع (با CLI)
 
 ```bash
-# 1. Clone the repository
+# ۱. کلون کردن مخزن
 git clone https://github.com/yourusername/FarmTech-ProFertilizer.git
 cd FarmTech-ProFertilizer
 
-# 2. Run the CLI installer
+# ۲. اجرای منوی مدیریتی
 python scripts/cli.py
 
-# 3. Select option 4 to install dependencies
-# 4. Select option 1 to run the full application
-Manual Installation
+# ۳. انتخاب گزینه ۴ برای نصب وابستگی‌ها
+# ۴. انتخاب گزینه ۱ برای اجرای کامل برنامه
+روش دستی
 bash
-# Backend
+# ----- بک‌اند -----
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate        # در ویندوز: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Frontend (in a new terminal)
+# ----- فرانت‌اند (در ترمینال جدید) -----
 cd frontend
 npm install
 npm run dev
-Access the Application
-Frontend: http://localhost:3000
-
-Backend API: http://localhost:8000
-
-API Docs: http://localhost:8000/docs
-
-Health Check: http://localhost:8000/health
-🧪 Running Tests
+🌐 دسترسی به برنامه
+سرویس	آدرس
+فرانت‌اند	http://localhost:3000
+بک‌اند (API)	http://localhost:8000
+مستندات API	http://localhost:8000/docs
+سلامت سرور http://localhost:8000/health
+🧪 اجرای تست‌ها
 bash
 cd backend
 python tests/test_all.py
-Or use the CLI menu (option 5).
-🐳 Docker Deployment
+یا از طریق منوی CLI (گزینه ۵).
+🐳 استقرار با Docker
 bash
-# Build and run
+# ساخت و اجرا
 docker-compose up --build
 
-# Stop
+# توقف
 docker-compose down
-🔧 Environment Variables
-Create a .env file in the root directory:
+🔧 متغیرهای محیطی
+فایل .env در ریشه پروژه:
 
 env
-# Database
+# دیتابیس
 DATABASE_URL=sqlite:///./farmtech.db
 
-# Security
+# امنیت
 SECRET_KEY=your-super-secret-key-change-in-production
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
 
-# Application
+# برنامه
 APP_NAME=FarmTech - ProFertilizer
 APP_VERSION=0.1.0
 DEBUG=True
 
-# API
+# API (فرانت‌اند)
 VITE_API_URL=http://localhost:8000/api/v1
-📸 Screenshots
-(Add screenshots here)
 
-👨‍💻 Developer
-Omid Rahmani
+🧠 الگوریتم محاسبه
+قلب محاسباتی برنامه بر اساس روش NNLS (Non-Negative Least Squares) طراحی شده است:
 
-GitHub: omidrph
+ساخت ماتریس ضرایب: سهم هر عنصر از هر کود (با در نظر گرفتن خلوص) محاسبه می‌شود.
 
-Email: info@farmtech.ir
+کسر کیفیت آب: عناصر موجود در آب از نیاز خالص کسر می‌شوند.
 
-🏢 Organization
+بهینه‌سازی: با قید غیرمنفی بودن وزن‌ها، بهترین ترکیب کودها محاسبه می‌شود.
+
+اعتبارسنجی: تعادل یونی، بررسی رسوب و درصد تحقق اهداف بررسی می‌شود.
+
+توزیع مخازن: مواد به‌صورت خودکار در مخازن A، B و C توزیع می‌شوند.
+
+📚 منابع علمی
+هوارد رش (Howard Resh) – مرجع استاندارد تغذیه در هیدروپونیک
+
+دانشگاه فلوریدا – رسپی‌های گوجه‌فرنگی در مراحل مختلف رشد
+
+داگلاس پکنپا (Douglas Peckenpaugh) – فرمول‌های تخصصی
+
+نرخنامه سال ۱۴۰۵ وزارت جهاد کشاورزی – قیمت و ترکیب کودهای ایرانی
+
+👨‍💻 توسعه‌دهنده
+امید رحمانی
+توسعه‌دهنده ارشد و طراح سیستم
+
+ایمیل: info@farmtech.ir
+
+گیت‌هاب: github.com/omidrph
+
+🏢 سازمان
 FarmTech
-Smart Agriculture Solutions
+راهکارهای هوشمند کشاورزی
 
-🤖 AI Assistance
-This project was developed with assistance from AI technologies to accelerate development and enhance code quality.
+📄 مجوز
+نرم‌افزار اختصاصی (Proprietary)
 
-📄 License
-Proprietary License
+© ۲۰۲۶ FarmTech. تمامی حقوق محفوظ است.
 
-© 2026 FarmTech. All rights reserved.
+این نرم‌افزار متعلق به FarmTech بوده و هرگونه کپی، توزیع، تغییر یا استفاده غیرمجاز از آن ممنوع می‌باشد.
+برای دریافت مجوز، با ایمیل زیر تماس بگیرید:
+📧 info@farmtech.ir
 
-This software is the exclusive property of FarmTech. Unauthorized copying, modification, distribution, or use of this software is strictly prohibited. For licensing inquiries, please contact: info@farmtech.ir
+📞 ارتباط با ما
+ایمیل: info@farmtech.ir
 
-📞 Contact
-Email: info@farmtech.ir
+وب‌سایت: www.farmtech.ir
 
-Website: www.farmtech.ir
-
-Phone: +98 910 473 9718
-
-Made with ❤️ by FarmTech Team
+تلفن: ۰۲۱-۸۸۴۱۴۶۷۹

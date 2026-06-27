@@ -1,5 +1,21 @@
+<!-- frontend/src/components/features/EducationQuickStart.vue -->
 <template>
   <div class="space-y-4 sm:space-y-6">
+    <!-- مقدمه -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">شروع سریع با FarmTech</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">مراحل گام‌به‌گام برای استفاده از نرم‌افزار</p>
+        </div>
+      </div>
+    </div>
+
     <!-- گام‌ها -->
     <div class="space-y-3 sm:space-y-4">
       <!-- گام ۱ -->
@@ -109,7 +125,7 @@
             <li>به تب <strong>"پایگاه داده کودها"</strong> بروید</li>
             <li>روی دکمه <strong>"افزودن کود جدید"</strong> کلیک کنید</li>
             <li>نام کود، قیمت هر کیلوگرم و درصد عناصر موجود در آن را وارد کنید</li>
-            <li>برای بارگذاری نمونه‌های آماده، روی <strong>"بارگذاری نمونه"</strong> کلیک کنید</li>
+            <li>برای بارگذاری نمونه‌های آماده، روی <strong>"کپی کودهای سیستمی"</strong> کلیک کنید</li>
           </ul>
           <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 mt-2 text-yellow-700 dark:text-yellow-300 text-xs sm:text-sm">
             ⚠️ <strong>توجه:</strong> درصد عناصر باید بین ۰ تا ۱۰۰ باشد و مجموع آنها نباید از ۱۰۰ بیشتر شود.
@@ -259,18 +275,16 @@
         <div v-show="openSteps[4]" class="mt-3 sm:mt-4 mr-11 sm:mr-14 space-y-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3 sm:pt-4">
           <p>✅ <strong>مراحل محاسبه کود:</strong></p>
           <ul class="list-disc list-inside space-y-1 mr-4">
-            <li>از لیست، کودهای مورد نظر خود را انتخاب کنید (با نگه‌داشتن Ctrl می‌توانید چند کود انتخاب کنید)</li>
-            <li>روی دکمه <strong>"افزودن"</strong> کلیک کنید تا کودها به جدول محاسبه اضافه شوند</li>
-            <li>حجم مخزن (لیتر) و ضریب رقیق‌سازی را وارد کنید</li>
-            <li>برای هر کود، وزن (گرم) و خلوص (درصد) را وارد کنید</li>
-            <li>روی دکمه <strong>"محاسبه"</strong> کلیک کنید</li>
-            <li>نرم‌افزار سهم هر عنصر، هزینه و مجموع را محاسبه می‌کند</li>
+            <li>از لیست، کودهای مورد نظر خود را انتخاب کنید</li>
+            <li>روی دکمه <strong>"بهینه‌سازی خودکار"</strong> کلیک کنید</li>
+            <li>نرم‌افزار بهترین ترکیب کودها را محاسبه می‌کند</li>
+            <li>می‌توانید گزینه <strong>"بهینه‌سازی بر اساس هزینه"</strong> را فعال کنید</li>
           </ul>
           <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 mt-2 text-green-700 dark:text-green-300 text-xs sm:text-sm">
-            ✅ <strong>نتیجه:</strong> پس از محاسبه، جدول کامل با وزن، خلوص، هزینه و سهم هر عنصر نمایش داده می‌شود.
+            ✅ <strong>نتیجه:</strong> پس از محاسبه، جدول کامل با وزن، هزینه و سهم هر عنصر نمایش داده می‌شود.
           </div>
           <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mt-2 text-blue-700 dark:text-blue-300 text-xs sm:text-sm">
-            💡 <strong>نکته:</strong> اسیدها (H3PO4، HNO3، H2SO4) به صورت پیش‌فرض در جدول وجود دارند و قابل حذف نیستند.
+            💡 <strong>نکته:</strong> اسیدها (H3PO4، HNO3، H2SO4) به صورت خودکار در مخزن C قرار می‌گیرند.
           </div>
         </div>
       </div>
@@ -316,7 +330,7 @@
             <li>اطمینان حاصل کنید که آنالیز آب و عناصر هدف را وارد کرده‌اید</li>
             <li>محاسبات کود را انجام داده باشید</li>
             <li>روی دکمه <strong>"تولید تفسیر"</strong> کلیک کنید</li>
-            <li>گزارش کامل شامل موارد زیر نمایش داده می‌شود:</li>
+            <li>برای تفسیر پیشرفته، روی <strong>"تفسیر با هوش مصنوعی"</strong> کلیک کنید</li>
           </ul>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
             <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
@@ -342,16 +356,6 @@
         </div>
       </div>
     </div>
-
-    <!-- دکمه ریست -->
-    <div class="text-center">
-      <button 
-        @click="resetSteps" 
-        class="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
-      >
-        ↺ بستن همه
-      </button>
-    </div>
   </div>
 </template>
 
@@ -368,6 +372,13 @@ const toggleStep = (step: number) => {
 
 const resetSteps = () => {
   openSteps.value = [false, false, false, false, false, false];
+};
+
+// ===== تور آموزشی =====
+const startTutorial = () => {
+  // این تابع از composable useTour استفاده می‌کند
+  // که در فایل بعدی پیاده‌سازی می‌شود
+  alert('🎯 تور آموزشی به زودی اضافه می‌شود!');
 };
 </script>
 

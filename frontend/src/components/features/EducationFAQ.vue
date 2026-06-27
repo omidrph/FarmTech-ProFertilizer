@@ -1,14 +1,19 @@
+<!-- frontend/src/components/features/EducationFAQ.vue -->
 <template>
   <div class="space-y-4 sm:space-y-6">
     <!-- مقدمه -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-      <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-        <span class="text-2xl">❓</span>
-        سوالات متداول
-      </h3>
-      <p class="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
-        پاسخ به سوالات رایج کاربران درباره نرم‌افزار FarmTech - ProFertilizer
-      </p>
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">سوالات متداول</h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400">پاسخ به سوالات رایج کاربران</p>
+        </div>
+      </div>
     </div>
 
     <!-- جستجو -->
@@ -100,7 +105,7 @@
         سوالی دارید که در این لیست نیست؟
       </p>
       <p class="text-gray-500 dark:text-gray-400 text-xs sm:text-sm mt-1">
-        از طریق بخش <router-link to="/" @click="navigateToContact" class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium">ارتباط با ما</router-link> با تیم پشتیبانی در تماس باشید.
+        از طریق بخش <router-link to="/" class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium">ارتباط با ما</router-link> با تیم پشتیبانی در تماس باشید.
       </p>
     </div>
   </div>
@@ -108,9 +113,6 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-
-const router = useRouter();
 
 // ===== Types =====
 interface FAQItem {
@@ -123,7 +125,7 @@ interface FAQItem {
 // ===== State =====
 const searchQuery = ref('');
 
-// ===== Data =====
+// ===== Data - کامل‌شده با سوالات جدید =====
 const faqs = ref<FAQItem[]>([
   {
     question: 'چطور یک کود جدید به پایگاه داده اضافه کنم؟',
@@ -271,13 +273,73 @@ const faqs = ref<FAQItem[]>([
     answer: `
       <p>برای ارتباط با تیم پشتیبانی FarmTech از روش‌های زیر استفاده کنید:</p>
       <ul class="list-disc list-inside mr-4 space-y-1">
-        <li><strong>تلفن:</strong> ۰۲۱-۱۲۳۴۵۶۷۸</li>
+        <li><strong>تلفن:</strong> ۰۲۱-۸۸۴۱۴۶۷۹</li>
         <li><strong>ایمیل:</strong> info@farmtech.ir</li>
         <li><strong>بخش ارتباط با ما:</strong> در منوی اصلی نرم‌افزار</li>
       </ul>
       <p class="mt-2 text-green-600 dark:text-green-400 text-sm">✅ تیم پشتیبانی در ساعات کاری پاسخگوی شما خواهد بود.</p>
     `,
     tags: ['پشتیبانی', 'تماس', 'ارتباط'],
+    open: false
+  },
+  // ===== 🆕 سوالات جدید =====
+  {
+    question: 'چطور از بهینه‌سازی خودکار استفاده کنم؟',
+    answer: `
+      <p>برای استفاده از بهینه‌سازی خودکار مراحل زیر را دنبال کنید:</p>
+      <ol class="list-decimal list-inside mr-4 space-y-1">
+        <li>به تب <strong>محاسبه کود</strong> بروید</li>
+        <li>کودهای مورد نظر خود را از لیست انتخاب کنید</li>
+        <li>روی دکمه <strong>🚀 بهینه‌سازی خودکار</strong> کلیک کنید</li>
+        <li>نرم‌افزار بهترین ترکیب کودها را محاسبه می‌کند</li>
+      </ol>
+      <p class="mt-2 text-blue-600 dark:text-blue-400 text-sm">💡 می‌توانید گزینه <strong>بهینه‌سازی بر اساس هزینه</strong> را فعال کنید تا ارزان‌ترین ترکیب انتخاب شود.</p>
+    `,
+    tags: ['بهینه‌سازی', 'خودکار', 'NNLS'],
+    open: false
+  },
+  {
+    question: 'چطور هشدارهای بهینه‌سازی را رفع کنم؟',
+    answer: `
+      <p>اگر پس از بهینه‌سازی هشدارهایی مشاهده کردید:</p>
+      <ul class="list-disc list-inside mr-4 space-y-1">
+        <li>هشدارها در بخش <strong>نتیجه بهینه‌سازی</strong> نمایش داده می‌شوند</li>
+        <li>روی دکمه <strong>🔧 رفع خودکار هشدارها</strong> کلیک کنید</li>
+        <li>نرم‌افزار کودهای سمی را با جایگزین‌های مناسب تعویض می‌کند</li>
+        <li>همچنین می‌توانید هشدارها را به صورت دستی بررسی و اصلاح کنید</li>
+      </ul>
+      <p class="mt-2 text-green-600 dark:text-green-400 text-sm">✅ پس از رفع هشدارها، دوباره روی "بهینه‌سازی خودکار" کلیک کنید.</p>
+    `,
+    tags: ['هشدار', 'رفع خودکار', 'سمی'],
+    open: false
+  },
+  {
+    question: 'نرم‌افزار چگونه pH و EC را در محاسبات لحاظ می‌کند؟',
+    answer: `
+      <p>نرم‌افزار FarmTech به صورت هوشمند pH و EC آب را در محاسبات لحاظ می‌کند:</p>
+      <ul class="list-disc list-inside mr-4 space-y-1">
+        <li><strong>pH:</strong> اگر pH آب بالا باشد (>۷.۵)، استفاده از کودهای اسیدی ترجیح داده می‌شود</li>
+        <li><strong>EC:</strong> اگر EC آب بالا باشد (>۲.۵ dS/m)، از کودهای شور مانند KCl و NaNO3 اجتناب می‌شود</li>
+        <li><strong>pH برآوردی:</strong> نرم‌افزار pH نهایی محلول را برآورد و نشان می‌دهد</li>
+      </ul>
+      <p class="mt-2 text-purple-600 dark:text-purple-400 text-sm">🔬 این ویژگی به جلوگیری از رسوب و بهبود جذب عناصر کمک می‌کند.</p>
+    `,
+    tags: ['pH', 'EC', 'شوری', 'اسیدیته'],
+    open: false
+  },
+  {
+    question: 'چطور می‌توانم نسخه‌های قبلی گزارش را بازیابی کنم؟',
+    answer: `
+      <p>نرم‌افزار به صورت خودکار از هر تغییر گزارش نسخه‌برداری می‌کند:</p>
+      <ol class="list-decimal list-inside mr-4 space-y-1">
+        <li>به منوی <strong>فایل</strong> در هدر برنامه بروید</li>
+        <li>گزینه <strong>بازکردن...</strong> را انتخاب کنید</li>
+        <li>در مودال باز شده، می‌توانید لیست نسخه‌ها را مشاهده کنید</li>
+        <li>روی نسخه مورد نظر کلیک کرده و <strong>بارگذاری</strong> را بزنید</li>
+      </ol>
+      <p class="mt-2 text-green-600 dark:text-green-400 text-sm">✅ نسخه‌ها به صورت خودکار هر بار که گزارش ذخیره می‌شود، ایجاد می‌شوند.</p>
+    `,
+    tags: ['نسخه', 'بازیابی', 'تاریخچه'],
     open: false
   }
 ]);
@@ -298,14 +360,6 @@ const filteredFAQs = computed(() => {
 // ===== Methods =====
 const toggleFAQ = (index: number) => {
   faqs.value[index].open = !faqs.value[index].open;
-};
-
-const navigateToContact = () => {
-  // این تابع توسط کامپوننت والد مدیریت می‌شود
-  // از طریق emit یا router
-  router.push('/');
-  // در اینجا باید تب contact فعال شود
-  // این کار در MainLayout انجام می‌شود
 };
 </script>
 
@@ -342,5 +396,9 @@ code {
 
 .list-inside {
   list-style-position: inside;
+}
+
+.list-disc {
+  list-style-type: disc;
 }
 </style>

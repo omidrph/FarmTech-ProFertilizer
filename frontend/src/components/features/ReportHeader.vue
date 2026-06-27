@@ -1,3 +1,4 @@
+<!-- frontend/src/components/features/ReportHeader.vue -->
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -34,14 +35,14 @@
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all appearance-none"
         >
           <option value="">انتخاب فصل...</option>
-          <option value="بهار">بهار</option>
-          <option value="تابستان">تابستان</option>
-          <option value="پاییز">پاییز</option>
-          <option value="زمستان">زمستان</option>
+          <option value="بهار">🌱 بهار</option>
+          <option value="تابستان">☀️ تابستان</option>
+          <option value="پاییز">🍂 پاییز</option>
+          <option value="زمستان">❄️ زمستان</option>
         </select>
       </div>
 
-      <!-- مرحله رشد -->
+      <!-- مرحله رشد (با گزینه‌های جدید) -->
       <div>
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">مرحله رشد</label>
         <select 
@@ -50,10 +51,12 @@
           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all appearance-none"
         >
           <option value="">انتخاب مرحله رشد...</option>
-          <option value="استقرار نشا">استقرار نشا</option>
-          <option value="رشد رویشی">رشد رویشی</option>
-          <option value="گلدهی">گلدهی</option>
-          <option value="میوه دهی">میوه دهی</option>
+          <option value="استقرار نشا">🌱 استقرار نشا</option>
+          <option value="رشد رویشی">🌿 رشد رویشی</option>
+          <option value="گلدهی">🌸 گلدهی</option>
+          <option value="رسیدگی">🍎 رسیدگی</option>
+          <option value="میوه‌دهی">🍅 میوه‌دهی</option>
+          <option value="پایان دوره">🌾 پایان دوره</option>
         </select>
       </div>
 
