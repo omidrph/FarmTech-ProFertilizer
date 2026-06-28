@@ -40,7 +40,6 @@ export const useReportStore = defineStore('report', () => {
     growthStage: '',
     date: getCurrentShamsiDate()
   });
-
   const currentReportId = ref<number | null>(null);
   const reports = ref<Report[]>([]);
   const isLoading = ref(false);
@@ -120,7 +119,6 @@ export const useReportStore = defineStore('report', () => {
   async function saveCurrentReport(): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
-
     try {
       const waterStore = useWaterStore();
       const targetStore = useTargetStore();
@@ -136,7 +134,6 @@ export const useReportStore = defineStore('report', () => {
       };
 
       let savedReport: any;
-
       if (currentReportId.value) {
         // به‌روزرسانی گزارش موجود
         savedReport = await apiService.updateReport(String(currentReportId.value), reportPayload);
@@ -225,7 +222,6 @@ export const useReportStore = defineStore('report', () => {
 
       // بارگذاری مجدد گزارش‌ها
       await loadReports();
-      
       return true;
     } catch (err: any) {
       error.value = err.message || 'خطا در ذخیره گزارش';
@@ -238,15 +234,23 @@ export const useReportStore = defineStore('report', () => {
 
   /**
    * 🆕 بارگذاری یک گزارش خاص و تمام داده‌های مرتبط آن
+   * 
+   * 🐛 رفع باگ: قبل از بارگذاری گزارش جدید، همه storeها ریست می‌شوند
+   * تا داده‌های گزارش قبلی باقی نمانند
    */
   async function loadReport(reportId: number): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
-
     try {
       const waterStore = useWaterStore();
       const targetStore = useTargetStore();
       const calcStore = useCalcStore();
+
+      // 🐛🔧 رفع باگ: ریست کردن storeها قبل از بارگذاری گزارش جدید
+      // این کار باعث می‌شود داده‌های گزارش قبلی پاک شوند و با داده‌های جدید جایگزین شوند
+      waterStore.resetWaterData();
+      targetStore.resetTargets();
+      calcStore.resetCalculation();
 
       // 1. بارگذاری گزارش اصلی
       const report = await apiService.getReport(String(reportId));
@@ -295,7 +299,6 @@ export const useReportStore = defineStore('report', () => {
           // ===== اصلاح: اطمینان از اینکه target_values به درستی در targetStore قرار می‌گیرد =====
           if (calculation.target_values) {
             let targetValues = calculation.target_values;
-            
             // اگر target_values رشته JSON است، آن را تبدیل کن
             if (typeof targetValues === 'string') {
               try {
@@ -305,7 +308,6 @@ export const useReportStore = defineStore('report', () => {
                 targetValues = {};
               }
             }
-            
             // اگر target_values دیکشنری است، آن را در targetStore قرار بده
             if (typeof targetValues === 'object' && targetValues !== null) {
               console.log('Loading target_values into store:', targetValues);
@@ -324,12 +326,12 @@ export const useReportStore = defineStore('report', () => {
           } else {
             console.warn('calculation.target_values is null or undefined');
           }
-          
+
           // بارگذاری calc_rows
           if (calculation.calc_rows && Array.isArray(calculation.calc_rows)) {
             calcStore.calculationRows = calculation.calc_rows;
           }
-          
+
           // بارگذاری reservoir_data
           if (calculation.reservoir_data) {
             let reservoirData = calculation.reservoir_data;
@@ -368,10 +370,8 @@ export const useReportStore = defineStore('report', () => {
       error.value = 'هیچ گزارشی برای حذف وجود ندارد';
       return false;
     }
-
     isLoading.value = true;
     error.value = null;
-
     try {
       await apiService.deleteReport(String(currentReportId.value));
       resetReportData();
@@ -392,7 +392,6 @@ export const useReportStore = defineStore('report', () => {
   async function deleteReport(reportId: number): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
-
     try {
       await apiService.deleteReport(String(reportId));
       if (currentReportId.value === reportId) {

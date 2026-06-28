@@ -248,21 +248,18 @@
                       </span>
                     </div>
                   </td>
-
                   <!-- مقدار هدف -->
                   <td class="px-3 py-3 text-center">
                     <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
                       {{ item.target.toFixed(2) }}
                     </span>
                   </td>
-
                   <!-- مقدار تامین شده -->
                   <td class="px-3 py-3 text-center">
                     <span class="text-sm font-semibold tabular-nums" :class="getActualValueClass(item.progress_percent)">
                       {{ item.actual.toFixed(2) }}
                     </span>
                   </td>
-
                   <!-- نوار پیشرفت -->
                   <td class="px-3 py-3">
                     <div class="flex items-center gap-2">
@@ -278,7 +275,6 @@
                       </span>
                     </div>
                   </td>
-
                   <!-- اختلاف -->
                   <td class="px-3 py-3 text-center">
                     <div
@@ -366,7 +362,6 @@
                   {{ getReservoirTotal('A').toFixed(2) }}g
                 </span>
               </div>
-
               <div v-if="summary.reservoir_data?.A?.length > 0" class="space-y-2">
                 <div
                   v-for="(item, idx) in summary.reservoir_data.A"
@@ -405,7 +400,6 @@
                   {{ getReservoirTotal('B').toFixed(2) }}g
                 </span>
               </div>
-
               <div v-if="summary.reservoir_data?.B?.length > 0" class="space-y-2">
                 <div
                   v-for="(item, idx) in summary.reservoir_data.B"
@@ -444,7 +438,6 @@
                   {{ getReservoirTotal('C').toFixed(2) }}g
                 </span>
               </div>
-
               <div v-if="summary.reservoir_data?.C?.length > 0" class="space-y-2">
                 <div
                   v-for="(item, idx) in summary.reservoir_data.C"
@@ -506,7 +499,6 @@
             </p>
           </div>
         </div>
-
         <div class="space-y-2">
           <div
             v-for="(rec, idx) in summary.recommendations"
@@ -539,7 +531,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { apiService } from '@/services/apiService';
 
 // ============================================================
@@ -561,7 +553,6 @@ const ionBalanceStatus = computed(() => {
       badgeClass: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
     };
   }
-
   if (summary.value.ion_balance.is_balanced) {
     return {
       borderClass: 'border-l-4 border-l-success-500',
@@ -582,7 +573,6 @@ const ionBalanceStatus = computed(() => {
 // ============================================================
 // Methods - فقط برای نمایش و فرمت‌بندی
 // ============================================================
-
 const loadData = async () => {
   isLoading.value = true;
   error.value = null;
@@ -595,6 +585,13 @@ const loadData = async () => {
   } finally {
     isLoading.value = false;
   }
+};
+
+// 🆕 Event handler برای بارگذاری مجدد داده‌ها
+// این handler زمانی فراخوانی می‌شود که گزارش جدید ایجاد شود یا گزارش موجود بارگذاری شود
+const handleReportChanged = () => {
+  console.log('📊 Report changed, reloading home summary...');
+  loadData();
 };
 
 const getReservoirTotal = (reservoir: 'A' | 'B' | 'C'): number => {
@@ -626,7 +623,7 @@ const getElementBadgeClass = (element: string): string => {
   const macroElements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg'];
   const secondaryElements = ['Na', 'Cl'];
   const microElements = ['Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
-
+  
   if (macroElements.includes(element)) {
     return 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400';
   } else if (secondaryElements.includes(element)) {
@@ -699,6 +696,14 @@ const getRecommendationDescClass = (type: string): string => {
 // ============================================================
 onMounted(() => {
   loadData();
+  // 🆕 گوش دادن به رویداد تغییر گزارش
+  // این رویداد از AppHeader ارسال می‌شود
+  window.addEventListener('report-changed', handleReportChanged);
+});
+
+onUnmounted(() => {
+  // 🆕 حذف event listener برای جلوگیری از memory leak
+  window.removeEventListener('report-changed', handleReportChanged);
 });
 </script>
 

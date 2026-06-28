@@ -1,8 +1,8 @@
+<!-- frontend/src/components/layout/AppHeader.vue -->
 <template>
   <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-50 transition-colors duration-200">
     <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
       <div class="flex items-center justify-between h-16 sm:h-20 lg:h-24">
-        
         <!-- Logo -->
         <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0">
           <img
@@ -34,7 +34,6 @@
 
         <!-- Desktop Actions -->
         <div class="hidden lg:flex items-center gap-1 lg:gap-2">
-          
           <!-- File Menu -->
           <div class="relative" ref="fileMenuRef">
             <button
@@ -144,7 +143,6 @@
       class="lg:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-2 px-3 shadow-lg"
     >
       <div class="flex flex-col gap-1">
-        
         <!-- File Menu (Mobile) -->
         <button
           @click="toggleFileMenuMobile"
@@ -166,18 +164,21 @@
             </svg>
             <span>جدید</span>
           </button>
+
           <button @click="handleOpenReport" class="flex items-center gap-2 w-full text-right px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
             </svg>
             <span>بازکردن...</span>
           </button>
+
           <button @click="handleSaveReport" :disabled="isSaving" class="flex items-center gap-2 w-full text-right px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
             </svg>
             <span>{{ isSaving ? 'در حال ذخیره...' : 'ذخیره' }}</span>
           </button>
+
           <button @click="handleDeleteReport" :disabled="!reportStore.hasCurrentReport" class="flex items-center gap-2 w-full text-right px-3 py-2 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors disabled:opacity-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -236,7 +237,6 @@
           <!-- Modal Container -->
           <div class="flex min-h-full items-center justify-center p-0 sm:p-4">
             <div class="relative w-full h-full sm:h-auto sm:max-w-2xl sm:my-8 bg-white dark:bg-gray-800 sm:rounded-2xl shadow-2xl overflow-hidden">
-              
               <!-- Header -->
               <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -277,7 +277,6 @@
 
               <!-- Reports List -->
               <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
-                
                 <!-- Loading State -->
                 <div v-if="reportStore.isLoading" class="flex items-center justify-center py-12">
                   <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
@@ -400,8 +399,8 @@
         <div
           v-if="toastMessage"
           class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2"
-          :class="toastType === 'success' 
-            ? 'bg-success-600 text-white' 
+          :class="toastType === 'success'
+            ? 'bg-success-600 text-white'
             : 'bg-danger-600 text-white'"
         >
           <svg v-if="toastType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,12 +447,10 @@ const fileMenuOpen = ref(false);
 const fileMenuOpenMobile = ref(false);
 const mobileMenuOpen = ref(false);
 const fileMenuRef = ref<HTMLElement | null>(null);
-
 const showOpenModal = ref(false);
 const searchQuery = ref('');
 const isLoadingReport = ref(false);
 const loadingReportId = ref<number | null>(null);
-
 const isSaving = ref(false);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
@@ -556,7 +553,6 @@ const formatDate = (dateString: string): string => {
 // ===== File Menu Actions =====
 const handleNewReport = async () => {
   closeFileMenu();
-  
   if (reportStore.hasCurrentReport) {
     if (!confirm('گزارش فعلی ذخیره نشده است. آیا مطمئن هستید که می‌خواهید گزارش جدید ایجاد کنید؟')) {
       return;
@@ -568,6 +564,9 @@ const handleNewReport = async () => {
   waterStore.resetWaterData();
   targetStore.resetTargets();
   calcStore.resetCalculation();
+  
+  // 🆕 ارسال رویداد تغییر گزارش برای به‌روزرسانی HomeTab
+  window.dispatchEvent(new CustomEvent('report-changed'));
   
   emit('new-report');
   showToast('گزارش جدید ایجاد شد', 'success');
@@ -582,7 +581,6 @@ const handleOpenReport = async () => {
 
 const handleSaveReport = async () => {
   closeFileMenu();
-  
   if (!reportStore.reportData.reportName && !reportStore.reportData.plantName) {
     showToast('لطفاً ابتدا اطلاعات گزارش را وارد کنید', 'error');
     return;
@@ -602,7 +600,6 @@ const handleSaveReport = async () => {
 
 const handleDeleteReport = async () => {
   closeFileMenu();
-  
   if (!reportStore.hasCurrentReport) {
     showToast('هیچ گزارشی برای حذف وجود ندارد', 'error');
     return;
@@ -638,15 +635,16 @@ const loadSelectedReport = async (reportId: number) => {
   
   isLoadingReport.value = true;
   loadingReportId.value = reportId;
-  
   const success = await reportStore.loadReport(reportId);
-  
   isLoadingReport.value = false;
   loadingReportId.value = null;
   
   if (success) {
     showToast('گزارش با موفقیت بارگذاری شد', 'success');
     closeOpenModal();
+    
+    // 🆕 ارسال رویداد تغییر گزارش برای به‌روزرسانی HomeTab
+    window.dispatchEvent(new CustomEvent('report-changed'));
   } else {
     showToast(reportStore.error || 'خطا در بارگذاری گزارش', 'error');
   }
@@ -704,6 +702,7 @@ onMounted(() => {
     isDarkMode.value = true;
     document.documentElement.classList.add('dark');
   }
+  
   document.addEventListener('click', handleClickOutside);
   document.addEventListener('keydown', handleKeyboard);
 });
