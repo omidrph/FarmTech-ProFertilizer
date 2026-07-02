@@ -90,21 +90,43 @@
               {{ recipe.description }}
             </p>
 
-            <!-- Elements Preview -->
-            <div class="flex flex-wrap gap-1 mb-3">
-              <span
-                v-for="(value, element) in getTopElements(recipe.target_values, 4)"
-                :key="element"
-                class="text-[10px] px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600"
-              >
-                {{ element }}: {{ Number(value).toFixed(1) }}
-              </span>
-              <span
-                v-if="Object.keys(recipe.target_values).length > 4"
-                class="text-[10px] px-1.5 py-0.5 text-gray-400 dark:text-gray-500"
-              >
-                +{{ Object.keys(recipe.target_values).length - 4 }} عنصر
-              </span>
+            <!-- Elements Preview with Hover Tooltip -->
+            <div class="relative mb-3">
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-for="(value, element) in getTopElements(recipe.target_values, 4)"
+                  :key="element"
+                  class="text-[10px] px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600"
+                >
+                  {{ element }}: {{ Number(value).toFixed(1) }}
+                </span>
+                <span
+                  v-if="Object.keys(recipe.target_values).length > 4"
+                  class="text-[10px] px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600 cursor-help relative group/tooltip"
+                >
+                  +{{ Object.keys(recipe.target_values).length - 4 }} عنصر
+                  <!-- Tooltip با تمام عناصر -->
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block z-50 min-w-[200px] max-w-[280px]">
+                    <div class="bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-2xl p-3 border border-gray-700 dark:border-gray-600">
+                      <p class="font-semibold text-primary-400 mb-2 text-center">تمام عناصر</p>
+                      <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div
+                          v-for="(value, element) in recipe.target_values"
+                          :key="'tooltip-'+element"
+                          class="flex justify-between items-center"
+                          :class="{ 'text-gray-400': value === 0 }"
+                        >
+                          <span class="font-medium">{{ element }}</span>
+                          <span class="font-mono tabular-nums">{{ Number(value).toFixed(2) }}</span>
+                        </div>
+                      </div>
+                      <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
+                        <div class="border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                      </div>
+                    </div>
+                  </div>
+                </span>
+              </div>
             </div>
 
             <!-- Actions -->
@@ -136,17 +158,20 @@
       <!-- محتوای تب شخصی -->
       <!-- ============================================================ -->
       <div v-if="activeTab === 'personal'" class="p-4 sm:p-6">
-        <!-- دکمه افزودن رسپی جدید -->
+        <!-- عنوان -->
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
             <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
             رسپی‌های شخصی من
+            <span class="text-xs font-normal text-gray-400">({{ userRecipes.length }})</span>
           </h3>
+          <!-- دکمه رسپی جدید - فقط در حالت غیر خالی نمایش داده می‌شود -->
           <button
+            v-if="userRecipes.length > 0"
             @click="openCreateModal"
-            class="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm flex items-center gap-1"
+            class="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm flex items-center gap-1 shadow-sm hover:shadow-md"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -161,7 +186,7 @@
           <span class="mr-2 text-gray-600 dark:text-gray-400">در حال بارگذاری...</span>
         </div>
 
-        <!-- Empty State -->
+        <!-- Empty State با دکمه ساخت رسپی -->
         <div v-else-if="userRecipes.length === 0" class="text-center py-12">
           <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
             <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,11 +194,14 @@
             </svg>
           </div>
           <p class="text-gray-500 dark:text-gray-400 mb-2">هنوز رسپی شخصی ندارید</p>
-          <p class="text-xs text-gray-400 dark:text-gray-500">با کلیک روی دکمه "رسپی جدید" اولین رسپی خود را بسازید</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-4">از رسپی‌های سیستمی کپی کنید یا یک رسپی جدید بسازید</p>
           <button
             @click="openCreateModal"
-            class="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+            class="px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm flex items-center gap-2 shadow-sm hover:shadow-md mx-auto"
           >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
             ساخت رسپی جدید
           </button>
         </div>
@@ -234,21 +262,43 @@
               {{ recipe.description }}
             </p>
 
-            <!-- Elements Preview -->
-            <div class="flex flex-wrap gap-1 mb-3">
-              <span
-                v-for="(value, element) in getTopElements(recipe.target_values, 4)"
-                :key="element"
-                class="text-[10px] px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600"
-              >
-                {{ element }}: {{ Number(value).toFixed(1) }}
-              </span>
-              <span
-                v-if="Object.keys(recipe.target_values).length > 4"
-                class="text-[10px] px-1.5 py-0.5 text-gray-400 dark:text-gray-500"
-              >
-                +{{ Object.keys(recipe.target_values).length - 4 }} عنصر
-              </span>
+            <!-- Elements Preview with Hover Tooltip -->
+            <div class="relative mb-3">
+              <div class="flex flex-wrap gap-1">
+                <span
+                  v-for="(value, element) in getTopElements(recipe.target_values, 4)"
+                  :key="element"
+                  class="text-[10px] px-1.5 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600"
+                >
+                  {{ element }}: {{ Number(value).toFixed(1) }}
+                </span>
+                <span
+                  v-if="Object.keys(recipe.target_values).length > 4"
+                  class="text-[10px] px-1.5 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600 cursor-help relative group/tooltip"
+                >
+                  +{{ Object.keys(recipe.target_values).length - 4 }} عنصر
+                  <!-- Tooltip با تمام عناصر -->
+                  <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/tooltip:block z-50 min-w-[200px] max-w-[280px]">
+                    <div class="bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-2xl p-3 border border-gray-700 dark:border-gray-600">
+                      <p class="font-semibold text-primary-400 mb-2 text-center">تمام عناصر</p>
+                      <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <div
+                          v-for="(value, element) in recipe.target_values"
+                          :key="'tooltip-'+element"
+                          class="flex justify-between items-center"
+                          :class="{ 'text-gray-400': value === 0 }"
+                        >
+                          <span class="font-medium">{{ element }}</span>
+                          <span class="font-mono tabular-nums">{{ Number(value).toFixed(2) }}</span>
+                        </div>
+                      </div>
+                      <div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
+                        <div class="border-8 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+                      </div>
+                    </div>
+                  </div>
+                </span>
+              </div>
             </div>
 
             <!-- Actions -->
@@ -559,18 +609,6 @@ const openCreateModal = () => {
   showModal.value = true;
 };
 
-const editRecipe = (recipe: any) => {
-  resetForm();
-  isEditing.value = true;
-  editingId.value = recipe.id;
-  formData.name = recipe.name;
-  formData.description = recipe.description || '';
-  formData.category = recipe.category || '';
-  formData.stage = recipe.stage || '';
-  formData.target_values = { ...recipe.target_values };
-  showModal.value = true;
-};
-
 const closeModal = () => {
   showModal.value = false;
   resetForm();
@@ -582,6 +620,18 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   setTimeout(() => {
     toastMessage.value = null;
   }, 3000);
+};
+
+const editRecipe = (recipe: any) => {
+  resetForm();
+  isEditing.value = true;
+  editingId.value = recipe.id;
+  formData.name = recipe.name;
+  formData.description = recipe.description || '';
+  formData.category = recipe.category || '';
+  formData.stage = recipe.stage || '';
+  formData.target_values = { ...recipe.target_values };
+  showModal.value = true;
 };
 
 const saveRecipe = async () => {
@@ -635,7 +685,6 @@ const applyRecipe = async (id: number) => {
   try {
     const result = await recipeStore.applyRecipe(id);
     if (result) {
-      // اعمال مقادیر به targetStore
       for (const [element, value] of Object.entries(result)) {
         targetStore.setTargetElement(element as any, value);
       }
@@ -743,5 +792,19 @@ onMounted(async () => {
 .fade-leave-to {
   opacity: 0;
   transform: translate(-50%, 10px);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Tooltip Arrow */
+.group\/tooltip .absolute {
+  pointer-events: none;
+}
+
+.group\/tooltip:hover .absolute {
+  pointer-events: auto;
 }
 </style>

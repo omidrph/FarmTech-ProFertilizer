@@ -21,11 +21,27 @@ export const EC_STANDARDS = {
 } as const;
 
 // ============================================================
+// 🆕 ثابت‌های استاندارد pH
+// ============================================================
+export const PH_STANDARDS = {
+  MIN_VALID_PH: 0,
+  MAX_VALID_PH: 14,
+  DEFAULT_PH: 7,  // مقدار پیش‌فرض و خنثی
+  RANGES: [
+    { min: 0, max: 5.5, level: 'acidic', label: 'اسیدی', color: 'warning', description: 'نیاز به تنظیم pH' },
+    { min: 5.5, max: 6.5, level: 'slightly_acidic', label: 'کمی اسیدی', color: 'success', description: 'مناسب برای اکثر گیاهان' },
+    { min: 6.5, max: 7.5, level: 'neutral', label: 'خنثی', color: 'success', description: 'ایده‌آل برای جذب عناصر' },
+    { min: 7.5, max: 8.5, level: 'slightly_alkaline', label: 'کمی قلیایی', color: 'warning', description: 'نیاز به بررسی' },
+    { min: 8.5, max: 14, level: 'alkaline', label: 'قلیایی', color: 'danger', description: 'نامناسب برای اکثر گیاهان' }
+  ]
+} as const;
+
+// ============================================================
 // 🆕 توابع تبدیل واحد EC
 // ============================================================
 export function convertECUnit(value: number, fromUnit: string, toUnit: string): number {
   if (fromUnit === toUnit) return value;
-  
+
   // تبدیل به dS/m
   let dsValue: number;
   if (fromUnit === 'dS/m') {
@@ -37,7 +53,7 @@ export function convertECUnit(value: number, fromUnit: string, toUnit: string): 
   } else {
     return value;
   }
-  
+
   // تبدیل از dS/m به واحد مقصد
   if (toUnit === 'dS/m') {
     return dsValue;
@@ -46,7 +62,7 @@ export function convertECUnit(value: number, fromUnit: string, toUnit: string): 
   } else if (toUnit === 'μS/cm') {
     return dsValue * 1000;
   }
-  
+
   return value;
 }
 
@@ -64,10 +80,12 @@ export const useWaterStore = defineStore('water', () => {
     wastewaterPercentage: 0,
     waterSalinity: EC_STANDARDS.DEFAULT_EC
   });
-  
+
   // 🆕 واحد EC و pH
   const ecUnit = ref<'dS/m' | 'mS/cm' | 'μS/cm'>('dS/m');
-  const waterPH = ref<number | null>(null);
+  
+  // 🆕 مقدار پیش‌فرض pH روی ۷ تنظیم شده (مقدار خنثی و استاندارد)
+  const waterPH = ref<number | null>(PH_STANDARDS.DEFAULT_PH);
   
   const wastewaterValues = ref<Record<string, number>>({});
   const waterValues = ref<Record<string, number>>({});
@@ -83,6 +101,7 @@ export const useWaterStore = defineStore('water', () => {
       const wasteVal = wastewaterValues.value[element] || 0;
       result[element] = (waterVal * waterPct) + (wasteVal * wastePct);
     }
+
     return result;
   });
 
@@ -101,6 +120,23 @@ export const useWaterStore = defineStore('water', () => {
     return calculateTDS(ecDS);
   });
 
+  // 🆕 وضعیت pH
+  const phStatus = computed(() => {
+    if (waterPH.value === null) return null;
+    
+    for (const range of PH_STANDARDS.RANGES) {
+      if (waterPH.value >= range.min && waterPH.value < range.max) {
+        return {
+          level: range.level,
+          label: range.label,
+          color: range.color,
+          description: range.description
+        };
+      }
+    }
+    return null;
+  });
+
   // ===== Actions =====
   function setWaterMix(data: Partial<WaterMixData>) {
     waterMixData.value = {
@@ -113,6 +149,7 @@ export const useWaterStore = defineStore('water', () => {
     // تبدیل مقدار EC به واحد جدید
     const currentValue = waterMixData.value.waterSalinity;
     const newValue = convertECUnit(currentValue, ecUnit.value, unit);
+    
     ecUnit.value = unit;
     waterMixData.value.waterSalinity = newValue;
   }
@@ -138,7 +175,8 @@ export const useWaterStore = defineStore('water', () => {
       waterSalinity: EC_STANDARDS.DEFAULT_EC
     };
     ecUnit.value = 'dS/m';
-    waterPH.value = null;
+    // 🆕 مقدار pH هم به حالت پیش‌فرض (۷) بازنشانی می‌شود
+    waterPH.value = PH_STANDARDS.DEFAULT_PH;
   }
 
   function getElementFinalValue(element: string): number {
@@ -154,6 +192,7 @@ export const useWaterStore = defineStore('water', () => {
     finalValues,
     analysisRows,
     tds,
+    phStatus,
     setWaterMix,
     setECUnit,
     setWaterPH,
