@@ -1,12 +1,12 @@
 # backend/app/routes/calculations.py
-"""مسیرهای محاسبات (Calculations) - نسخه کامل با بهینه‌سازی"""
+"""مسیرهای محاسبات (Calculations) - نسخه کامل با بهینه‌سازی و ماژول‌های core"""
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 import logging
 import time
 import json
-from typing import List, Optional
+from typing import Dict, List, Optional, Any, Tuple  # ✅ این خط اضافه شد
 
 from app.database import get_db
 from app.models import User, Calculation, OptimizationLog
@@ -23,7 +23,18 @@ from app.schemas import (
 )
 import app.crud as crud
 from app.security import get_current_user
-from app import services
+
+# ===== استفاده از core به جای services قدیمی =====
+from app.core import (
+    calculate_ion_balance,
+    get_ion_balance_status,
+    check_precipitation,
+    convert_units as core_convert_units,
+    optimize_fertilizers as core_optimize_fertilizers,
+    calculate_reservoir_data,
+    ALL_ELEMENTS
+)
+from app.core.optimizer.result_processor import validate_optimization_result
 
 # ===== تنظیمات Logger =====
 logger = logging.getLogger(__name__)
@@ -148,12 +159,14 @@ def get_home_summary(
             if not isinstance(reservoir_data[key], list):
                 reservoir_data[key] = []
         
-        # ===== محاسبه تعادل یونی =====
-        cation, anion, is_balanced = services.calculate_ion_balance(target_values, unit="ppm")
+        # ===== محاسبه تعادل یونی با استفاده از core =====
+        cation, anion, is_balanced, ion_details = calculate_ion_balance(
+            target_values, unit="ppm"
+        )
         
         # ===== محاسبه آمار =====
         active_elements_count = sum(1 for v in target_values.values() if v and v > 0)
-        total_elements = len(services.ELEMENTS)
+        total_elements = len(ALL_ELEMENTS)
         
         active_reservoirs_count = 0
         if reservoir_data.get('A') and len(reservoir_data['A']) > 0:
@@ -198,7 +211,7 @@ def get_home_summary(
         
         deficient_elements = []
         excessive_elements = []
-        for element in services.ELEMENTS:
+        for element in ALL_ELEMENTS:
             target = target_values.get(element, 0)
             actual = final_values.get(element, 0)
             if target == 0:
@@ -245,7 +258,7 @@ def get_home_summary(
         
         # ===== آماده‌سازی داده عناصر برای جدول =====
         elements_data = []
-        for element in services.ELEMENTS:
+        for element in ALL_ELEMENTS:
             target = target_values.get(element, 0)
             actual = final_values.get(element, 0)
             diff = actual - target
@@ -291,9 +304,11 @@ def api_calculate_ion_balance(
     data: IonBalanceRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """محاسبه تعادل یونی"""
+    """محاسبه تعادل یونی با استفاده از core"""
     try:
-        cation, anion, is_balanced = services.calculate_ion_balance(data.elements, unit=data.unit)
+        cation, anion, is_balanced, details = calculate_ion_balance(
+            data.elements, unit=data.unit
+        )
         message = "تعادل یونی برقرار است ✅" if is_balanced else "تعادل یونی برقرار نیست ⚠️"
         return IonBalanceResponse(
             cation=cation,
@@ -316,12 +331,24 @@ def api_calculate_final_solution(
 ):
     """محاسبه محلول نهایی"""
     try:
-        final_values = services.calculate_final_solution(
-            target_values=data.target_values,
+        from app.core.optimizer.result_processor import calculate_final_concentrations
+        import numpy as np
+        
+        active_elements = list(data.target_values.keys())
+        A = np.array([[1.0 if el in data.fertilizer_contributions else 0.0 for el in active_elements]])
+        weights = np.array([1.0])
+        
+        final_values = calculate_final_concentrations(
+            weights=weights,
+            A=A,
             water_values=data.water_values,
-            fertilizer_contributions=data.fertilizer_contributions
+            active_elements=active_elements
         )
-        cation, anion, is_balanced = services.calculate_ion_balance(final_values, unit="ppm")
+        
+        cation, anion, is_balanced, _ = calculate_ion_balance(
+            final_values, unit="ppm"
+        )
+        
         return FinalSolutionResponse(
             final_values=final_values,
             ion_balance=IonBalanceResponse(
@@ -344,14 +371,36 @@ def api_calculate_reservoir(
     data: ReservoirRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """محاسبه توزیع مخازن"""
+    """محاسبه توزیع مخازن با استفاده از core"""
     try:
-        reservoir_data = services.calculate_reservoir_data(data.fertilizers)
+        # تبدیل داده‌های ورودی به فرمت مورد نیاز
+        fertilizers = []
+        for item in data.fertilizers:
+            fert = item.get('fertilizer', {})
+            weight = item.get('weight', 0)
+            fertilizers.append({
+                'id': fert.get('id', ''),
+                'name': fert.get('name', 'نامشخص'),
+                'elements': fert.get('elements', {}),
+                'is_acid': fert.get('is_acid', False)
+            })
+        
+        # ساخت دیکشنری وزن‌ها
+        weights = {}
+        for item in data.fertilizers:
+            fert_id = str(item.get('fertilizer', {}).get('id', ''))
+            weight = item.get('weight', 0)
+            if fert_id and weight > 0:
+                weights[fert_id] = weight
+        
+        reservoir_data = calculate_reservoir_data(fertilizers, weights)
+        
         totals = {
             'A': sum(item['amount'] for item in reservoir_data.get('A', [])),
             'B': sum(item['amount'] for item in reservoir_data.get('B', [])),
             'C': sum(item['amount'] for item in reservoir_data.get('C', []))
         }
+        
         return ReservoirResponse(
             reservoir_data=reservoir_data,
             totals=totals
@@ -369,9 +418,9 @@ def api_convert_unit(
     data: UnitConversionRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """تبدیل واحد"""
+    """تبدیل واحد با استفاده از core"""
     try:
-        converted_value = services.convert_units(
+        converted_value = core_convert_units(
             value=data.value,
             from_unit=data.from_unit,
             to_unit=data.to_unit,
@@ -393,7 +442,7 @@ def api_convert_unit(
 
 
 # ============================================================
-# 🆕 API بهینه‌سازی خودکار
+# 🆕 API بهینه‌سازی خودکار با استفاده از core
 # ============================================================
 
 @calculations_router.post("/optimize", response_model=OptimizationResponse)
@@ -403,7 +452,7 @@ def optimize_fertilizers_endpoint(
     current_user: User = Depends(get_current_user)
 ):
     """
-    🚀 بهینه‌سازی خودکار فرمول کود با استفاده از الگوریتم NNLS
+    🚀 بهینه‌سازی خودکار فرمول کود با استفاده از الگوریتم NNLS (core)
     """
     try:
         logger.info(f"🚀 Starting optimization for user {current_user.id}")
@@ -427,14 +476,15 @@ def optimize_fertilizers_endpoint(
                 'price_per_kg': fert.price_per_kg,
                 'purity': fert.purity,
                 'is_acid': fert.is_acid,
-                'is_system_default': fert.is_system_default
+                'is_system_default': fert.is_system_default,
+                'fixed_weight': fert.fixed_weight if hasattr(fert, 'fixed_weight') else None
             })
         
         # تنظیمات بهینه‌سازی
         options = request.options.dict() if request.options else {}
         
-        # ۲. اجرای بهینه‌سازی
-        result = services.optimize_fertilizers(
+        # ۲. اجرای بهینه‌سازی با استفاده از core
+        result = core_optimize_fertilizers(
             target_values=target_values,
             fertilizers=fertilizers,
             water_values=water_values,
@@ -498,19 +548,31 @@ def optimize_fertilizers_endpoint(
             traceback.print_exc()
         
         # ۳. اعتبارسنجی نتایج
-        validation = services.validate_optimization_result(result)
+        validation = validate_optimization_result(result)
         if not validation['is_valid']:
             logger.warning(f"Validation errors: {validation['errors']}")
         
         # ۴. ذخیره تاریخچه
         try:
+            # ساخت لیست کودهای انتخاب شده برای تاریخچه
+            fertilizers_selected = []
+            for fert in fertilizers:
+                fertilizers_selected.append({
+                    'id': fert.get('id'),
+                    'name': fert.get('name'),
+                    'elements': fert.get('elements'),
+                    'price_per_kg': fert.get('price_per_kg'),
+                    'purity': fert.get('purity'),
+                    'is_acid': fert.get('is_acid')
+                })
+            
             crud.save_optimization_log(
                 db=db,
                 user_id=current_user.id,
                 report_id=None,
                 target_values=target_values,
                 water_values=water_values,
-                fertilizers_selected=fertilizers,
+                fertilizers_selected=fertilizers_selected,
                 optimization_options=options,
                 result=result
             )
@@ -563,9 +625,9 @@ def check_precipitation_endpoint(
     request: PrecipitationCheckRequest,
     current_user: User = Depends(get_current_user)
 ):
-    """بررسی رسوب احتمالی در ترکیب عناصر"""
+    """بررسی رسوب احتمالی در ترکیب عناصر با استفاده از core"""
     try:
-        result = services.check_precipitation(request.concentrations)
+        result = check_precipitation(request.concentrations)
         
         return PrecipitationCheckResponse(
             is_safe=result['is_safe'],
@@ -724,7 +786,7 @@ def calculate_and_interpret(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """تولید تفسیر کامل"""
+    """تولید تفسیر کامل با استفاده از core"""
     try:
         report = crud.get_report_by_id(db, report_id)
         if not report:
@@ -749,23 +811,33 @@ def calculate_and_interpret(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="لطفاً ابتدا محاسبات را انجام دهید"
             )
+        
         target_values = calculation.target_values or {}
         final_values = calculation.final_values or {}
+        
         water_data = {
             'water_salinity': water_analysis.water_salinity,
             'water_percentage': water_analysis.water_percentage,
             'wastewater_percentage': water_analysis.wastewater_percentage
         }
-        cation, anion, is_balanced = services.calculate_ion_balance(target_values)
-        interpretation = services.generate_interpretation(
+        
+        # استفاده از core برای محاسبه تعادل یونی
+        cation, anion, is_balanced, _ = calculate_ion_balance(
+            target_values, unit="ppm"
+        )
+        
+        # تولید تفسیر
+        interpretation = generate_interpretation(
             target_values=target_values,
             final_values=final_values,
             water_analysis=water_data,
             ion_balance=(cation, anion, is_balanced)
         )
+        
         calculation.interpretation = interpretation['summary']
         db.commit()
         return interpretation
+        
     except HTTPException:
         raise
     except Exception as e:
@@ -774,3 +846,123 @@ def calculate_and_interpret(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در تولید تفسیر: {str(e)}"
         )
+
+
+# ============================================================
+# تابع کمکی برای تولید تفسیر (سازگاری با کدهای قدیمی)
+# ============================================================
+
+def generate_interpretation(
+    target_values: Dict[str, float],
+    final_values: Dict[str, float],
+    water_analysis: Dict[str, float],
+    ion_balance: Tuple[float, float, bool]
+) -> Dict[str, Any]:
+    """
+    تولید تفسیر از داده‌ها (سازگاری با کدهای قدیمی)
+    """
+    cation, anion, is_balanced = ion_balance
+    
+    # وضعیت عناصر
+    element_status = []
+    for element in ALL_ELEMENTS:
+        target = target_values.get(element, 0)
+        actual = final_values.get(element, 0)
+        diff = actual - target
+        
+        if target == 0:
+            status = 'sufficient'
+            message = 'نیازی به تنظیم ندارد'
+        else:
+            percent = (actual / target) * 100
+            if percent < 70:
+                status = 'deficient'
+                message = 'کمبود دارد'
+            elif percent > 130:
+                status = 'excessive'
+                message = 'بیش‌بود دارد'
+            else:
+                status = 'sufficient'
+                message = 'در محدوده مطلوب'
+        
+        element_status.append({
+            'element': element,
+            'target': target,
+            'actual': actual,
+            'difference': diff,
+            'status': status,
+            'message': message
+        })
+    
+    # کیفیت آب
+    salinity = water_analysis.get('water_salinity', 0)
+    if salinity < 0.75:
+        water_impact = 'مناسب'
+        water_recommendation = 'کیفیت آب عالی است'
+    elif salinity < 2.0:
+        water_impact = 'متوسط'
+        water_recommendation = 'کیفیت آب قابل قبول است، اما مراقب باشید'
+    else:
+        water_impact = 'بالا'
+        water_recommendation = 'شوری آب بالا است، از کودهای با EC پایین استفاده کنید'
+    
+    # توصیه‌های کودی
+    recommendations = []
+    for status in element_status:
+        if status['status'] == 'deficient':
+            recommendations.append({
+                'issue': f'کمبود {status["element"]}',
+                'suggestion': f'کود حاوی {status["element"]} را افزایش دهید',
+                'priority': 'high'
+            })
+        elif status['status'] == 'excessive':
+            recommendations.append({
+                'issue': f'بیش‌بود {status["element"]}',
+                'suggestion': f'مصرف کود حاوی {status["element"]} را کاهش دهید',
+                'priority': 'medium'
+            })
+    
+    if not is_balanced:
+        recommendations.append({
+            'issue': 'عدم تعادل یونی',
+            'suggestion': 'تعادل کاتیون و آنیون را برقرار کنید',
+            'priority': 'high'
+        })
+    
+    # خلاصه
+    summary_lines = [
+        "📊 **خلاصه تفسیر**",
+        "",
+        f"⚖️ **تعادل یونی:** {'✅ متعادل' if is_balanced else '⚠️ نامتعادل'}",
+        f"   کاتیون: {cation:.2f} meq/L | آنیون: {anion:.2f} meq/L",
+        f"💧 **کیفیت آب:** {water_impact} (EC: {salinity:.2f} dS/m)",
+        "",
+        "📈 **وضعیت عناصر:**"
+    ]
+    
+    for status in element_status[:8]:
+        if status['target'] > 0:
+            summary_lines.append(f"   - {status['element']}: {status['message']}")
+    
+    if recommendations:
+        summary_lines.append("")
+        summary_lines.append("💡 **توصیه‌ها:**")
+        for rec in recommendations[:3]:
+            summary_lines.append(f"   - {rec['suggestion']}")
+    
+    return {
+        'ion_balance': {
+            'cation': cation,
+            'anion': anion,
+            'is_balanced': is_balanced,
+            'message': 'تعادل یونی برقرار است ✅' if is_balanced else 'تعادل یونی برقرار نیست ⚠️'
+        },
+        'element_status': element_status,
+        'water_quality': {
+            'salinity': salinity,
+            'impact': water_impact,
+            'recommendation': water_recommendation
+        },
+        'fertilizer_recommendation': recommendations,
+        'summary': "\n".join(summary_lines)
+    }
