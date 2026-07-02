@@ -1,37 +1,44 @@
 <template>
-  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-3 sm:py-4 mt-auto">
-    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+  <!-- 
+    تغییرات اصلی برای موبایل:
+    - fixed bottom-0 left-0 right-0 z-50: چسبیدن به پایین صفحه
+    - sm:relative: در دسکتاپ حالت عادی داشته باشد
+    - shadow-[0_-4px_...]: سایه رو به بالا برای جدا شدن از محتوا
+  -->
+  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-auto transition-colors duration-200 sm:py-3 relative sm:relative fixed bottom-0 left-0 right-0 z-50 sm:z-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
+    
+    <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 w-full">
+      
+      <!-- کانتینر اصلی: در موبایل flex-row و justify-around، در دسکتاپ flex-col/sm:flex-row -->
       <div class="flex flex-col sm:flex-row justify-between items-center gap-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-        <!-- Copyright -->
-        <div class="flex items-center gap-2 flex-wrap justify-center">
-          <img src="/favicon.webp" alt="FarmTech" class="h-5 w-5 sm:h-6 sm:w-6 rounded object-contain" />
+        
+        <!-- بخش 1: کپی‌رایت (فقط در دسکتاپ نمایش داده می‌شود) -->
+        <div class="hidden sm:flex items-center gap-2 flex-wrap justify-center">
+          <img src="/favicon.webp" alt="سهند کود" class="h-6 w-6 rounded object-contain" />
           <span>© ۱۴۰۵</span>
-          <span class="font-medium text-primary-600 dark:text-primary-400">FarmTech</span>
-          <span class="hidden sm:inline">| تمامی حقوق محفوظ است</span>
+          <span class="font-medium text-primary-600 dark:text-primary-400">سهند کود</span>
+          <span>| تمامی حقوق محفوظ است</span>
         </div>
 
-        <!-- User Info, Status, Version & Logout -->
-        <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
-          <!-- User Info - کلیک برای باز کردن مودال -->
+        <!-- بخش 2: منوی ناوبری موبایل / اطلاعات کاربر دسکتاپ -->
+        <!-- در موبایل: کل عرض را می‌گیرد و آیتم‌ها را پخش می‌کند (justify-between) -->
+        <div class="flex items-center justify-between w-full sm:w-auto sm:justify-end sm:gap-3 py-2 sm:py-0">
+          
+          <!-- دکمه پروفایل (نمایش نام کامل در موبایل و دسکتاپ) -->
           <button
             @click="openProfileModal"
-            class="flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors group"
+            class="flex flex-col sm:flex-row items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors group flex-1 sm:flex-none justify-center"
             title="پروفایل کاربری"
           >
             <div class="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs group-hover:bg-primary-200 dark:group-hover:bg-primary-900/50 transition-colors">
               {{ userInitials }}
             </div>
-            <span class="hidden sm:inline font-medium">{{ userDisplayName }}</span>
-            <svg class="w-3 h-3 text-gray-400 group-hover:text-primary-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-            </svg>
+            <!-- نمایش نام کامل در هر دو حالت -->
+            <span class="text-[10px] sm:text-xs font-medium">{{ userDisplayName }}</span>
           </button>
 
-          <!-- Separator -->
-          <span class="text-gray-300 dark:text-gray-600">|</span>
-
-          <!-- Status Indicator -->
-          <div class="flex items-center gap-1.5">
+          <!-- وضعیت اتصال (فقط در دسکتاپ نمایش داده می‌شود - حذف شده از موبایل) -->
+          <div class="hidden sm:flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
             <span
               class="inline-block w-2.5 h-2.5 rounded-full animate-pulse"
               :class="{
@@ -41,26 +48,26 @@
               }"
               :title="connectionStatusText"
             ></span>
-            <span class="text-xs hidden md:inline">
+            <span class="text-xs">
               {{ connectionStatusText }}
             </span>
           </div>
 
-          <!-- Version -->
-          <span class="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono hidden sm:inline">
+          <!-- نسخه برنامه (فقط دسکتاپ) -->
+          <span class="hidden sm:inline-block px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">
             v{{ version }}
           </span>
 
           <!-- دکمه خروج -->
           <button
             @click="handleLogout"
-            class="flex items-center gap-1 px-2.5 py-1 text-xs text-danger-600 hover:text-danger-700 dark:text-danger-400 dark:hover:text-danger-300 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors"
+            class="flex flex-col sm:flex-row items-center gap-1 sm:gap-1 px-2 sm:px-2.5 py-1 text-danger-600 hover:text-danger-800 dark:text-danger-400 dark:hover:text-danger-300 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors flex-1 sm:flex-none justify-center"
             title="خروج از حساب"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
-            <span class="hidden sm:inline">خروج</span>
+            <span class="text-[10px] sm:text-xs mt-1 sm:mt-0">خروج</span>
           </button>
         </div>
       </div>
@@ -106,11 +113,11 @@ const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checkin
 
 const checkConnection = async () => {
   try {
-    const response = await fetch('http://localhost:8000/health', {
+    // استفاده از آدرس نسبی یا متغیر محیطی بهتر است، اما برای سازگاری با کد قبلی:
+    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+    const response = await fetch(`${baseUrl}/health`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(3000),
     });
     connectionStatus.value = response.ok ? 'connected' : 'disconnected';
@@ -123,15 +130,12 @@ const connectionStatusText = computed(() => {
   switch (connectionStatus.value) {
     case 'connected': return 'متصل';
     case 'disconnected': return 'قطع';
-    default: return 'در حال بررسی...';
+    default: return 'بررسی...';
   }
 });
 
 // ===== باز کردن مودال پروفایل =====
 const openProfileModal = () => {
-  // emit به MainLayout برای باز کردن مودال
-  // یا استفاده از یک store/event bus
-  // برای سادگی، از یک event سفارشی استفاده می‌کنیم
   window.dispatchEvent(new CustomEvent('open-profile-modal'));
 };
 

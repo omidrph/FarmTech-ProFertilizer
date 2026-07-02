@@ -114,20 +114,20 @@
           />
         </div>
 
+        <!-- Interpretation Sub Tab -->
+        <div v-else-if="activeSubTab === 'interpretation'">
+          <InterpretationTab
+            v-model:interpretationResult="interpretationResult"
+            @generate="generateInterpretation"
+          />
+        </div>
+
         <!-- Fertilizer DB Sub Tab -->
         <div v-else-if="activeSubTab === 'fertilizer-db'">
           <FertilizerDBTab
             v-model:fertilizers="fertilizerStore.fertilizers"
             @show-add-modal="showAddFertilizerModal = true"
             @delete-fertilizer="handleDeleteFertilizer"
-          />
-        </div>
-
-        <!-- Interpretation Sub Tab -->
-        <div v-else-if="activeSubTab === 'interpretation'">
-          <InterpretationTab
-            v-model:interpretationResult="interpretationResult"
-            @generate="generateInterpretation"
           />
         </div>
       </div>
@@ -283,7 +283,9 @@ const newFertilizer = reactive({
   acidType: '' as string
 });
 
-// ===== Navigation Tabs =====
+// ============================================================
+// 🆕 Navigation Tabs - ترتیب جدید مطابق درخواست شما
+// ============================================================
 const subTabs = [
   {
     id: 'home',
@@ -306,14 +308,14 @@ const subTabs = [
     icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>`
   },
   {
-    id: 'fertilizer-db',
-    label: 'پایگاه داده کودها',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
-  },
-  {
     id: 'interpretation',
     label: 'تفسیر داده‌ها',
     icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`
+  },
+  {
+    id: 'fertilizer-db',
+    label: 'پایگاه داده کودها',
+    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
   }
 ];
 
