@@ -1,5 +1,5 @@
 # backend/app/schemas.py
-"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه نهایی با مدل‌های بهینه‌سازی"""
+"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه نهایی با مدل‌های بهینه‌سازی و EC/pH"""
 
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
@@ -470,7 +470,7 @@ class WaterAnalysisTemplateResponse(BaseModel):
 
 
 # ============================================================
-# 🆕 طرح‌های مربوط به بهینه‌سازی (Optimization)
+# 🆕 طرح‌های مربوط به بهینه‌سازی (Optimization) با EC و pH و auto_balance
 # ============================================================
 
 class OptimizationOptions(BaseModel):
@@ -501,6 +501,9 @@ class OptimizationOptions(BaseModel):
     use_precipitation_check: bool = Field(True, description="بررسی رسوب")
     use_ion_balance_check: bool = Field(True, description="بررسی تعادل یونی")
     
+    # 🆕 تعادل یونی خودکار (پیش‌فرض فعال)
+    auto_balance: bool = Field(True, description="تعادل یونی خودکار (اضافه کردن Na یا Cl)")
+    
     # مخازن
     reservoir_mode: str = Field(
         "auto",
@@ -530,7 +533,7 @@ class OptimizationRequest(BaseModel):
     # کیفیت آب (اختیاری)
     water_values: Optional[Dict[str, float]] = Field(
         default_factory=dict, 
-        description="عناصر موجود در آب (ppm)"
+        description="عناصر موجود در آب (ppm) - شامل EC و pH"
     )
     
     # کودهای موجود (ضروری)
@@ -549,6 +552,24 @@ class OptimizationRequest(BaseModel):
     tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن (لیتر)")
     stock_volume: float = Field(100.0, ge=1, description="حجم استوک (لیتر)")
     injection_ratio: float = Field(100.0, ge=1, description="نسبت تزریق (1:X)")
+
+
+class EcPhStatusResponse(BaseModel):
+    """وضعیت ترکیبی EC و pH"""
+    status: str = Field(..., description="وضعیت کلی: optimal, warning, critical")
+    status_label: str = Field(..., description="برچسب وضعیت")
+    color: str = Field(..., description="رنگ: success, warning, danger")
+    message: str = Field(..., description="پیام وضعیت")
+    issues: List[str] = Field(default_factory=list, description="لیست مشکلات")
+    recommendations: List[str] = Field(default_factory=list, description="لیست توصیه‌ها")
+    ec: float = Field(..., description="مقدار EC")
+    ph: float = Field(..., description="مقدار pH")
+    water_ec: Optional[float] = Field(None, description="EC آب")
+    water_ph: Optional[float] = Field(None, description="pH آب")
+    ec_status: str = Field("", description="وضعیت EC")
+    ec_label: str = Field("", description="برچسب EC")
+    ph_status: str = Field("", description="وضعیت pH")
+    ph_label: str = Field("", description="برچسب pH")
 
 
 class OptimizationResponse(BaseModel):
@@ -586,6 +607,31 @@ class OptimizationResponse(BaseModel):
     
     # خلاصه
     summary: str = Field(..., description="خلاصه نتیجه به‌صورت متنی")
+    
+    # ============================================================
+    # 🆕 فیلدهای EC و pH
+    # ============================================================
+    ec: float = Field(0.0, description="EC نهایی (dS/m)")
+    ph: float = Field(7.0, description="pH نهایی")
+    ec_status: str = Field("", description="وضعیت EC (مطلوب, کم, بالا, بحرانی)")
+    ph_status: str = Field("", description="وضعیت pH (مطلوب, اسیدی, قلیایی, بحرانی)")
+    ec_ph_status: EcPhStatusResponse = Field(
+        default_factory=lambda: EcPhStatusResponse(
+            status="optimal",
+            status_label="مطلوب",
+            color="success",
+            message="EC و pH در محدوده مطلوب هستند.",
+            issues=[],
+            recommendations=[],
+            ec=0.0,
+            ph=7.0,
+            ec_status="",
+            ec_label="",
+            ph_status="",
+            ph_label=""
+        ),
+        description="وضعیت ترکیبی EC و pH"
+    )
 
 
 class OptimizationLogResponse(BaseModel):

@@ -6,12 +6,8 @@ Core Module - هسته اصلی محاسبات FarmTech
 - تعادل یونی (Ion Balance)
 - بهینه‌سازی NNLS (Fertilizer Optimization)
 - مدیریت مخازن (Reservoir Management)
-
-ساختار:
-    core/
-    ├── ion_balance/     # محاسبات تعادل یونی
-    ├── optimizer/       # بهینه‌سازی NNLS
-    └── reservoir/       # مدیریت مخازن
+- محاسبه EC و pH
+- 🆕 تعادل یونی خودکار
 """
 
 from .ion_balance import (
@@ -23,6 +19,10 @@ from .ion_balance import (
     NEUTRAL_ELEMENTS,
     ALL_ELEMENTS,
     BALANCE_TOLERANCE,
+    ION_TO_EC_COEFFICIENTS,
+    ACIDITY_COEFFICIENTS,
+    EC_RANGES,
+    PH_RANGES,
     # Converters
     ppm_to_meq,
     meq_to_ppm,
@@ -32,6 +32,13 @@ from .ion_balance import (
     # Calculator
     calculate_ion_balance,
     get_ion_balance_status,
+    calculate_ec,
+    calculate_ph,
+    get_ec_ph_status,
+    check_element_status,
+    get_element_standard_range,
+    # 🆕 تابع جدید
+    auto_balance_ion,
     # Validators
     validate_ion_balance_result,
     check_precipitation
@@ -68,6 +75,10 @@ __all__ = [
     'NEUTRAL_ELEMENTS',
     'ALL_ELEMENTS',
     'BALANCE_TOLERANCE',
+    'ION_TO_EC_COEFFICIENTS',
+    'ACIDITY_COEFFICIENTS',
+    'EC_RANGES',
+    'PH_RANGES',
     # Ion Balance - Converters
     'ppm_to_meq',
     'meq_to_ppm',
@@ -77,6 +88,12 @@ __all__ = [
     # Ion Balance - Calculator
     'calculate_ion_balance',
     'get_ion_balance_status',
+    'calculate_ec',
+    'calculate_ph',
+    'get_ec_ph_status',
+    'check_element_status',
+    'get_element_standard_range',
+    'auto_balance_ion',
     # Ion Balance - Validators
     'validate_ion_balance_result',
     'check_precipitation',

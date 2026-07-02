@@ -1,12 +1,12 @@
 # backend/app/routes/calculations.py
-"""مسیرهای محاسبات (Calculations) - نسخه کامل با بهینه‌سازی و ماژول‌های core"""
+"""مسیرهای محاسبات (Calculations) - نسخه کامل با بهینه‌سازی و ماژول‌های core و EC/pH"""
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 import logging
 import time
 import json
-from typing import Dict, List, Optional, Any, Tuple  # ✅ این خط اضافه شد
+from typing import Dict, List, Optional, Any, Tuple
 
 from app.database import get_db
 from app.models import User, Calculation, OptimizationLog
@@ -19,7 +19,8 @@ from app.schemas import (
     InterpretationResponse,
     OptimizationRequest, OptimizationResponse,
     OptimizationOptions, OptimizationLogResponse,
-    PrecipitationCheckRequest, PrecipitationCheckResponse
+    PrecipitationCheckRequest, PrecipitationCheckResponse,
+    EcPhStatusResponse
 )
 import app.crud as crud
 from app.security import get_current_user
@@ -32,7 +33,13 @@ from app.core import (
     convert_units as core_convert_units,
     optimize_fertilizers as core_optimize_fertilizers,
     calculate_reservoir_data,
-    ALL_ELEMENTS
+    ALL_ELEMENTS,
+    # 🆕 توابع جدید برای EC و pH
+    calculate_ec,
+    calculate_ph,
+    get_ec_ph_status,
+    # 🆕 تابع تعادل یونی خودکار
+    auto_balance_ion
 )
 from app.core.optimizer.result_processor import validate_optimization_result
 
@@ -164,6 +171,16 @@ def get_home_summary(
             target_values, unit="ppm"
         )
         
+        # ===== محاسبه EC و pH =====
+        ec_result = calculate_ec(final_values, unit="ppm")
+        ph_result = calculate_ph(final_values, unit="ppm", water_ph=None)
+        ec_ph_status = get_ec_ph_status(
+            ec=ec_result['ec'],
+            ph=ph_result['ph'],
+            water_ec=water_salinity,
+            water_ph=None
+        )
+        
         # ===== محاسبه آمار =====
         active_elements_count = sum(1 for v in target_values.values() if v and v > 0)
         total_elements = len(ALL_ELEMENTS)
@@ -207,6 +224,22 @@ def get_home_summary(
                 'type': 'danger',
                 'title': 'عدم تعادل یونی',
                 'description': f'اختلاف کاتیون و آنیون {diff:.2f} meq/L است.'
+            })
+        
+        # توصیه‌های EC
+        if ec_result['status'] in ['low', 'high', 'critical']:
+            recommendations.append({
+                'type': ec_result['color'],
+                'title': f'EC {ec_result["status_label"]}',
+                'description': ec_result['recommendation']
+            })
+        
+        # توصیه‌های pH
+        if ph_result['status'] in ['low', 'high', 'critical_low', 'critical_high']:
+            recommendations.append({
+                'type': ph_result['color'],
+                'title': f'pH {ph_result["status_label"]}',
+                'description': ph_result['recommendation']
             })
         
         deficient_elements = []
@@ -442,7 +475,7 @@ def api_convert_unit(
 
 
 # ============================================================
-# 🆕 API بهینه‌سازی خودکار با استفاده از core
+# 🆕 API بهینه‌سازی خودکار با استفاده از core و گزینه تعادل یونی خودکار
 # ============================================================
 
 @calculations_router.post("/optimize", response_model=OptimizationResponse)
@@ -453,6 +486,7 @@ def optimize_fertilizers_endpoint(
 ):
     """
     🚀 بهینه‌سازی خودکار فرمول کود با استفاده از الگوریتم NNLS (core)
+    با قابلیت تعادل یونی خودکار
     """
     try:
         logger.info(f"🚀 Starting optimization for user {current_user.id}")
@@ -482,6 +516,10 @@ def optimize_fertilizers_endpoint(
         
         # تنظیمات بهینه‌سازی
         options = request.options.dict() if request.options else {}
+        
+        # 🆕 اضافه کردن گزینه auto_balance (پیش‌فرض فعال)
+        if 'auto_balance' not in options:
+            options['auto_balance'] = True
         
         # ۲. اجرای بهینه‌سازی با استفاده از core
         result = core_optimize_fertilizers(
@@ -579,7 +617,46 @@ def optimize_fertilizers_endpoint(
         except Exception as e:
             logger.warning(f"Could not save optimization log: {e}")
         
-        # ۵. ساخت پاسخ
+        # ============================================================
+        # 🆕 ۵. محاسبه EC و pH نهایی
+        # ============================================================
+        concentrations = result.get('concentrations', {})
+        
+        # محاسبه EC
+        ec_result = calculate_ec(concentrations, unit="ppm")
+        
+        # محاسبه pH (با استفاده از pH آب کاربر یا پیش‌فرض)
+        water_ph = water_values.get('pH', 7.0) if water_values else 7.0
+        ph_result = calculate_ph(concentrations, unit="ppm", water_ph=water_ph)
+        
+        # وضعیت ترکیبی
+        water_ec = water_values.get('EC', 0) if water_values else 0
+        ec_ph_status = get_ec_ph_status(
+            ec=ec_result['ec'],
+            ph=ph_result['ph'],
+            water_ec=water_ec,
+            water_ph=water_ph
+        )
+        
+        # ساخت EcPhStatusResponse
+        ec_ph_response = EcPhStatusResponse(
+            status=ec_ph_status['status'],
+            status_label=ec_ph_status['status_label'],
+            color=ec_ph_status['color'],
+            message=ec_ph_status['message'],
+            issues=ec_ph_status['issues'],
+            recommendations=ec_ph_status['recommendations'],
+            ec=ec_ph_status['ec'],
+            ph=ec_ph_status['ph'],
+            water_ec=ec_ph_status.get('water_ec'),
+            water_ph=ec_ph_status.get('water_ph'),
+            ec_status=ec_ph_status.get('ec_status', ''),
+            ec_label=ec_ph_status.get('ec_label', ''),
+            ph_status=ec_ph_status.get('ph_status', ''),
+            ph_label=ec_ph_status.get('ph_label', '')
+        )
+        
+        # ۶. ساخت پاسخ
         response = OptimizationResponse(
             weights=result['weights'],
             concentrations=result['concentrations'],
@@ -598,13 +675,20 @@ def optimize_fertilizers_endpoint(
             iterations=result['iterations'],
             convergence_time_ms=result['convergence_time_ms'],
             is_converged=result['is_converged'],
-            summary=result['summary']
+            summary=result['summary'],
+            # 🆕 فیلدهای EC و pH
+            ec=ec_result['ec'],
+            ph=ph_result['ph'],
+            ec_status=ec_result['status_label'],
+            ph_status=ph_result['status_label'],
+            ec_ph_status=ec_ph_response
         )
         
         logger.info(f"✅ Optimization completed in {response.convergence_time_ms:.2f}ms")
         logger.info(f"   Residual error: {response.residual_error:.4f}")
         logger.info(f"   Total cost: {response.cost_total:,.0f} تومان")
         logger.info(f"   Iterations: {response.iterations}")
+        logger.info(f"   🆕 EC: {response.ec} dS/m | pH: {response.ph}")
         
         return response
         

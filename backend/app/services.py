@@ -24,6 +24,10 @@ from app.core import (
     CATION_ELEMENTS,
     ANION_ELEMENTS,
     BALANCE_TOLERANCE,
+    # 🆕 توابع EC و pH
+    calculate_ec as core_calculate_ec,
+    calculate_ph as core_calculate_ph,
+    get_ec_ph_status as core_get_ec_ph_status,
     # Optimizer
     optimize_fertilizers as core_optimize_fertilizers,
     # Reservoir
@@ -141,6 +145,64 @@ def check_precipitation(concentrations: Dict[str, float]) -> Dict[str, Any]:
         Dict: شامل وضعیت ایمنی و خطرات
     """
     return check_precipitation(concentrations)
+
+
+# ============================================================
+# 🆕 توابع EC و pH (Wrapper)
+# ============================================================
+
+def calculate_ec(concentrations: Dict[str, float], unit: str = "ppm") -> Dict[str, Any]:
+    """
+    محاسبه EC (هدایت الکتریکی) محلول نهایی
+    
+    Args:
+        concentrations: غلظت عناصر (ppm یا meq/L)
+        unit: واحد ورودی ('ppm', 'meq')
+    
+    Returns:
+        Dict: شامل EC (dS/m)، وضعیت و توصیه
+    """
+    return core_calculate_ec(concentrations, unit)
+
+
+def calculate_ph(
+    concentrations: Dict[str, float],
+    unit: str = "ppm",
+    water_ph: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    محاسبه pH تقریبی محلول نهایی
+    
+    Args:
+        concentrations: غلظت عناصر (ppm یا meq/L)
+        unit: واحد ورودی ('ppm', 'meq')
+        water_ph: pH آب (اختیاری، پیش‌فرض ۷.۰)
+    
+    Returns:
+        Dict: شامل pH، وضعیت و توصیه
+    """
+    return core_calculate_ph(concentrations, unit, water_ph)
+
+
+def get_ec_ph_status(
+    ec: float,
+    ph: float,
+    water_ec: Optional[float] = None,
+    water_ph: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    دریافت وضعیت ترکیبی EC و pH
+    
+    Args:
+        ec: مقدار EC (dS/m)
+        ph: مقدار pH
+        water_ec: EC آب (اختیاری)
+        water_ph: pH آب (اختیاری)
+    
+    Returns:
+        Dict: وضعیت کلی و توصیه‌ها
+    """
+    return core_get_ec_ph_status(ec, ph, water_ec, water_ph)
 
 
 # ============================================================
@@ -283,5 +345,9 @@ def get_core_info() -> Dict[str, Any]:
         },
         'reservoir': {
             'reservoirs': ['A', 'B', 'C']
+        },
+        'ec_ph': {
+            'ec_coefficients_count': len(core_calculate_ec.__code__.co_consts) if hasattr(core_calculate_ec, '__code__') else 0,
+            'ph_coefficients_count': len(core_calculate_ph.__code__.co_consts) if hasattr(core_calculate_ph, '__code__') else 0
         }
     }

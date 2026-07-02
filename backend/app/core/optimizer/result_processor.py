@@ -7,6 +7,7 @@
 - محاسبه درصد تحقق اهداف
 - تولید خلاصه متنی
 - اعتبارسنجی نتایج
+- 🆕 تعادل یونی خودکار
 """
 
 import numpy as np
@@ -17,7 +18,9 @@ from ..ion_balance import (
     calculate_ion_balance,
     get_ion_balance_status,
     check_precipitation,
-    ALL_ELEMENTS
+    ALL_ELEMENTS,
+    # 🆕 تابع تعادل یونی خودکار
+    auto_balance_ion
 )
 
 logger = logging.getLogger(__name__)
@@ -40,22 +43,11 @@ def calculate_final_concentrations(
     
     Returns:
         Dict[str, float]: غلظت نهایی هر عنصر (ppm)
-    
-    مثال:
-        >>> weights = np.array([10.5, 5.2])
-        >>> A = np.array([[0.38, 0.0], [0.0, 0.13]])
-        >>> water = {'K': 5, 'N-NO3': 2}
-        >>> active = ['K', 'N-NO3']
-        >>> concentrations = calculate_final_concentrations(weights, A, water, active)
-        >>> print(concentrations)
-        {'K': 8.99, 'N-NO3': 2.676}
     """
     final_concentrations = {}
     
     for i, element in enumerate(active_elements):
-        # محاسبه سهم کودها
         fertilizer_contribution = np.dot(A[i], weights)
-        # اضافه کردن عناصر موجود در آب
         water_contribution = water_values.get(element, 0)
         final_concentrations[element] = fertilizer_contribution + water_contribution
     
@@ -75,13 +67,6 @@ def calculate_target_achievement(
     
     Returns:
         Dict[str, float]: درصد تحقق هر عنصر (۰ تا ۱۰۰)
-    
-    مثال:
-        >>> target = {'K': 250, 'N-NO3': 200}
-        >>> final = {'K': 248.5, 'N-NO3': 195.2}
-        >>> achievement = calculate_target_achievement(target, final)
-        >>> print(achievement)
-        {'K': 99.4, 'N-NO3': 97.6}
     """
     achievement = {}
     
@@ -90,7 +75,6 @@ def calculate_target_achievement(
             achievement[element] = 100.0
         else:
             actual = final_concentrations.get(element, 0)
-            # محدود کردن به ۰ تا ۱۰۰ درصد
             pct = min(100, max(0, (actual / target) * 100))
             achievement[element] = pct
     
@@ -110,25 +94,7 @@ def generate_optimization_summary(
     convergence_time_ms: float,
     is_converged: bool
 ) -> str:
-    """
-    تولید خلاصه متنی از نتیجه بهینه‌سازی
-    
-    Args:
-        weights: وزن‌های بهینه هر کود
-        concentrations: غلظت نهایی عناصر
-        target_values: مقادیر هدف
-        achievement: درصد تحقق عناصر
-        cost_total: هزینه کل
-        ion_balance: تعادل یونی (cation, anion, is_balanced)
-        warnings: لیست هشدارها
-        suggestions: لیست پیشنهادات
-        iterations: تعداد تکرارها
-        convergence_time_ms: زمان همگرایی
-        is_converged: آیا همگرا شده است
-    
-    Returns:
-        str: خلاصه متنی
-    """
+    """تولید خلاصه متنی از نتیجه بهینه‌سازی"""
     cation, anion, is_balanced = ion_balance
     
     summary_lines = []
@@ -137,7 +103,6 @@ def generate_optimization_summary(
     summary_lines.append("=" * 60)
     summary_lines.append("")
     
-    # آمار کلی
     summary_lines.append(f"💰 **هزینه کل:** {cost_total:,.0f} تومان")
     summary_lines.append(f"⚖️ **تعادل یونی:** {'✅ متعادل' if is_balanced else '⚠️ نامتعادل'}")
     summary_lines.append(f"   کاتیون: {cation:.2f} meq/L | آنیون: {anion:.2f} meq/L")
@@ -146,10 +111,8 @@ def generate_optimization_summary(
     summary_lines.append(f"✅ **همگرایی:** {'موفق' if is_converged else 'ناموفق'}")
     summary_lines.append("")
     
-    # درصد تحقق عناصر
     summary_lines.append("📈 **درصد تحقق عناصر هدف:**")
     
-    # عناصر با تحقق کمتر از ۷۰٪ یا بیشتر از ۱۳۰٪
     low_achievement = []
     high_achievement = []
     
@@ -168,14 +131,12 @@ def generate_optimization_summary(
         summary_lines.append("")
         summary_lines.append(f"⚠️ **عناصر با تحقق زیاد:** {', '.join(high_achievement)}")
     
-    # هشدارها
     if warnings:
         summary_lines.append("")
         summary_lines.append("⚠️ **هشدارها:**")
         for warning in warnings:
             summary_lines.append(f"   - {warning}")
     
-    # پیشنهادات
     if suggestions:
         summary_lines.append("")
         summary_lines.append("💡 **پیشنهادات:**")
@@ -189,55 +150,34 @@ def generate_optimization_summary(
 
 
 def validate_optimization_result(result: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    اعتبارسنجی نتایج بهینه‌سازی
-    
-    Args:
-        result: نتیجه بهینه‌سازی
-    
-    Returns:
-        Dict: شامل وضعیت اعتبار و خطاها/هشدارها
-    
-    مثال:
-        >>> result = {'weights': {'KNO3': 10.5}, 'is_converged': True}
-        >>> validation = validate_optimization_result(result)
-        >>> print(validation['is_valid'])
-        True
-    """
+    """اعتبارسنجی نتایج بهینه‌سازی"""
     errors = []
     warnings = []
     
-    # بررسی ۱: وجود وزن‌ها
     weights = result.get('weights', {})
     if not weights:
         errors.append('وزن‌های بهینه محاسبه نشدند')
     
-    # بررسی ۲: وجود غلظت‌ها
     concentrations = result.get('concentrations', {})
     if not concentrations:
         errors.append('غلظت‌های نهایی محاسبه نشدند')
     
-    # بررسی ۳: هزینه
     cost = result.get('cost_total', 0)
     if cost < 0:
         errors.append('هزینه کل نمی‌تواند منفی باشد')
     
-    # بررسی ۴: تعادل یونی
     ion_balance = result.get('ion_balance', {})
     if ion_balance.get('cation', 0) < 0 or ion_balance.get('anion', 0) < 0:
         errors.append('مقادیر کاتیون و آنیون نمی‌توانند منفی باشند')
     
-    # بررسی ۵: همگرایی
     if not result.get('is_converged', False):
         warnings.append('الگوریتم به جواب کامل نرسید، نتایج ممکن است بهینه نباشند')
     
-    # بررسی ۶: وزن‌های صفر
     weights = result.get('weights', {})
     zero_count = sum(1 for w in weights.values() if w == 0)
     if zero_count > 0:
         warnings.append(f'{zero_count} کود در ترکیب نهایی استفاده نشدند (وزن صفر)')
     
-    # بررسی ۷: خطای باقی‌مانده
     residual = result.get('residual_error', 0)
     if residual > 100:
         warnings.append(f'خطای باقی‌مانده بالا است ({residual:.2f})')
@@ -253,9 +193,7 @@ def validate_optimization_result(result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _get_validation_suggestions(errors: List[str], warnings: List[str]) -> List[str]:
-    """
-    تولید پیشنهادات بر اساس خطاها و هشدارها (داخلی)
-    """
+    """تولید پیشنهادات بر اساس خطاها و هشدارها"""
     suggestions = []
     
     if "وزن‌های بهینه محاسبه نشدند" in errors:
@@ -279,6 +217,10 @@ def _get_validation_suggestions(errors: List[str], warnings: List[str]) -> List[
     return suggestions
 
 
+# ============================================================
+# 🆕 تابع پردازش نتیجه با قابلیت تعادل یونی خودکار
+# ============================================================
+
 def process_optimization_result(
     solver_result: Dict[str, Any],
     A: np.ndarray,
@@ -291,16 +233,7 @@ def process_optimization_result(
     options: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    پردازش کامل نتیجه بهینه‌سازی
-    
-    این تابع تمام مراحل پردازش نتیجه را در یکجا انجام می‌دهد:
-    1. استخراج وزن‌ها
-    2. محاسبه غلظت نهایی
-    3. محاسبه هزینه
-    4. بررسی تعادل یونی
-    5. بررسی رسوب
-    6. محاسبه تحقق اهداف
-    7. تولید خلاصه
+    پردازش کامل نتیجه بهینه‌سازی با قابلیت تعادل یونی خودکار
     
     Args:
         solver_result: نتیجه حل‌کننده بهینه‌سازی
@@ -311,14 +244,12 @@ def process_optimization_result(
         target_values: مقادیر هدف
         water_values: مقادیر آب
         costs: هزینه هر کود
-        options: تنظیمات بهینه‌سازی
+        options: تنظیمات بهینه‌سازی (شامل auto_balance)
     
     Returns:
         Dict: نتیجه پردازش شده کامل
     """
     weights = solver_result.get('weights', np.zeros(len(fertilizers)))
-    
-    # اطمینان از غیرمنفی بودن وزن‌ها
     weights = np.maximum(weights, 0)
     
     # محاسبه غلظت نهایی
@@ -326,10 +257,40 @@ def process_optimization_result(
         weights, A, water_values, active_elements
     )
     
+    # ============================================================
+    # 🆕 تعادل یونی خودکار (اگر فعال باشد)
+    # ============================================================
+    auto_balance = options.get('auto_balance', True)  # پیش‌فرض فعال
+    
+    if auto_balance:
+        # بررسی تعادل فعلی
+        cation, anion, is_balanced, _ = calculate_ion_balance(
+            final_concentrations, unit="ppm"
+        )
+        
+        if not is_balanced:
+            logger.info(f"🔄 تعادل یونی خودکار فعال شد. اختلاف فعلی: {abs(cation - anion):.2f} meq/L")
+            
+            # اعمال تعادل یونی خودکار
+            balance_result = auto_balance_ion(final_concentrations, unit="ppm")
+            
+            if balance_result['is_balanced']:
+                final_concentrations = balance_result['concentrations']
+                logger.info(f"✅ تعادل یونی با اضافه کردن {balance_result['added_element']} برقرار شد.")
+                
+                # اضافه کردن به هشدارها و پیشنهادات
+                if 'warnings' not in options:
+                    options['warnings'] = []
+                if 'suggestions' not in options:
+                    options['suggestions'] = []
+                
+                options['warnings'].append(f"🔧 تعادل یونی خودکار: {balance_result['added_element']} اضافه شد")
+                options['suggestions'].append(f"برای برقراری تعادل یونی، {balance_result['added_element']} به ترکیب اضافه شد.")
+    
     # محاسبه هزینه کل
     total_cost = np.sum(weights * costs)
     
-    # محاسبه تعادل یونی
+    # محاسبه تعادل یونی نهایی
     cation, anion, is_balanced, ion_details = calculate_ion_balance(
         final_concentrations, unit="ppm"
     )
@@ -343,15 +304,15 @@ def process_optimization_result(
     # محاسبه درصد تحقق
     achievement = calculate_target_achievement(target_values, final_concentrations)
     
-    # ساخت دیکشنری وزن‌ها با کلیدهای شناسه کود
+    # ساخت دیکشنری وزن‌ها
     weights_dict = {}
     for i, fert in enumerate(fertilizers):
         fert_id = fert.get('id', f'fert_{i}')
         weights_dict[fert_id] = float(weights[i])
     
     # جمع‌آوری هشدارها و پیشنهادات
-    warnings = []
-    suggestions = []
+    warnings = options.get('warnings', [])
+    suggestions = options.get('suggestions', [])
     
     # هشدارهای تعادل یونی
     if not is_balanced:
@@ -421,5 +382,6 @@ def process_optimization_result(
         'convergence_time_ms': solver_result.get('convergence_time_ms', 0),
         'is_converged': solver_result.get('is_converged', True),
         'method': solver_result.get('method', 'nnls'),
-        'summary': summary
+        'summary': summary,
+        'auto_balanced': auto_balance and is_balanced  # نشان‌دهنده اینکه تعادل خودکار انجام شده است
     }

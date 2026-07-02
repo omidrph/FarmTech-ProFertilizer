@@ -26,28 +26,15 @@ def optimize_fertilizers(
     """
     🎯 تابع اصلی بهینه‌سازی ترکیب کودها
     
-    این تابع قلب تپنده FarmTech است. با استفاده از الگوریتم NNLS،
-    بهترین ترکیب کودها را محاسبه می‌کند.
-    
     Args:
         target_values: عناصر هدف (ppm)
         fertilizers: لیست کودها با عناصر و قیمت
         water_values: عناصر موجود در آب (اختیاری)
         options: تنظیمات بهینه‌سازی (اختیاری)
+            - auto_balance: bool (پیش‌فرض True) - تعادل یونی خودکار
     
     Returns:
         Dict: شامل وزن‌ها، غلظت‌ها، خطا، تحلیل و توصیه‌ها
-    
-    Raises:
-        ValueError: اگر هیچ عنصر هدفی تعریف نشده باشد
-        ValueError: اگر هیچ کودی انتخاب نشده باشد
-    
-    مثال:
-        >>> targets = {'K': 250, 'N-NO3': 200}
-        >>> ferts = [{'id': '1', 'name': 'KNO3', 'elements': {'K': 38, 'N-NO3': 13}, 'price_per_kg': 750000}]
-        >>> result = optimize_fertilizers(targets, ferts)
-        >>> print(result['summary'])
-        ...
     """
     start_time = time.time()
     
@@ -63,10 +50,12 @@ def optimize_fertilizers(
     cost_weight = options.get('cost_weight', 0.01)
     use_precipitation_check = options.get('use_precipitation_check', True)
     use_ion_balance_check = options.get('use_ion_balance_check', True)
+    auto_balance = options.get('auto_balance', True)  # 🆕 پیش‌فرض فعال
     
     logger.info(f"🚀 Starting optimization with method: {method}")
     logger.info(f"   Targets: {len(target_values)} elements")
     logger.info(f"   Fertilizers: {len(fertilizers)} items")
+    logger.info(f"   Auto Balance: {'✅ فعال' if auto_balance else '❌ غیرفعال'}")
     
     # ===== ۲. ساخت ماتریس =====
     try:
@@ -141,11 +130,11 @@ def optimize_fertilizers(
             'summary': f"❌ خطا در بهینه‌سازی: {str(e)}"
         }
     
-    # ===== ۵. پردازش نتایج =====
+    # ===== ۵. پردازش نتایج با قابلیت تعادل یونی خودکار =====
     try:
-        # اضافه کردن تنظیمات به options برای پردازش
         options['use_precipitation_check'] = use_precipitation_check
         options['use_ion_balance_check'] = use_ion_balance_check
+        options['auto_balance'] = auto_balance  # 🆕 اضافه شدن به options
         
         result = process_optimization_result(
             solver_result=solver_result,
@@ -159,12 +148,13 @@ def optimize_fertilizers(
             options=options
         )
         
-        # اضافه کردن زمان کل
         result['total_time_ms'] = (time.time() - start_time) * 1000
+        result['auto_balance_applied'] = auto_balance
         
         logger.info(f"✅ Optimization completed in {result['convergence_time_ms']:.2f}ms")
         logger.info(f"   Residual error: {result['residual_error']:.4f}")
         logger.info(f"   Total cost: {result['cost_total']:,.0f} تومان")
+        logger.info(f"   Auto Balance: {'✅ اعمال شد' if result.get('auto_balanced', False) else '❌ اعمال نشد'}")
         
         return result
         

@@ -248,7 +248,7 @@ export interface RecipeListResponse {
 }
 
 // ============================================================
-// 🆕 OPTIMIZATION TYPES (بهینه‌سازی خودکار)
+// 🆕 OPTIMIZATION TYPES (بهینه‌سازی خودکار) با EC و pH و auto_balance
 // ============================================================
 
 export interface OptimizationOptions {
@@ -262,6 +262,8 @@ export interface OptimizationOptions {
     use_precipitation_check?: boolean;
     use_ion_balance_check?: boolean;
     reservoir_mode?: 'auto' | 'manual';
+    // 🆕 تعادل یونی خودکار
+    auto_balance?: boolean;
 }
 
 export interface OptimizationFertilizerInput {
@@ -285,6 +287,23 @@ export interface OptimizationRequest {
     injection_ratio?: number;
 }
 
+export interface EcPhStatus {
+    status: 'optimal' | 'warning' | 'critical';
+    status_label: string;
+    color: 'success' | 'warning' | 'danger';
+    message: string;
+    issues: string[];
+    recommendations: string[];
+    ec: number;
+    ph: number;
+    water_ec?: number;
+    water_ph?: number;
+    ec_status: string;
+    ec_label: string;
+    ph_status: string;
+    ph_label: string;
+}
+
 export interface OptimizationResponse {
     weights: Record<string, number>;
     concentrations: Record<string, number>;
@@ -299,6 +318,12 @@ export interface OptimizationResponse {
     convergence_time_ms: number;
     is_converged: boolean;
     summary: string;
+    // 🆕 فیلدهای EC و pH
+    ec: number;
+    ph: number;
+    ec_status: string;
+    ph_status: string;
+    ec_ph_status: EcPhStatus;
 }
 
 export interface PrecipitationRiskItem {

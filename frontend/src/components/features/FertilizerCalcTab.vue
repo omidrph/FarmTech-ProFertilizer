@@ -27,17 +27,16 @@
     />
 
     <!-- ============================================================ -->
-    <!-- دکمه‌های اقدام -->
+    <!-- دکمه‌های اقدام با گزینه تعادل یونی خودکار -->
     <!-- ============================================================ -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-      <div class="flex flex-wrap gap-3">
+      <div class="flex flex-wrap items-center gap-4">
         <!-- دکمه اصلی: بهینه‌سازی خودکار -->
         <button
           @click="handleAutoOptimize"
           :disabled="isOptimizing || localSelectedFertilizers.length === 0"
           class="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-all duration-200 flex items-center gap-2 shadow-lg shadow-indigo-500/30 hover:shadow-xl"
         >
-          <!-- آیکون SVG -->
           <svg v-if="!isOptimizing" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
           </svg>
@@ -48,13 +47,38 @@
           {{ isOptimizing ? 'در حال بهینه‌سازی...' : '🚀 بهینه‌سازی خودکار' }}
         </button>
 
+        <!-- 🆕 گزینه تعادل یونی خودکار -->
+        <div class="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              v-model="autoBalanceEnabled"
+              class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-0"
+            />
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              تعادل یونی خودکار
+            </span>
+          </label>
+          <div class="relative group">
+            <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none">
+              در صورت فعال بودن، الگوریتم به طور خودکار یون‌های پادبار (Na یا Cl) را به ترکیب نهایی اضافه می‌کند تا تعادل یونی برقرار شود.
+              <div class="absolute top-full right-4 border-4 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+          <span class="text-[10px] text-gray-400" :class="autoBalanceEnabled ? 'text-success-600 dark:text-success-400' : 'text-gray-400'">
+            {{ autoBalanceEnabled ? '✅ فعال' : '❌ غیرفعال' }}
+          </span>
+        </div>
+
         <!-- دکمه ذخیره در گزارش -->
         <button
           @click="saveToReport"
           :disabled="!hasOptimizationResult || isSaving"
           class="px-4 py-2.5 bg-success-600 hover:bg-success-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
         >
-          <!-- آیکون SVG -->
           <svg v-if="!isSaving" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
           </svg>
@@ -70,7 +94,6 @@
           @click="resetAll"
           class="px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
         >
-          <!-- آیکون SVG -->
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
@@ -82,7 +105,6 @@
           @click="printReport"
           class="px-4 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors flex items-center gap-2"
         >
-          <!-- آیکون SVG -->
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
           </svg>
@@ -107,7 +129,6 @@
     <!-- ============================================================ -->
     <div v-if="calcErrors.length > 0" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-4">
       <div class="flex items-start gap-3">
-        <!-- آیکون SVG -->
         <svg class="w-5 h-5 text-danger-600 dark:text-danger-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
         </svg>
@@ -131,7 +152,6 @@
             ? 'bg-success-600 text-white' 
             : 'bg-danger-600 text-white'"
         >
-          <!-- آیکون SVG -->
           <svg v-if="toastType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
           </svg>
@@ -192,6 +212,9 @@ const isSaving = ref(false);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
 
+// 🆕 گزینه تعادل یونی خودکار (پیش‌فرض فعال)
+const autoBalanceEnabled = ref(true);
+
 // ===== Computed =====
 const hasOptimizationResult = computed(() => calcStore.optimizationResult !== null);
 const isCalculating = computed(() => calcStore.isLoading);
@@ -225,9 +248,14 @@ const handleAutoOptimize = async () => {
   );
 
   try {
+    // 🆕 ارسال گزینه auto_balance به بک‌اند
+    const options = {
+      auto_balance: autoBalanceEnabled.value
+    };
+
     const result = await optimizeFertilizers(
       selectedFerts,
-      undefined,
+      options,
       mainTankVolume.value,
       stockVolume.value,
       injectionRatio.value
