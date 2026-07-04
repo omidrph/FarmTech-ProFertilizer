@@ -2,20 +2,20 @@
 <template>
   <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-50 transition-colors duration-200">
     <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-      <div class="flex items-center justify-between h-16 sm:h-20 lg:h-24">
-        <!-- Logo -->
-        <div class="flex items-center gap-3 sm:gap-4 flex-shrink-0">
+      <div class="flex items-center justify-between h-14 sm:h-16 lg:h-18">
+        <!-- Logo - نسخه جدید -->
+        <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <img
             src="/Logo.webp"
-            alt="FarmTech"
-            class="h-10 w-10 sm:h-14 sm:w-14 lg:h-16 lg:w-16 object-contain rounded-lg"
+            alt="سهند کود"
+            class="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 object-contain rounded-lg"
           />
           <div class="flex flex-col leading-tight">
-            <h1 class="text-sm sm:text-base lg:text-xl font-bold text-gray-800 dark:text-white tracking-tight">
-              سیستم هوشمند نسخه‌نویسی کود
+            <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 dark:text-white tracking-tight" style="font-family: 'Vazirmatn', 'IRANSans', sans-serif;">
+              سهند کود
             </h1>
-            <p class="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
-              فارم تک
+            <p class="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 hidden sm:block">
+              سیستم هوشمند نسخه‌نویسی کود
             </p>
           </div>
         </div>
@@ -33,20 +33,25 @@
         </button>
 
         <!-- Desktop Actions -->
-        <div class="hidden lg:flex items-center gap-1 lg:gap-2">
-          <!-- File Menu -->
+        <div class="hidden lg:flex items-center gap-1">
+          <!-- File Menu - با استایل متمایز -->
           <div class="relative" ref="fileMenuRef">
             <button
               @click="toggleFileMenu"
-              class="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all duration-200 text-xs lg:text-sm"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-all duration-200 text-sm border border-gray-200 dark:border-gray-700"
             >
-              <svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              <span class="hidden sm:inline">فایل</span>
-              <svg class="w-3 h-3 lg:w-4 lg:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>فایل</span>
+              <svg class="w-3 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
               </svg>
+              <!-- نشانگر وضعیت گزارش -->
+              <span 
+                class="w-2 h-2 rounded-full ml-1"
+                :class="getReportStatusClass"
+              ></span>
             </button>
 
             <!-- File Dropdown -->
@@ -62,7 +67,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
                 <span>جدید</span>
-                <span class="mr-auto text-xs text-gray-400">Ctrl+N</span>
+                <span class="mr-auto text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Ctrl+N</span>
               </button>
 
               <button
@@ -73,7 +78,7 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
                 </svg>
                 <span>بازکردن...</span>
-                <span class="mr-auto text-xs text-gray-400">Ctrl+O</span>
+                <span class="mr-auto text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Ctrl+O</span>
               </button>
 
               <button
@@ -89,7 +94,7 @@
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                 </svg>
                 <span>ذخیره</span>
-                <span class="mr-auto text-xs text-gray-400">Ctrl+S</span>
+                <span class="mr-auto text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">Ctrl+S</span>
               </button>
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -107,31 +112,50 @@
             </div>
           </div>
 
-          <!-- Navigation Buttons -->
+          <!-- Navigation Buttons با خط زیرین -->
           <button
             v-for="tab in navTabs"
             :key="tab.id"
             @click="setActiveTab(tab.id)"
-            class="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1.5 lg:py-2 rounded-lg transition-all duration-200 text-xs lg:text-sm"
-            :class="currentActiveTab === tab.id
-              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'"
+            class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group"
           >
-            <span v-html="tab.icon"></span>
-            <span class="hidden sm:inline">{{ tab.label }}</span>
+            <span class="relative z-10 flex items-center gap-1.5" :class="currentActiveTab === tab.id
+              ? 'text-primary-600 dark:text-primary-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'"
+            >
+              <span v-html="tab.icon"></span>
+              <span class="hidden xl:inline">{{ tab.label }}</span>
+            </span>
+            <!-- خط زیرین فعال -->
+            <span 
+              v-if="currentActiveTab === tab.id"
+              class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300"
+            ></span>
           </button>
 
-          <!-- Theme Toggle -->
+          <!-- Theme Toggle با انیمیشن -->
           <button
             @click="toggleTheme"
-            class="p-1.5 lg:p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-all duration-200"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-all duration-200 relative overflow-hidden group"
           >
-            <svg v-if="isDarkMode" class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-            </svg>
-            <svg v-else class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-            </svg>
+            <div class="relative w-5 h-5">
+              <!-- خورشید -->
+              <svg 
+                v-if="!isDarkMode" 
+                class="w-5 h-5 absolute inset-0 transition-all duration-500 rotate-0 scale-100 group-hover:rotate-90"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+              <!-- ماه -->
+              <svg 
+                v-else 
+                class="w-5 h-5 absolute inset-0 transition-all duration-500 rotate-0 scale-100 group-hover:-rotate-12"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+              </svg>
+            </div>
           </button>
         </div>
       </div>
@@ -155,6 +179,11 @@
           <svg class="w-4 h-4 ml-auto transition-transform" :class="{ 'rotate-180': fileMenuOpenMobile }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
+          <!-- نشانگر وضعیت گزارش -->
+          <span 
+            class="w-2 h-2 rounded-full ml-1"
+            :class="getReportStatusClass"
+          ></span>
         </button>
 
         <div v-if="fileMenuOpenMobile" class="mr-6 space-y-1">
@@ -218,7 +247,7 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 🆕 مودال بازکردن گزارش -->
+    <!-- مودال بازکردن گزارش -->
     <!-- ============================================================ -->
     <Teleport to="body">
       <Transition name="modal">
@@ -303,7 +332,8 @@
                   <div
                     v-for="report in filteredReports"
                     :key="report.id"
-                    class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    @click="loadSelectedReport(report.id)"
+                    class="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
                     :class="{ 'bg-primary-50 dark:bg-primary-900/10': report.id === reportStore.currentReportId }"
                   >
                     <div class="flex items-start justify-between gap-3">
@@ -345,7 +375,7 @@
                       </div>
                       <div class="flex items-center gap-2 flex-shrink-0">
                         <button
-                          @click="loadSelectedReport(report.id)"
+                          @click.stop="loadSelectedReport(report.id)"
                           :disabled="isLoadingReport"
                           class="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs flex items-center gap-1 disabled:opacity-50"
                         >
@@ -359,7 +389,7 @@
                           <span>بارگذاری</span>
                         </button>
                         <button
-                          @click="deleteSelectedReport(report.id)"
+                          @click.stop="deleteSelectedReport(report.id)"
                           class="p-1.5 rounded-lg text-danger-600 hover:text-danger-800 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors"
                           title="حذف"
                         >
@@ -471,33 +501,43 @@ const filteredReports = computed(() => {
   );
 });
 
+const getReportStatusClass = computed(() => {
+  if (!reportStore.hasCurrentReport) {
+    return 'bg-gray-300 dark:bg-gray-600';
+  }
+  if (reportStore.isDirty) {
+    return 'bg-yellow-500 animate-pulse';
+  }
+  return 'bg-green-500';
+});
+
 // ===== Navigation Tabs =====
 const navTabs = [
   {
     id: 'home',
     label: 'صفحه اصلی',
-    icon: `<svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
     </svg>`
   },
   {
     id: 'education',
     label: 'آموزش',
-    icon: `<svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
     </svg>`
   },
   {
     id: 'contact',
     label: 'ارتباط با ما',
-    icon: `<svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
     </svg>`
   },
   {
     id: 'about',
     label: 'درباره',
-    icon: `<svg class="w-4 h-4 lg:w-5 lg:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>`
   }
@@ -551,35 +591,41 @@ const formatDate = (dateString: string): string => {
 };
 
 // ===== File Menu Actions =====
-const handleNewReport = async () => {
+const handleNewReport = (event?: MouseEvent) => {
+  if (event) {
+    event.preventDefault();
+  }
   closeFileMenu();
-  if (reportStore.hasCurrentReport) {
+  if (reportStore.hasCurrentReport && reportStore.isDirty) {
     if (!confirm('گزارش فعلی ذخیره نشده است. آیا مطمئن هستید که می‌خواهید گزارش جدید ایجاد کنید؟')) {
       return;
     }
   }
   
-  // پاک کردن همه داده‌ها
   reportStore.resetReportData();
   waterStore.resetWaterData();
   targetStore.resetTargets();
   calcStore.resetCalculation();
   
-  // 🆕 ارسال رویداد تغییر گزارش برای به‌روزرسانی HomeTab
   window.dispatchEvent(new CustomEvent('report-changed'));
-  
   emit('new-report');
   showToast('گزارش جدید ایجاد شد', 'success');
 };
 
-const handleOpenReport = async () => {
+const handleOpenReport = (event?: MouseEvent) => {
+  if (event) {
+    event.preventDefault();
+  }
   closeFileMenu();
   showOpenModal.value = true;
   searchQuery.value = '';
-  await reportStore.loadReports();
+  reportStore.loadReports();
 };
 
-const handleSaveReport = async () => {
+const handleSaveReport = (event?: MouseEvent) => {
+  if (event) {
+    event.preventDefault();
+  }
   closeFileMenu();
   if (!reportStore.reportData.reportName && !reportStore.reportData.plantName) {
     showToast('لطفاً ابتدا اطلاعات گزارش را وارد کنید', 'error');
@@ -587,18 +633,18 @@ const handleSaveReport = async () => {
   }
   
   isSaving.value = true;
-  const success = await reportStore.saveCurrentReport();
-  isSaving.value = false;
-  
-  if (success) {
-    showToast('گزارش با موفقیت ذخیره شد', 'success');
-    await reportStore.loadReports();
-  } else {
-    showToast(reportStore.error || 'خطا در ذخیره گزارش', 'error');
-  }
+  reportStore.saveCurrentReport().then((success) => {
+    isSaving.value = false;
+    if (success) {
+      showToast('گزارش با موفقیت ذخیره شد', 'success');
+      reportStore.loadReports();
+    } else {
+      showToast(reportStore.error || 'خطا در ذخیره گزارش', 'error');
+    }
+  });
 };
 
-const handleDeleteReport = async () => {
+const handleDeleteReport = () => {
   closeFileMenu();
   if (!reportStore.hasCurrentReport) {
     showToast('هیچ گزارشی برای حذف وجود ندارد', 'error');
@@ -609,16 +655,16 @@ const handleDeleteReport = async () => {
     return;
   }
   
-  const success = await reportStore.deleteCurrentReport();
-  if (success) {
-    showToast('گزارش با موفقیت حذف شد', 'success');
-    // پاک کردن داده‌های فعلی
-    waterStore.resetWaterData();
-    targetStore.resetTargets();
-    calcStore.resetCalculation();
-  } else {
-    showToast(reportStore.error || 'خطا در حذف گزارش', 'error');
-  }
+  reportStore.deleteCurrentReport().then((success) => {
+    if (success) {
+      showToast('گزارش با موفقیت حذف شد', 'success');
+      waterStore.resetWaterData();
+      targetStore.resetTargets();
+      calcStore.resetCalculation();
+    } else {
+      showToast(reportStore.error || 'خطا در حذف گزارش', 'error');
+    }
+  });
 };
 
 const closeOpenModal = () => {
@@ -627,7 +673,7 @@ const closeOpenModal = () => {
 };
 
 const loadSelectedReport = async (reportId: number) => {
-  if (reportStore.hasCurrentReport && reportStore.currentReportId !== reportId) {
+  if (reportStore.hasCurrentReport && reportStore.currentReportId !== reportId && reportStore.isDirty) {
     if (!confirm('گزارش فعلی ذخیره نشده است. آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
       return;
     }
@@ -642,8 +688,6 @@ const loadSelectedReport = async (reportId: number) => {
   if (success) {
     showToast('گزارش با موفقیت بارگذاری شد', 'success');
     closeOpenModal();
-    
-    // 🆕 ارسال رویداد تغییر گزارش برای به‌روزرسانی HomeTab
     window.dispatchEvent(new CustomEvent('report-changed'));
   } else {
     showToast(reportStore.error || 'خطا در بارگذاری گزارش', 'error');
@@ -670,18 +714,22 @@ const deleteSelectedReport = async (reportId: number) => {
 
 // ===== Keyboard Shortcuts =====
 const handleKeyboard = (event: KeyboardEvent) => {
+  // جلوگیری از باز شدن تب جدید در مرورگر
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'n':
         event.preventDefault();
+        event.stopPropagation();
         handleNewReport();
         break;
       case 'o':
         event.preventDefault();
+        event.stopPropagation();
         handleOpenReport();
         break;
       case 's':
         event.preventDefault();
+        event.stopPropagation();
         handleSaveReport();
         break;
     }
@@ -712,7 +760,7 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyboard);
 });
 
-// ===== Watch for mobile menu close on resize =====
+// ===== Watch =====
 watch(mobileMenuOpen, (newVal) => {
   if (newVal) {
     document.body.style.overflow = 'hidden';
@@ -786,5 +834,15 @@ watch(mobileMenuOpen, (newVal) => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Pulse Animation برای نشانگر وضعیت */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 </style>

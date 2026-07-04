@@ -5,7 +5,7 @@
     - sm:relative: در دسکتاپ حالت عادی داشته باشد
     - shadow-[0_-4px_...]: سایه رو به بالا برای جدا شدن از محتوا
   -->
-  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mt-auto transition-colors duration-200 sm:py-3 relative sm:relative fixed bottom-0 left-0 right-0 z-50 sm:z-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
+  <footer class="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 transition-colors duration-200 sm:py-3 relative sm:relative fixed bottom-0 left-0 right-0 z-50 sm:z-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] sm:shadow-none">
     
     <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 w-full">
       
@@ -37,10 +37,10 @@
             <span class="text-[10px] sm:text-xs font-medium">{{ userDisplayName }}</span>
           </button>
 
-          <!-- وضعیت اتصال (فقط در دسکتاپ نمایش داده می‌شود - حذف شده از موبایل) -->
+          <!-- وضعیت اتصال (فقط در دسکتاپ نمایش داده می‌شود) -->
           <div class="hidden sm:flex items-center gap-1.5 px-2 py-1 flex-shrink-0">
             <span
-              class="inline-block w-2.5 h-2.5 rounded-full animate-pulse"
+              class="inline-block w-2.5 h-2.5 rounded-full"
               :class="{
                 'bg-green-500': connectionStatus === 'connected',
                 'bg-red-500': connectionStatus === 'disconnected',
@@ -64,8 +64,8 @@
             class="flex flex-col sm:flex-row items-center gap-1 sm:gap-1 px-2 sm:px-2.5 py-1 text-danger-600 hover:text-danger-800 dark:text-danger-400 dark:hover:text-danger-300 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors flex-1 sm:flex-none justify-center"
             title="خروج از حساب"
           >
-            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
             </svg>
             <span class="text-[10px] sm:text-xs mt-1 sm:mt-0">خروج</span>
           </button>
@@ -113,7 +113,6 @@ const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checkin
 
 const checkConnection = async () => {
   try {
-    // استفاده از آدرس نسبی یا متغیر محیطی بهتر است، اما برای سازگاری با کد قبلی:
     const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
     const response = await fetch(`${baseUrl}/health`, {
       method: 'GET',
