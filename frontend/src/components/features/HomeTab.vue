@@ -1,3 +1,4 @@
+<!-- frontend/src/components/features/HomeTab.vue -->
 <template>
   <div class="space-y-6">
     <!-- ============================================================ -->
@@ -193,7 +194,6 @@
           </div>
         </div>
 
-        <!-- جدول با اسکرول افقی برای موبایل -->
         <div class="overflow-x-auto -mx-4 sm:mx-0">
           <div class="inline-block min-w-full align-middle px-4 sm:px-0">
             <table class="min-w-full border-collapse">
@@ -234,7 +234,6 @@
                   :key="item.element"
                   class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
-                  <!-- نام عنصر -->
                   <td class="sticky left-0 z-10 bg-white dark:bg-gray-800 px-3 py-3 text-right">
                     <div class="flex items-center gap-2">
                       <span
@@ -248,19 +247,16 @@
                       </span>
                     </div>
                   </td>
-                  <!-- مقدار هدف -->
                   <td class="px-3 py-3 text-center">
                     <span class="text-sm font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
                       {{ item.target.toFixed(2) }}
                     </span>
                   </td>
-                  <!-- مقدار تامین شده -->
                   <td class="px-3 py-3 text-center">
                     <span class="text-sm font-semibold tabular-nums" :class="getActualValueClass(item.progress_percent)">
                       {{ item.actual.toFixed(2) }}
                     </span>
                   </td>
-                  <!-- نوار پیشرفت -->
                   <td class="px-3 py-3">
                     <div class="flex items-center gap-2">
                       <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -275,7 +271,6 @@
                       </span>
                     </div>
                   </td>
-                  <!-- اختلاف -->
                   <td class="px-3 py-3 text-center">
                     <div
                       v-if="item.difference !== 0"
@@ -300,7 +295,6 @@
           </div>
         </div>
 
-        <!-- راهنمای رنگ‌ها -->
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div class="flex flex-wrap items-center gap-3 text-xs">
             <span class="text-gray-500 dark:text-gray-400">راهنما:</span>
@@ -342,7 +336,6 @@
           </div>
         </div>
 
-        <!-- کارت‌های مخازن -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- مخزن A -->
           <div class="relative overflow-hidden rounded-xl border-2 border-primary-200 dark:border-primary-800 bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/20 dark:to-gray-800 p-4 transition-all hover:shadow-lg">
@@ -362,9 +355,9 @@
                   {{ getReservoirTotal('A').toFixed(2) }}g
                 </span>
               </div>
-              <div v-if="summary.reservoir_data?.A?.length > 0" class="space-y-2">
+              <div v-if="getReservoirItems('A').length > 0" class="space-y-2">
                 <div
-                  v-for="(item, idx) in summary.reservoir_data.A"
+                  v-for="(item, idx) in getReservoirItems('A')"
                   :key="idx"
                   class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-primary-100 dark:border-primary-900/50"
                 >
@@ -400,9 +393,9 @@
                   {{ getReservoirTotal('B').toFixed(2) }}g
                 </span>
               </div>
-              <div v-if="summary.reservoir_data?.B?.length > 0" class="space-y-2">
+              <div v-if="getReservoirItems('B').length > 0" class="space-y-2">
                 <div
-                  v-for="(item, idx) in summary.reservoir_data.B"
+                  v-for="(item, idx) in getReservoirItems('B')"
                   :key="idx"
                   class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-success-100 dark:border-success-900/50"
                 >
@@ -438,9 +431,9 @@
                   {{ getReservoirTotal('C').toFixed(2) }}g
                 </span>
               </div>
-              <div v-if="summary.reservoir_data?.C?.length > 0" class="space-y-2">
+              <div v-if="getReservoirItems('C').length > 0" class="space-y-2">
                 <div
-                  v-for="(item, idx) in summary.reservoir_data.C"
+                  v-for="(item, idx) in getReservoirItems('C')"
                   :key="idx"
                   class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-warning-100 dark:border-warning-900/50"
                 >
@@ -459,7 +452,6 @@
           </div>
         </div>
 
-        <!-- جمع کل -->
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-4 text-sm">
@@ -533,16 +525,24 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { apiService } from '@/services/apiService';
+import { useTargetStore } from '@/store/modules/targetStore';
+import { useCalcStore } from '@/store/modules/calcStore';
 
 // ============================================================
-// State - فقط داده‌های دریافتی از API
+// Stores
+// ============================================================
+const targetStore = useTargetStore();
+const calcStore = useCalcStore();
+
+// ============================================================
+// State
 // ============================================================
 const summary = ref<any>(null);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 
 // ============================================================
-// Computed - فقط برای نمایش (بدون محاسبه)
+// Computed
 // ============================================================
 const ionBalanceStatus = computed(() => {
   if (!summary.value?.ion_balance) {
@@ -571,34 +571,166 @@ const ionBalanceStatus = computed(() => {
 });
 
 // ============================================================
-// Methods - فقط برای نمایش و فرمت‌بندی
+// Methods
 // ============================================================
 const loadData = async () => {
   isLoading.value = true;
   error.value = null;
   try {
     const data = await apiService.getHomeSummary();
+    
+    if (data && data.has_data) {
+      // اگر elements_data خالی است، از storeها پر کن
+      if (!data.elements_data || data.elements_data.length === 0) {
+        data.elements_data = buildElementsData();
+      }
+      
+      // اگر reservoir_data خالی است، از calcStore پر کن
+      if (!data.reservoir_data || Object.keys(data.reservoir_data).length === 0) {
+        data.reservoir_data = calcStore.reservoirData || { A: [], B: [], C: [] };
+      }
+      
+      // محاسبه مجموع وزن مخازن
+      if (data.reservoir_data) {
+        let totalWeight = 0;
+        const reservoirKeys = ['A', 'B', 'C'] as const;
+        for (const key of reservoirKeys) {
+          const items = data.reservoir_data[key];
+          if (items && Array.isArray(items)) {
+            totalWeight += items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+          }
+        }
+        data.total_reservoir_weight = totalWeight;
+      }
+    }
+    
     summary.value = data;
   } catch (err: any) {
     error.value = err.message || 'خطا در بارگذاری داده‌ها از سرور';
     console.error('Error loading home summary:', err);
+    
+    // در صورت خطا، از داده‌های محلی استفاده کن
+    const localData = buildLocalSummary();
+    if (localData) {
+      summary.value = localData;
+    }
   } finally {
     isLoading.value = false;
   }
 };
 
-// 🆕 Event handler برای بارگذاری مجدد داده‌ها
-// این handler زمانی فراخوانی می‌شود که گزارش جدید ایجاد شود یا گزارش موجود بارگذاری شود
+// ============================================================
+// توابع ساخت داده از storeها
+// ============================================================
+
+const buildElementsData = () => {
+  const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
+  const result = [];
+  
+  const finalValues: Record<string, number> = {};
+  for (const row of calcStore.calculationRows) {
+    if (row.elements) {
+      for (const [element, percentage] of Object.entries(row.elements)) {
+        if (percentage && percentage > 0 && row.weight && row.weight > 0) {
+          const contribution = (percentage / 100) * row.weight * (row.purity / 100);
+          finalValues[element] = (finalValues[element] || 0) + contribution;
+        }
+      }
+    }
+  }
+  
+  for (const element of elements) {
+    const target = (targetStore.targetElements as Record<string, number>)[element] || 0;
+    const actual = finalValues[element] || 0;
+    const diff = actual - target;
+    const progressPercent = target > 0 ? (actual / target) * 100 : 0;
+    
+    result.push({
+      element,
+      target,
+      actual,
+      difference: diff,
+      progress_percent: Math.min(progressPercent, 150)
+    });
+  }
+  
+  return result;
+};
+
+const buildLocalSummary = () => {
+  const elementsData = buildElementsData();
+  const hasTargets = elementsData.some(item => item.target > 0);
+  
+  if (!hasTargets) {
+    return null;
+  }
+  
+  const activeElementsCount = elementsData.filter(item => item.target > 0).length;
+  
+  let totalReservoirWeight = 0;
+  const reservoirData = calcStore.reservoirData || { A: [], B: [], C: [] };
+  const reservoirKeys = ['A', 'B', 'C'] as const;
+  for (const key of reservoirKeys) {
+    const items = reservoirData[key];
+    if (items && Array.isArray(items)) {
+      totalReservoirWeight += items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+    }
+  }
+  
+  let activeReservoirsCount = 0;
+  for (const key of reservoirKeys) {
+    const items = reservoirData[key];
+    if (items && Array.isArray(items) && items.length > 0) {
+      activeReservoirsCount++;
+    }
+  }
+  
+  return {
+    has_data: true,
+    ion_balance: targetStore.ionBalance || { cation: 0, anion: 0, is_balanced: false },
+    active_elements_count: activeElementsCount,
+    total_elements: 15,
+    active_reservoirs_count: activeReservoirsCount,
+    total_cost: calcStore.totalCost || 0,
+    total_reservoir_weight: totalReservoirWeight,
+    reservoir_data: reservoirData,
+    elements_data: elementsData,
+    recommendations: []
+  };
+};
+
+// ============================================================
+// توابع مخازن
+// ============================================================
+
+const getReservoirItems = (reservoir: 'A' | 'B' | 'C') => {
+  const data = summary.value?.reservoir_data || calcStore.reservoirData || { A: [], B: [], C: [] };
+  return data[reservoir] || [];
+};
+
+const getReservoirTotal = (reservoir: 'A' | 'B' | 'C'): number => {
+  const items = getReservoirItems(reservoir);
+  return items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+};
+
+// ============================================================
+// Event Handlers
+// ============================================================
+
 const handleReportChanged = () => {
   console.log('📊 Report changed, reloading home summary...');
   loadData();
 };
 
-const getReservoirTotal = (reservoir: 'A' | 'B' | 'C'): number => {
-  const data = summary.value?.reservoir_data?.[reservoir];
-  if (!data || !Array.isArray(data) || data.length === 0) return 0;
-  return data.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+const handleReportReset = () => {
+  console.log('🔄 Report reset, clearing home summary...');
+  summary.value = null;
+  loadData();
 };
+
+// ============================================================
+// توابع کمکی نمایش
+// ============================================================
 
 const formatNumber = (value: number | undefined | null): string => {
   if (value === undefined || value === null) return '0.00';
@@ -696,14 +828,13 @@ const getRecommendationDescClass = (type: string): string => {
 // ============================================================
 onMounted(() => {
   loadData();
-  // 🆕 گوش دادن به رویداد تغییر گزارش
-  // این رویداد از AppHeader ارسال می‌شود
   window.addEventListener('report-changed', handleReportChanged);
+  window.addEventListener('report-reset', handleReportReset);
 });
 
 onUnmounted(() => {
-  // 🆕 حذف event listener برای جلوگیری از memory leak
   window.removeEventListener('report-changed', handleReportChanged);
+  window.removeEventListener('report-reset', handleReportReset);
 });
 </script>
 

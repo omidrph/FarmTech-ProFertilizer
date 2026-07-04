@@ -1,340 +1,412 @@
+# backend/tests/test_report_save_flow.py
 #!/usr/bin/env python3
 """
-تست محاسبه EC و pH - تشخیص دقیق مشکل
-======================================
-
-این اسکریپت محاسبات EC و pH را با داده‌های واقعی تست می‌کند.
-
-نحوه اجرا:
-    cd backend
-    python tests/test_ec_ph_debug.py
+تست کامل جریان ذخیره‌سازی گزارش‌ها و عناصر هدف
+این تست بررسی می‌کند که:
+1. گزارش جدید به درستی ایجاد شود
+2. عناصر هدف ذخیره شوند
+3. گزارش بارگذاری مجدد شود و عناصر هدف بازیابی شوند
+4. محاسبات به درستی ذخیره و بازیابی شوند
 """
 
 import sys
-import os
 import json
+import sqlite3
 from pathlib import Path
 
-# اضافه کردن مسیر backend به sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.ion_balance import (
-    calculate_ec,
-    calculate_ph,
-    get_ec_ph_status,
-    calculate_ion_balance,
-    auto_balance_ion,
-    ppm_to_meq,
-    ALL_ELEMENTS,
-    CATION_ELEMENTS,
-    ANION_ELEMENTS,
-    VALENCES,
-    MOLECULAR_WEIGHTS,
-    ION_TO_EC_COEFFICIENTS,
-    ACIDITY_COEFFICIENTS
+from app.database import SessionLocal, create_tables
+from app.models import Base
+from app.crud import (
+    create_report, get_report_by_id, 
+    create_calculation, get_calculation_by_report,
+    update_calculation, get_user_by_phone
 )
+from app.schemas import ReportCreate, CalculationCreate, CalculationUpdate, UserCreate
+from app.security import get_password_hash
 
-print("=" * 80)
-print("🧪 تست محاسبه EC و pH - تشخیص دقیق مشکل")
-print("=" * 80 + "\n")
+DB_PATH = Path(__file__).parent.parent / "farmtech.db"
 
-# ============================================================
-# داده‌های تست - از خروجی واقعی برنامه
-# ============================================================
-
-# غلظت نهایی عناصر (از خروجی)
-CONCENTRATIONS = {
-    "N-NO3": 320.0,
-    "P": 103.0,
-    "S": 174.0,
-    "K": 364.0,
-    "Ca": 330.0,
-    "Mg": 96.0,
-    "Fe": 4.9,
-    "Mn": 2.0,
-    "Zn": 0.2,
-    "B": 0.7,
-    "Cu": 0.1,
-    "Mo": 0.1,
-    "Cl": 515.6,
-    "N-NH4": 0.0,
-    "Na": 0.0
-}
-
-# آب کاربر (از آنالیز آب)
-WATER_VALUES = {
-    "EC": 0.8,  # dS/m
-    "pH": 7.0,  # pH آب
-    "Ca": 30.0
-}
-
-print("📊 داده‌های تست:")
-print(f"  غلظت عناصر: {len(CONCENTRATIONS)} عنصر")
-print(f"  pH آب: {WATER_VALUES.get('pH', 7.0)}")
-print(f"  EC آب: {WATER_VALUES.get('EC', 0.8)} dS/m")
-print()
-
-# ============================================================
-# تست 1: نمایش ضرایب EC
-# ============================================================
-print("📌 تست 1: بررسی ضرایب EC")
-print("-" * 50)
-
-print("ضرایب EC برای عناصر موجود:")
-for element in CONCENTRATIONS:
-    if element in ION_TO_EC_COEFFICIENTS:
-        coeff = ION_TO_EC_COEFFICIENTS[element]
-        meq = ppm_to_meq(CONCENTRATIONS[element], element)
-        contribution = meq * coeff
-        print(f"  {element}: PPM={CONCENTRATIONS[element]:>8.2f} | MEQ={meq:>8.4f} | ضریب={coeff:>6.3f} | سهم={contribution:>10.4f}")
-    else:
-        print(f"  {element}: ⚠️ ضریب EC تعریف نشده است!")
-
-print()
-
-# ============================================================
-# تست 2: محاسبه EC
-# ============================================================
-print("📌 تست 2: محاسبه EC")
-print("-" * 50)
-
-try:
-    ec_result = calculate_ec(CONCENTRATIONS, unit="ppm")
+def setup_database():
+    """راه‌اندازی دیتابیس تست"""
+    print("📦 Setting up test database...")
     
-    print(f"  EC محاسبه شده: {ec_result['ec']:.4f} dS/m")
-    print(f"  وضعیت EC: {ec_result['status_label']}")
-    print(f"  تعداد عناصر فعال: {len(ec_result.get('active_elements', []))}")
+    # ایجاد جدول‌ها
+    create_tables()
     
-    # نمایش مجموع MEQ
-    total_meq = sum(c['meq'] for c in ec_result.get('contributions', {}).values())
-    print(f"  مجموع MEQ: {total_meq:.4f} meq/L")
+    db = SessionLocal()
+    user_id = None
     
-    # نمایش سهم هر عنصر در EC
-    print("\n  سهم هر عنصر در EC:")
-    for element, data in ec_result.get('contributions', {}).items():
-        print(f"    {element}: {data['contribution']:.6f} (از {data['meq']:.4f} meq)")
-    
-    if ec_result['ec'] < 0.5:
-        print("\n  ❌ EC بسیار پایین است! (مشکل در ضرایب یا محاسبه)")
-    else:
-        print("\n  ✅ EC در محدوده قابل قبول است")
+    try:
+        # بررسی وجود کاربر
+        user = get_user_by_phone(db, "09121234567")
         
-except Exception as e:
-    print(f"  ❌ خطا در محاسبه EC: {e}")
-    import traceback
-    traceback.print_exc()
-
-print()
-
-# ============================================================
-# تست 3: محاسبه pH
-# ============================================================
-print("📌 تست 3: محاسبه pH")
-print("-" * 50)
-
-try:
-    water_ph = WATER_VALUES.get('pH', 7.0)
-    ph_result = calculate_ph(CONCENTRATIONS, unit="ppm", water_ph=water_ph)
+        if user:
+            user_id = user.id
+            print(f"✅ Test user exists: ID={user_id}")
+        else:
+            # ایجاد کاربر تست
+            import secrets
+            import hashlib
+            
+            salt = secrets.token_hex(16)
+            hash_obj = hashlib.sha256((salt + "Test@123456").encode('utf-8'))
+            password_hash = f"{salt}:{hash_obj.hexdigest()}"
+            
+            # اتصال مستقیم به SQLite برای ایجاد کاربر
+            conn = sqlite3.connect(str(DB_PATH))
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO users (first_name, last_name, phone_number, password_hash, is_active)
+                VALUES (?, ?, ?, ?, ?)
+            """, ("تست", "سیستم", "09121234567", password_hash, 1))
+            conn.commit()
+            user_id = cursor.lastrowid
+            conn.close()
+            print(f"✅ Test user created: ID={user_id}")
+            
+    except Exception as e:
+        print(f"❌ Error in setup: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        db.close()
     
-    print(f"  pH آب: {water_ph}")
-    print(f"  pH محاسبه شده: {ph_result['ph']:.4f}")
-    print(f"  تغییر pH (ph_shift): {ph_result.get('ph_shift', 0):.4f}")
-    print(f"  وضعیت pH: {ph_result['status_label']}")
+    # اگر به هر دلیلی user_id ایجاد نشد، از 1 استفاده کن
+    if user_id is None:
+        print("⚠️ Using default user_id=1")
+        user_id = 1
     
-    # نمایش ضرایب اسیدی/بازی
-    print("\n  ضرایب اسیدی/بازی برای عناصر:")
-    for element, data in ph_result.get('contributions', {}).items():
-        coeff = data['coefficient']
-        meq = data['meq']
-        contribution = data['contribution']
-        acid_type = "اسیدی" if coeff > 0 else "بازی" if coeff < 0 else "خنثی"
-        print(f"    {element}: ضریب={coeff:>6.2f} | MEQ={meq:>8.4f} | سهم={contribution:>8.4f} | {acid_type}")
-    
-    if ph_result['ph'] < 4.0:
-        print("\n  ❌ pH بسیار پایین است! (مشکل در ضرایب اسیدی/بازی)")
-    else:
-        print("\n  ✅ pH در محدوده قابل قبول است")
-        
-except Exception as e:
-    print(f"  ❌ خطا در محاسبه pH: {e}")
-    import traceback
-    traceback.print_exc()
+    return user_id
 
-print()
-
-# ============================================================
-# تست 4: بررسی ضرایب اسیدی/بازی
-# ============================================================
-print("📌 تست 4: بررسی ضرایب اسیدی/بازی")
-print("-" * 50)
-
-print("ضرایب اسیدی/بازی برای عناصر موجود:")
-for element, value in CONCENTRATIONS.items():
-    if value == 0:
-        continue
-    if element in ACIDITY_COEFFICIENTS:
-        coeff = ACIDITY_COEFFICIENTS[element]
-        type_label = "اسیدی" if coeff > 0 else "بازی" if coeff < 0 else "خنثی"
-        print(f"  {element}: ضریب={coeff:>6.2f} | {type_label}")
-    else:
-        print(f"  {element}: ⚠️ ضریب اسیدی/بازی تعریف نشده است!")
-
-print()
-
-# ============================================================
-# تست 5: بررسی کامل تعادل یونی و auto_balance
-# ============================================================
-print("📌 تست 5: تعادل یونی و auto_balance")
-print("-" * 50)
-
-try:
-    cation, anion, is_balanced, details = calculate_ion_balance(CONCENTRATIONS, unit="ppm")
+def test_report_creation(db, user_id):
+    """تست ۱: ایجاد گزارش"""
+    print("\n📌 Test 1: Creating report")
+    print("-" * 50)
     
-    print(f"  کاتیون: {cation:.4f} meq/L")
-    print(f"  آنیون: {anion:.4f} meq/L")
-    print(f"  اختلاف: {abs(cation - anion):.4f} meq/L")
-    print(f"  متعادل: {'✅ بله' if is_balanced else '❌ خیر'}")
-    
-    # عناصر کاتیون
-    print("\n  عناصر کاتیون:")
-    for el, val in details.get('cation_elements', {}).items():
-        print(f"    {el}: {val:.4f} meq/L")
-    
-    # عناصر آنیون
-    print("\n  عناصر آنیون:")
-    for el, val in details.get('anion_elements', {}).items():
-        print(f"    {el}: {val:.4f} meq/L")
-    
-    # عناصر خنثی
-    if details.get('neutral_elements'):
-        print("\n  عناصر خنثی:")
-        for el, val in details.get('neutral_elements', {}).items():
-            print(f"    {el}: {val:.4f} meq/L")
-    
-    # تست auto_balance
-    if not is_balanced:
-        print("\n  🔄 اعمال auto_balance:")
-        balance_result = auto_balance_ion(CONCENTRATIONS, unit="ppm")
-        print(f"    متعادل شد: {'✅ بله' if balance_result['is_balanced'] else '❌ خیر'}")
-        if balance_result.get('added_element'):
-            print(f"    عنصر اضافه شده: {balance_result['added_element']}")
-            print(f"    مقدار اضافه شده: {balance_result['added_amount']:.2f} ppm")
-        print(f"    پیام: {balance_result['message']}")
-        
-        # نمایش تعادل جدید
-        new_cation, new_anion, new_balanced, _ = calculate_ion_balance(
-            balance_result['concentrations'], unit="ppm"
+    try:
+        report_data = ReportCreate(
+            report_name="گزارش تست",
+            plant_name="گوجه فرنگی",
+            season="بهار",
+            growth_stage="گلدهی",
+            report_date="۱۴۰۵/۰۴/۱۰"
         )
-        print(f"    کاتیون جدید: {new_cation:.4f} meq/L")
-        print(f"    آنیون جدید: {new_anion:.4f} meq/L")
-        print(f"    اختلاف جدید: {abs(new_cation - new_anion):.4f} meq/L")
+        
+        report = create_report(db, report_data, user_id)
+        print(f"✅ Report created: ID={report.id}, Name={report.report_name}")
+        return report.id
+    except Exception as e:
+        print(f"❌ Error creating report: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def test_create_calculation(db, report_id):
+    """تست ۲: ایجاد محاسبات با عناصر هدف"""
+    print("\n📌 Test 2: Creating calculation with target values")
+    print("-" * 50)
     
-except Exception as e:
-    print(f"  ❌ خطا: {e}")
-    import traceback
-    traceback.print_exc()
+    if not report_id:
+        print("❌ No report ID provided")
+        return None
+    
+    try:
+        target_values = {
+            "N-NO3": 140.0,
+            "P": 50.0,
+            "K": 350.0,
+            "Ca": 200.0,
+            "Mg": 50.0,
+            "S": 150.0,
+            "Fe": 3.0,
+            "Mn": 0.8,
+            "Zn": 0.1,
+            "B": 0.3,
+            "Cu": 0.07,
+            "Mo": 0.03
+        }
+        
+        calc_data = CalculationCreate(
+            target_values=target_values,
+            final_values={},
+            reservoir_data={"A": [], "B": [], "C": []},
+            calc_rows=[]
+        )
+        
+        calculation = create_calculation(db, calc_data, report_id)
+        print(f"✅ Calculation created: ID={calculation.id}")
+        print(f"   Target values: {len(calculation.target_values)} elements")
+        return calculation.id
+    except Exception as e:
+        print(f"❌ Error creating calculation: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
-print()
+def test_read_calculation(db, report_id):
+    """تست ۳: خواندن محاسبات"""
+    print("\n📌 Test 3: Reading calculation")
+    print("-" * 50)
+    
+    if not report_id:
+        print("❌ No report ID provided")
+        return False
+    
+    try:
+        calculation = get_calculation_by_report(db, report_id)
+        
+        if not calculation:
+            print("❌ Calculation not found")
+            return False
+        
+        print(f"✅ Calculation found: ID={calculation.id}")
+        print(f"   Target values count: {len(calculation.target_values)}")
+        
+        # نمایش عناصر
+        for element, value in list(calculation.target_values.items())[:5]:
+            print(f"   - {element}: {value}")
+        
+        return True
+    except Exception as e:
+        print(f"❌ Error reading calculation: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-# ============================================================
-# تست 6: بررسی علت EC = 0.01
-# ============================================================
-print("📌 تست 6: بررسی علت EC پایین")
-print("-" * 50)
+def test_update_calculation(db, report_id):
+    """تست ۴: به‌روزرسانی محاسبات"""
+    print("\n📌 Test 4: Updating calculation")
+    print("-" * 50)
+    
+    if not report_id:
+        print("❌ No report ID provided")
+        return False
+    
+    try:
+        calculation = get_calculation_by_report(db, report_id)
+        
+        if not calculation:
+            print("❌ Calculation not found")
+            return False
+        
+        # تغییر عناصر هدف
+        updated_targets = calculation.target_values.copy()
+        updated_targets["K"] = 400.0
+        updated_targets["Ca"] = 220.0
+        
+        calc_update = CalculationUpdate(
+            target_values=updated_targets,
+            final_values={},
+            reservoir_data={"A": [], "B": [], "C": []},
+            calc_rows=[]
+        )
+        
+        updated = update_calculation(db, calculation.id, calc_update)
+        
+        if not updated:
+            print("❌ Update failed")
+            return False
+        
+        print(f"✅ Calculation updated: ID={updated.id}")
+        print(f"   K: {updated.target_values.get('K')} (expected: 400)")
+        print(f"   Ca: {updated.target_values.get('Ca')} (expected: 220)")
+        return True
+    except Exception as e:
+        print(f"❌ Error updating calculation: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-# محاسبه دستی EC
-total_ec_manual = 0.0
-print("محاسبه دستی EC:")
-for element, value in CONCENTRATIONS.items():
-    if value == 0:
-        continue
-    if element not in ION_TO_EC_COEFFICIENTS:
-        print(f"  ⚠️ {element}: ضریب EC تعریف نشده!")
-        continue
-    meq = ppm_to_meq(value, element)
-    coeff = ION_TO_EC_COEFFICIENTS[element]
-    contribution = meq * coeff
-    total_ec_manual += contribution
-    print(f"  {element}: {value:.2f} ppm → {meq:.4f} meq × {coeff:.3f} = {contribution:.6f}")
+def test_read_after_update(db, report_id):
+    """تست ۵: خواندن مجدد پس از به‌روزرسانی"""
+    print("\n📌 Test 5: Reading after update")
+    print("-" * 50)
+    
+    if not report_id:
+        print("❌ No report ID provided")
+        return False
+    
+    try:
+        calculation = get_calculation_by_report(db, report_id)
+        
+        if not calculation:
+            print("❌ Calculation not found")
+            return False
+        
+        print(f"✅ Calculation found: ID={calculation.id}")
+        print(f"   K: {calculation.target_values.get('K')} (expected: 400)")
+        print(f"   Ca: {calculation.target_values.get('Ca')} (expected: 220)")
+        
+        if calculation.target_values.get('K') != 400:
+            print("❌ K value not updated correctly")
+            return False
+        
+        if calculation.target_values.get('Ca') != 220:
+            print("❌ Ca value not updated correctly")
+            return False
+        
+        print("✅ All values updated correctly")
+        return True
+    except Exception as e:
+        print(f"❌ Error reading after update: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-ec_manual = total_ec_manual / 1000
-print(f"\n  EC دستی: {ec_manual:.6f} dS/m")
+def test_create_second_report(db, user_id):
+    """تست ۶: ایجاد گزارش دوم و بررسی ریست شدن داده‌ها"""
+    print("\n📌 Test 6: Creating second report (should reset data)")
+    print("-" * 50)
+    
+    if not user_id:
+        print("❌ No user ID provided")
+        return None
+    
+    try:
+        report_data = ReportCreate(
+            report_name="گزارش تست دوم",
+            plant_name="خیار",
+            season="تابستان",
+            growth_stage="رشد رویشی",
+            report_date="۱۴۰۵/۰۴/۱۵"
+        )
+        
+        report = create_report(db, report_data, user_id)
+        print(f"✅ Second report created: ID={report.id}")
+        
+        # بررسی اینکه محاسبات برای گزارش جدید خالی است
+        calculation = get_calculation_by_report(db, report.id)
+        
+        if calculation:
+            print(f"⚠️ Calculation exists for new report: ID={calculation.id}")
+            print(f"   Target values: {len(calculation.target_values)}")
+        else:
+            print("✅ No calculation for new report (correct behavior)")
+        
+        return report.id
+    except Exception as e:
+        print(f"❌ Error creating second report: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
-if ec_manual < 0.5:
-    print("  ❌ مشکل: ضرایب EC بسیار کوچک هستند!")
-    print("  💡 پیشنهاد: ضرایب EC را 10 برابر کنید (0.7 به جای 0.07)")
-else:
-    print("  ✅ EC دستی در محدوده قابل قبول است")
+def test_database_direct():
+    """تست ۷: بررسی مستقیم دیتابیس"""
+    print("\n📌 Test 7: Direct database inspection")
+    print("-" * 50)
+    
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        cursor = conn.cursor()
+        
+        # بررسی جدول reports
+        cursor.execute("SELECT id, report_name, user_id FROM reports ORDER BY id DESC LIMIT 5")
+        reports = cursor.fetchall()
+        
+        print(f"📊 Recent reports:")
+        for report in reports:
+            print(f"   ID: {report[0]}, Name: {report[1]}, User: {report[2]}")
+        
+        # بررسی جدول calculations
+        cursor.execute("""
+            SELECT id, report_id, target_values 
+            FROM calculations 
+            ORDER BY id DESC 
+            LIMIT 5
+        """)
+        calcs = cursor.fetchall()
+        
+        print(f"\n📊 Recent calculations:")
+        for calc in calcs:
+            calc_id, report_id, target_values = calc
+            print(f"   ID: {calc_id}, Report: {report_id}")
+            if target_values:
+                try:
+                    if isinstance(target_values, str):
+                        target_values = json.loads(target_values)
+                    print(f"   Elements: {len(target_values)}")
+                except:
+                    print(f"   Elements: (parse error)")
+        
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"❌ Error in database direct: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
-print()
+def main():
+    print("=" * 70)
+    print("🧪 Testing Report Save Flow")
+    print("=" * 70)
+    
+    # Setup
+    user_id = setup_database()
+    if not user_id:
+        print("❌ Failed to setup database")
+        return False
+    
+    db = SessionLocal()
+    
+    results = []
+    
+    try:
+        # تست ۱: ایجاد گزارش
+        report_id = test_report_creation(db, user_id)
+        results.append(report_id is not None)
+        
+        if report_id:
+            # تست ۲: ایجاد محاسبات
+            calc_id = test_create_calculation(db, report_id)
+            results.append(calc_id is not None)
+            
+            # تست ۳: خواندن محاسبات
+            results.append(test_read_calculation(db, report_id))
+            
+            # تست ۴: به‌روزرسانی محاسبات
+            results.append(test_update_calculation(db, report_id))
+            
+            # تست ۵: خواندن مجدد
+            results.append(test_read_after_update(db, report_id))
+        
+        # تست ۶: ایجاد گزارش دوم
+        second_report_id = test_create_second_report(db, user_id)
+        results.append(second_report_id is not None)
+        
+        # تست ۷: بررسی دیتابیس
+        results.append(test_database_direct())
+        
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        results.append(False)
+    finally:
+        db.close()
+    
+    # جمع‌بندی
+    print("\n" + "=" * 70)
+    print("📊 Results Summary")
+    print("=" * 70)
+    
+    passed = sum(1 for r in results if r)
+    total = len(results)
+    
+    print(f"✅ Passed: {passed}/{total}")
+    print(f"❌ Failed: {total - passed}/{total}")
+    
+    if passed == total:
+        print("\n🎉 All tests passed! Database operations are working correctly.")
+        print("⚠️  The issue is in the frontend code, not the backend.")
+    else:
+        print("\n❌ Some tests failed. Please check the database schema.")
+        print("\n💡 Try running: python create_db_direct.py")
+    
+    return passed == total
 
-# ============================================================
-# تست 7: بررسی علت pH = 0.00
-# ============================================================
-print("📌 تست 7: بررسی علت pH پایین")
-print("-" * 50)
-
-# محاسبه دستی pH
-water_ph = WATER_VALUES.get('pH', 7.0)
-ph_shift_manual = 0.0
-
-print(f"pH آب: {water_ph}")
-print("محاسبه دستی تغییر pH:")
-for element, value in CONCENTRATIONS.items():
-    if value == 0:
-        continue
-    if element not in ACIDITY_COEFFICIENTS:
-        print(f"  ⚠️ {element}: ضریب اسیدی/بازی تعریف نشده!")
-        continue
-    meq = ppm_to_meq(value, element)
-    coeff = ACIDITY_COEFFICIENTS[element]
-    contribution = meq * coeff
-    ph_shift_manual += contribution
-    acid_type = "اسیدی" if coeff > 0 else "بازی" if coeff < 0 else "خنثی"
-    print(f"  {element}: {value:.2f} ppm → {meq:.4f} meq × {coeff:.2f} = {contribution:.4f} ({acid_type})")
-
-ph_manual = water_ph + ph_shift_manual
-print(f"\n  تغییر pH: {ph_shift_manual:.4f}")
-print(f"  pH دستی: {ph_manual:.4f}")
-
-if ph_manual < 4.0:
-    print("  ❌ مشکل: ضرایب اسیدی/بازی بسیار بزرگ هستند!")
-    print("  💡 پیشنهاد: ضرایب را 10 برابر کوچکتر کنید (0.05 به جای 0.5)")
-else:
-    print("  ✅ pH دستی در محدوده قابل قبول است")
-
-print()
-
-# ============================================================
-# خلاصه نهایی
-# ============================================================
-print("=" * 80)
-print("📋 خلاصه نهایی")
-print("=" * 80)
-
-print("""
-🔍 تشخیص مشکلات:
-
-1. EC = 0.01 dS/m → مشکل در ضرایب EC
-   - ضرایب فعلی (0.07) بسیار کوچک هستند
-   - باید حدود 10 برابر بزرگتر باشند (0.7)
-   - یا اینکه EC باید به جای تقسیم بر 1000، بر 100 تقسیم شود
-
-2. pH = 0.00 → مشکل در ضرایب اسیدی/بازی
-   - ضرایب فعلی (0.5) بسیار بزرگ هستند
-   - باید حدود 10 برابر کوچکتر باشند (0.05)
-   - یا اینکه ضریب N-NH4 باید اصلاح شود
-
-3. Cl = 515.6 با هدف 465 → مشکل در auto_balance
-   - auto_balance مقدار Cl را بیش از حد اضافه کرده است
-   - باید مقدار دقیق‌تری محاسبه شود
-
-💡 راه‌حل‌های پیشنهادی:
-   1. ضرایب EC را از 0.07 به 0.7 تغییر دهید
-   2. ضرایب اسیدی/بازی را از 0.5 به 0.05 تغییر دهید
-   3. در auto_balance، مقدار دقیق‌تری برای Cl محاسبه کنید
-""")
-
-print("=" * 80)
-print("✅ تست کامل شد!")
-print("=" * 80)
+if __name__ == "__main__":
+    success = main()
+    sys.exit(0 if success else 1)

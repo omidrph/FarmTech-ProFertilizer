@@ -11,7 +11,7 @@
           <li>کودهای مورد نظر خود را از لیست انتخاب کنید و روی دکمه <strong>بهینه‌سازی خودکار</strong> کلیک کنید.</li>
           <li>نرم‌افزار با استفاده از الگوریتم هوشمند NNLS، بهترین ترکیب کودها را برای دستیابی به عناصر هدف محاسبه می‌کند.</li>
           <li>گزینه <strong>تعادل یونی خودکار</strong> در صورت فعال بودن، به طور خودکار یون‌های پادبار (Na یا Cl) را برای برقراری تعادل یونی به ترکیب نهایی اضافه می‌کند.</li>
-          <li>پس از بهینه‌سازی، می‌توانید نتیجه را در <strong>گزارش</strong> ذخیره کرده یا به صورت <strong>فایل CSV</strong> خروجی بگیرید.</li>
+          <li>پس از بهینه‌سازی، نتیجه به صورت خودکار در گزارش ذخیره می‌شود و می‌توانید به صورت <strong>فایل CSV</strong> خروجی بگیرید.</li>
         </ul>
       </div>
     </div>
@@ -34,10 +34,9 @@
     />
 
     <!-- ============================================================ -->
-    <!-- دکمه‌های اقدام - چیدمان جدید -->
+    <!-- دکمه‌های اقدام - با دکمه ذخیره بازگردانده شده -->
     <!-- ============================================================ -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-      <!-- ردیف اول: دکمه بهینه‌سازی و تعادل یونی -->
       <div class="flex flex-wrap items-center gap-3">
         <!-- دکمه بهینه‌سازی خودکار -->
         <button
@@ -55,7 +54,7 @@
           {{ isOptimizing ? 'در حال بهینه‌سازی...' : 'بهینه‌سازی خودکار' }}
         </button>
 
-        <!-- گزینه تعادل یونی خودکار (بدون برچسب فعال/غیرفعال) -->
+        <!-- گزینه تعادل یونی خودکار -->
         <label class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer">
           <input
             type="checkbox"
@@ -68,9 +67,11 @@
         </label>
       </div>
 
+      <!-- ============================================================ -->
       <!-- ردیف دوم: دکمه‌های عملیاتی -->
+      <!-- ============================================================ -->
       <div class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <!-- دکمه ذخیره در گزارش -->
+        <!-- ✅ دکمه ذخیره در گزارش (بازگردانده شده) -->
         <button
           @click="saveToReport"
           :disabled="!hasOptimizationResult || isSaving"
@@ -118,7 +119,6 @@
       :result="calcStore.optimizationResult"
       :fertilizers="fertilizers"
       :target-values="targetStore.targetElements"
-      @save="saveToReport"
       @export-csv="exportCSV"
     />
 
@@ -208,10 +208,10 @@ const mainTankVolume = ref(5000);
 const stockVolume = ref(25);
 const injectionRatio = ref(100);
 const localSelectedFertilizers = ref<string[]>([...props.selectedFertilizers]);
-const isSaving = ref(false);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
 const autoBalanceEnabled = ref(true);
+const isSaving = ref(false);
 
 // ===== Computed =====
 const hasOptimizationResult = computed(() => calcStore.optimizationResult !== null);
@@ -267,6 +267,9 @@ const handleAutoOptimize = async () => {
   }
 };
 
+// ============================================================
+// ✅ تابع ذخیره در گزارش (بازگردانده شده)
+// ============================================================
 const saveToReport = async () => {
   if (!calcStore.optimizationResult) {
     showToast('هیچ نتیجه بهینه‌سازی برای ذخیره وجود ندارد', 'error');

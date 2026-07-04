@@ -12,7 +12,7 @@ import type {
 } from '@/types';
 import { apiService } from '@/services/apiService';
 import { useTargetStore } from './targetStore';
-import { useReportStore } from './reportStore'; // ✅ اضافه کردن import
+import { useReportStore } from './reportStore';
 
 const ELEMENTS: ElementName[] = [
     'N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl',
@@ -332,7 +332,6 @@ export const useCalcStore = defineStore('calc', () => {
                     optimizationHistory.value.pop();
                 }
                 
-                // ✅ اصلاح: استفاده صحیح از useReportStore
                 const reportStore = useReportStore();
                 if (reportStore.currentReportId) {
                     await reportStore.saveCurrentReport();
@@ -379,7 +378,6 @@ export const useCalcStore = defineStore('calc', () => {
     ): Promise<OptimizationResponse[]> {
         try {
             const history = await apiService.getOptimizationHistory(skip, limit, reportId);
-            // ✅ اصلاح: اضافه کردن فیلدهای مورد نیاز OptimizationResponse
             const formattedHistory: OptimizationResponse[] = history.map((item: any) => ({
                 weights: item.optimized_weights || {},
                 concentrations: item.final_concentrations || {},
@@ -399,7 +397,6 @@ export const useCalcStore = defineStore('calc', () => {
                 convergence_time_ms: item.convergence_time_ms || 0,
                 is_converged: item.is_successful || false,
                 summary: '',
-                // ✅ اضافه کردن فیلدهای جدید
                 ec: 0,
                 ph: 7.0,
                 ec_status: '',
@@ -433,6 +430,9 @@ export const useCalcStore = defineStore('calc', () => {
         lastOptimizationError.value = null;
     }
 
+    // ============================================================
+    // ✅ اصلاح: تابع resetCalculation کامل
+    // ============================================================
     function resetCalculation() {
         calculationRows.value = [];
         errorMessages.value = [];
@@ -446,9 +446,13 @@ export const useCalcStore = defineStore('calc', () => {
         totalCost.value = 0;
         optimizationResult.value = null;
         lastOptimizationError.value = null;
+        optimizationHistory.value = [];
         
+        // ✅ ریست کردن targetStore نیز
         const targetStore = useTargetStore();
         targetStore.resetTargets();
+        
+        console.log('🔄 calcStore reset complete');
     }
 
     function addError(message: string) {
