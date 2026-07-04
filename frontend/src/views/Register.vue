@@ -48,7 +48,6 @@
 
         <!-- اسلایدر توضیحات -->
         <div class="relative w-full max-w-md min-h-[200px]">
-          <!-- باک شیشه‌ای ثابت در پشت اسلایدها -->
           <div class="absolute inset-0 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl"></div>
           
           <TransitionGroup name="slide-fade" tag="div" class="relative">
@@ -126,7 +125,7 @@
           </p>
         </div>
 
-        <!-- ✅ پیام خطای اتصال - فقط وقتی واقعاً قطع است -->
+        <!-- پیام خطای اتصال -->
         <Transition name="fade">
           <div v-if="connectionStatus === 'disconnected'" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-3 mb-4">
             <div class="flex items-start gap-2">
@@ -170,7 +169,7 @@
               <svg class="w-5 h-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
               </svg>
-              <p class="text-success-700 dark:text-success-400 text-sm font-medium">✅ ثبت‌نام با موفقیت انجام شد!</p>
+              <p class="text-success-700 dark:text-success-400 text-sm font-medium">ثبت‌نام با موفقیت انجام شد!</p>
             </div>
           </div>
         </Transition>
@@ -336,10 +335,8 @@ const registerSuccess = ref(false);
 const isDarkMode = ref(false);
 const currentSlide = ref(0);
 
-// ✅ وضعیت اتصال با سه حالت
 const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checking');
 
-// اسلایدهای توضیحات - با آیکون‌های SVG و متن‌های حرفه‌ای
 const slides = [
   {
     id: 1,
@@ -381,7 +378,6 @@ const toggleTheme = () => {
   localStorage.setItem('theme', isDarkMode.value ? 'dark' : 'light');
 };
 
-// ✅ بررسی اتصال بدون نمایش پیام در حالت checking
 const checkConnection = async (): Promise<boolean> => {
   connectionStatus.value = 'checking';
   try {
@@ -396,17 +392,14 @@ const checkConnection = async (): Promise<boolean> => {
   }
 };
 
-// ✅ تلاش مجدد برای اتصال
 const retryConnection = async () => {
   await checkConnection();
 };
 
 const handleRegister = async () => {
-  // بررسی اتصال
   if (connectionStatus.value !== 'connected') {
     const connected = await checkConnection();
     if (!connected) {
-      // پیام خطا از طریق connectionStatus نمایش داده می‌شود
       return;
     }
   }
@@ -431,17 +424,13 @@ const nextSlide = () => {
 };
 
 onMounted(async () => {
-  // بارگذاری تم
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'dark') {
     isDarkMode.value = true;
     document.documentElement.classList.add('dark');
   }
   
-  // بررسی اتصال - بدون نمایش پیام در حالت checking
   await checkConnection();
-  
-  // شروع اسلایدر خودکار
   slideInterval = window.setInterval(nextSlide, 4000);
 });
 
@@ -453,7 +442,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Transition‌ها */
 .fade-enter-active,
 .fade-leave-active {
   transition: all 0.3s ease;
@@ -465,7 +453,6 @@ onUnmounted(() => {
   transform: translateY(-10px);
 }
 
-/* انیمیشن اسلایدر */
 .slide-fade-enter-active {
   transition: all 0.6s ease-out;
 }
@@ -488,7 +475,6 @@ onUnmounted(() => {
   transition: transform 0.5s;
 }
 
-/* حذف اسپینرهای input number */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
