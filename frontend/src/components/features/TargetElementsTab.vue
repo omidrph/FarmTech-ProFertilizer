@@ -1,3 +1,4 @@
+<!-- frontend/src/components/features/target/TargetElementsTab.vue -->
 <template>
   <div class="space-y-6">
     <!-- ============================================================ -->
@@ -126,7 +127,7 @@
       </div>
       
       <!-- ============================================================ -->
-      <!-- راهنمای رنگ‌ها (بدون ایموجی و بدون توضیح اضافی) -->
+      <!-- راهنمای رنگ‌ها -->
       <!-- ============================================================ -->
       <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-600 flex flex-wrap items-center gap-4 text-xs">
         <span class="text-gray-600 dark:text-gray-400 font-medium">راهنما:</span>
@@ -250,81 +251,18 @@
     <RecipeManager @recipe-applied="handleRecipeApplied" />
 
     <!-- ============================================================ -->
-    <!-- جدول توازن عناصر -->
+    <!-- کامپوننت جدول توازن عناصر + راهنما (اکوردئون) -->
     <!-- ============================================================ -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="p-4 sm:p-5">
-        <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
-          <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            جدول توازن عناصر
-          </h3>
-          <button
-            @click="loadConvertedValues"
-            :disabled="isConverting"
-            class="px-3 sm:px-4 py-1.5 sm:py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs sm:text-sm flex items-center gap-1.5 disabled:opacity-50 shadow-sm hover:shadow-md"
-          >
-            <svg v-if="!isConverting" class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            <svg v-else class="animate-spin h-3.5 w-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
-            <span class="hidden xs:inline">{{ isConverting ? 'در حال تبدیل...' : 'به‌روزرسانی' }}</span>
-            <span class="xs:hidden">{{ isConverting ? '...' : 'بروزرسانی' }}</span>
-          </button>
-        </div>
-
-        <div v-if="isConverting && !convertedValues" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <span class="mr-2 text-gray-600 dark:text-gray-400 text-sm">در حال تبدیل واحدها...</span>
-        </div>
-
-        <div v-else class="overflow-x-auto custom-scrollbar">
-          <table class="w-full text-sm border-collapse min-w-[600px]">
-            <thead>
-              <tr>
-                <th class="sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px] shadow-sm">
-                  واحد
-                </th>
-                <th v-for="element in elements" :key="element" class="px-3 py-3 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[70px]">
-                  {{ element }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2.5 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm">
-                  PPM/L
-                </td>
-                <td v-for="element in elements" :key="'ppm-'+element" class="px-3 py-2.5 border-l border-gray-100 dark:border-gray-700 text-center tabular-nums text-gray-700 dark:text-gray-300">
-                  {{ getConvertedValue(element, 'ppm') }}
-                </td>
-              </tr>
-              <tr>
-                <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2.5 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm">
-                  MEQ/L
-                </td>
-                <td v-for="element in elements" :key="'meq-'+element" class="px-3 py-2.5 border-l border-gray-100 dark:border-gray-700 text-center tabular-nums text-gray-700 dark:text-gray-300">
-                  {{ getConvertedValue(element, 'meq') }}
-                </td>
-              </tr>
-              <tr>
-                <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2.5 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm">
-                  MMOLS/L
-                </td>
-                <td v-for="element in elements" :key="'mmol-'+element" class="px-3 py-2.5 border-l border-gray-100 dark:border-gray-700 text-center tabular-nums text-gray-700 dark:text-gray-300">
-                  {{ getConvertedValue(element, 'mmol') }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+    <BalanceAndGuide
+      :elements="elements"
+      :target-unit="targetUnit"
+      :target-values="targetValues"
+      :converted-values="convertedValues"
+      :is-converting="isConverting"
+      :selected-element="selectedElement"
+      @update:selected-element="selectedElement = $event"
+      @open-guide="openElementGuide"
+    />
 
     <!-- ============================================================ -->
     <!-- پیام Toast -->
@@ -353,6 +291,7 @@ import { useTargetStore } from '@/store/modules/targetStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { apiService } from '@/services/apiService';
 import RecipeManager from './RecipeManager.vue';
+import BalanceAndGuide from './BalanceAndGuide.vue';
 
 // ===== Stores =====
 const targetStore = useTargetStore();
@@ -374,6 +313,9 @@ const toastType = ref<'success' | 'error'>('success');
 const isConverting = ref(false);
 const convertedValues = ref<Record<string, Record<string, number>> | null>(null);
 
+// Selected element for guide
+const selectedElement = ref<string>('N-NO3');
+
 // ============================================================
 // ✅ تعریف کاتیون‌ها و آنیون‌ها برای رنگ‌آمیزی
 // ============================================================
@@ -390,21 +332,15 @@ const targetValues = computed(() => targetStore.targetElements);
 const ionBalance = computed(() => targetStore.ionBalance);
 
 // ============================================================
-// ✅ توابع رنگ‌آمیزی (بدون ایموجی)
+// ✅ توابع رنگ‌آمیزی
 // ============================================================
 
-/**
- * تعیین نوع عنصر: cation, anion, neutral
- */
 const getElementType = (element: string): 'cation' | 'anion' | 'neutral' => {
   if (CATION_ELEMENTS.includes(element)) return 'cation';
   if (ANION_ELEMENTS.includes(element)) return 'anion';
   return 'neutral';
 };
 
-/**
- * کلاس CSS برای هدر ستون
- */
 const getElementHeaderClass = (element: string): string => {
   const type = getElementType(element);
   switch (type) {
@@ -417,9 +353,6 @@ const getElementHeaderClass = (element: string): string => {
   }
 };
 
-/**
- * کلاس CSS برای سلول جدول
- */
 const getElementCellClass = (element: string): string => {
   const type = getElementType(element);
   switch (type) {
@@ -487,6 +420,10 @@ const updateElementValue = (element: string, event: Event) => {
   const realValue = convertFromDisplay(displayValue, element, targetUnit.value);
   targetStore.setTargetElement(element as any, realValue);
   triggerAutoSave();
+  // به‌روزرسانی جدول توازن
+  setTimeout(() => {
+    loadConvertedValues();
+  }, 300);
 };
 
 const handleUnitChange = () => {
@@ -499,6 +436,20 @@ const resetTargets = () => {
   convertedValues.value = null;
   showToast('همه مقادیر بازنشانی شدند', 'success');
   triggerAutoSave();
+  setTimeout(() => {
+    loadConvertedValues();
+  }, 200);
+};
+
+const openElementGuide = (element: string) => {
+  selectedElement.value = element;
+  // اسکرول به بخش راهنما
+  setTimeout(() => {
+    const guideElement = document.getElementById('balance-guide-section');
+    if (guideElement) {
+      guideElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, 100);
 };
 
 // ===== Auto-save Logic =====
@@ -612,17 +563,6 @@ const loadConvertedValues = async () => {
   }
 };
 
-const getConvertedValue = (element: string, unit: string): string => {
-  if (!convertedValues.value || !convertedValues.value[element]) {
-    return '0.00';
-  }
-  const value = convertedValues.value[element][unit];
-  if (value === undefined || value === null) {
-    return '0.00';
-  }
-  return value.toFixed(3);
-};
-
 const handleRecipeApplied = () => {
   loadConvertedValues();
   triggerAutoSave();
@@ -631,9 +571,7 @@ const handleRecipeApplied = () => {
 // ===== Watchers =====
 watch(targetValues, () => {
   setTimeout(() => {
-    if (convertedValues.value) {
-      loadConvertedValues();
-    }
+    loadConvertedValues();
   }, 500);
 }, { deep: true });
 
@@ -644,7 +582,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ===== Animations ===== */
 .animate-spin {
   animation: spin 1s linear infinite;
 }
@@ -674,7 +611,6 @@ onMounted(() => {
   transform: translate(-50%, 10px);
 }
 
-/* ===== Scrollbar ===== */
 .custom-scrollbar::-webkit-scrollbar {
   height: 6px;
   width: 6px;
@@ -698,13 +634,11 @@ onMounted(() => {
   background: #4b5563;
 }
 
-/* ===== Utilities ===== */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
 
-/* ===== Responsive ===== */
 @media (max-width: 480px) {
   .xs\:inline {
     display: inline !important;
