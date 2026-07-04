@@ -190,8 +190,307 @@ def print_menu():
     print(f"  {Colors.BOLD}{Colors.GREEN}7{Colors.RESET}  🧹 Clean Cache Files")
     print(f"  {Colors.BOLD}{Colors.YELLOW}8{Colors.RESET}  🔧 Free Occupied Ports")
     print(f"  {Colors.BOLD}{Colors.CYAN}9{Colors.RESET}  📊 View Logs")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}10{Colors.RESET} 🗄️  Reset Database (Create Fresh)")
     print(f"  {Colors.BOLD}{Colors.RED}0{Colors.RESET}  🚪 Exit")
     print()
+
+# ============================================================
+# 🆕 Reset Database Function
+# ============================================================
+def reset_database():
+    """Reset and recreate database with all tables"""
+    print(f"\n{Colors.BLUE}🗄️  Resetting Database...{Colors.RESET}")
+    
+    db_path = BACKEND_DIR / "farmtech.db"
+    
+    # 1. حذف دیتابیس قدیمی
+    if db_path.exists():
+        print(f"{Colors.YELLOW}⚠️  Removing old database...{Colors.RESET}")
+        try:
+            db_path.unlink()
+            print(f"{Colors.GREEN}✅ Old database removed{Colors.RESET}")
+        except Exception as e:
+            print(f"{Colors.RED}❌ Error removing database: {e}{Colors.RESET}")
+            return
+    
+    # 2. ایجاد دیتابیس جدید با SQL مستقیم
+    print(f"{Colors.BLUE}📦 Creating new database with all tables...{Colors.RESET}")
+    
+    # محتوای اسکریپت موقت
+    temp_script_content = '''import sys
+import sqlite3
+from pathlib import Path
+
+DB_PATH = Path(__file__).parent / "farmtech.db"
+
+TABLES_SQL = {
+    "users": """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            first_name VARCHAR(50) NOT NULL,
+            last_name VARCHAR(50) NOT NULL,
+            phone_number VARCHAR(15) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME
+        )
+    """,
+    "user_sessions": """
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token VARCHAR(255) UNIQUE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            expires_at DATETIME,
+            is_active BOOLEAN DEFAULT 1,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """,
+    "reports": """
+        CREATE TABLE IF NOT EXISTS reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            report_name VARCHAR(100),
+            plant_name VARCHAR(50),
+            season VARCHAR(20),
+            growth_stage VARCHAR(50),
+            report_date VARCHAR(20),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """,
+    "fertilizers": """
+        CREATE TABLE IF NOT EXISTS fertilizers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            name VARCHAR(100) NOT NULL,
+            brand VARCHAR(100),
+            category VARCHAR(50),
+            form VARCHAR(20),
+            concentration FLOAT DEFAULT 100.0,
+            elements JSON,
+            price_per_kg FLOAT DEFAULT 0.0,
+            is_acid BOOLEAN DEFAULT 0,
+            acid_type VARCHAR(10),
+            ph_level FLOAT,
+            description TEXT,
+            is_system_default BOOLEAN DEFAULT 0,
+            source_system_id INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """,
+    "water_analyses": """
+        CREATE TABLE IF NOT EXISTS water_analyses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_id INTEGER NOT NULL,
+            water_percentage FLOAT DEFAULT 80.0,
+            wastewater_percentage FLOAT DEFAULT 20.0,
+            water_salinity FLOAT DEFAULT 0.0,
+            wastewater_values JSON,
+            water_values JSON,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+        )
+    """,
+    "calculations": """
+        CREATE TABLE IF NOT EXISTS calculations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_id INTEGER NOT NULL,
+            target_values JSON,
+            final_values JSON,
+            reservoir_data JSON,
+            calc_rows JSON,
+            interpretation TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+        )
+    """,
+    "recipes": """
+        CREATE TABLE IF NOT EXISTS recipes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(100) NOT NULL,
+            description TEXT,
+            is_system BOOLEAN DEFAULT 0,
+            user_id INTEGER,
+            target_values JSON NOT NULL,
+            category VARCHAR(50),
+            stage VARCHAR(50),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """,
+    "water_analysis_templates": """
+        CREATE TABLE IF NOT EXISTS water_analysis_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            description TEXT,
+            water_percentage FLOAT DEFAULT 100.0,
+            wastewater_percentage FLOAT DEFAULT 0.0,
+            water_salinity FLOAT DEFAULT 0.8,
+            water_salinity_unit VARCHAR(10) DEFAULT "dS/m",
+            water_ph FLOAT,
+            water_values JSON,
+            wastewater_values JSON,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """,
+    "optimization_logs": """
+        CREATE TABLE IF NOT EXISTS optimization_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            report_id INTEGER,
+            target_values JSON NOT NULL,
+            water_values JSON,
+            fertilizers_selected JSON,
+            optimization_options JSON,
+            optimized_weights JSON,
+            final_concentrations JSON,
+            residual_error FLOAT,
+            cost_total FLOAT,
+            iterations INTEGER,
+            convergence_time_ms FLOAT,
+            ion_balance JSON,
+            warnings JSON,
+            suggestions JSON,
+            is_successful BOOLEAN DEFAULT 1,
+            error_message TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
+        )
+    """
+}
+
+def main():
+    db_path = Path(__file__).parent / "farmtech.db"
+    
+    print("📦 Creating database tables...")
+    
+    try:
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        
+        for table_name, sql in TABLES_SQL.items():
+            try:
+                cursor.execute(sql)
+                print(f"   ✅ Table {table_name} created")
+            except Exception as e:
+                print(f"   ❌ Error creating {table_name}: {e}")
+        
+        conn.commit()
+        
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        
+        print(f"\n📊 Tables created: {len(tables)}")
+        for table in tables:
+            print(f"   - {table}")
+        
+        print("\n✅ Database created successfully!")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return False
+
+if __name__ == "__main__":
+    success = main()
+    sys.exit(0 if success else 1)'''
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        f.write(temp_script_content)
+        temp_script = f.name
+    
+    try:
+        # اجرای اسکریپت موقت
+        result = subprocess.run(
+            [sys.executable, temp_script],
+            cwd=str(BACKEND_DIR)
+        )
+        
+        if result.returncode == 0:
+            print(f"{Colors.GREEN}✅ Database reset successfully!{Colors.RESET}")
+            
+            # بارگذاری داده‌های سیستمی
+            print(f"{Colors.BLUE}🌱 Loading system data...{Colors.RESET}")
+            load_system_data()
+        else:
+            print(f"{Colors.RED}❌ Failed to reset database{Colors.RESET}")
+            
+    finally:
+        # حذف فایل موقت
+        try:
+            os.unlink(temp_script)
+        except:
+            pass
+
+def load_system_data():
+    """Load system fertilizers and recipes"""
+    python_exe = get_python_executable()
+    
+    # بارگذاری کودهای سیستمی
+    print(f"{Colors.BLUE}   📦 Loading system fertilizers...{Colors.RESET}")
+    cmd = [
+        python_exe, "-c",
+        "from app.seeds.fertilizer_seeds import seed_system_fertilizers; "
+        "from app.database import SessionLocal; "
+        "db = SessionLocal(); "
+        "stats = seed_system_fertilizers(db); "
+        "db.commit(); db.close(); "
+        "print(f'✅ {stats[\\\"added\\\"]} fertilizers added')"
+    ]
+    subprocess.run(cmd, cwd=str(BACKEND_DIR))
+    
+    # بارگذاری رسپی‌های سیستمی
+    print(f"{Colors.BLUE}   📋 Loading system recipes...{Colors.RESET}")
+    cmd = [
+        python_exe, "-c",
+        "from app.seeds.recipe_seeds import seed_system_recipes; "
+        "from app.database import SessionLocal; "
+        "db = SessionLocal(); "
+        "stats = seed_system_recipes(db); "
+        "db.commit(); db.close(); "
+        "print(f'✅ {stats[\\\"added\\\"]} recipes added')"
+    ]
+    subprocess.run(cmd, cwd=str(BACKEND_DIR))
+    
+    # ایجاد کاربر تست
+    print(f"{Colors.BLUE}   👤 Creating test user...{Colors.RESET}")
+    cmd = [
+        python_exe, "-c",
+        "from app.crud import create_user, get_user_by_phone; "
+        "from app.schemas import UserCreate; "
+        "from app.database import SessionLocal; "
+        "db = SessionLocal(); "
+        "user = get_user_by_phone(db, '09121234567'); "
+        "if not user: "
+        "    user_data = UserCreate("
+        "        first_name='تست', "
+        "        last_name='سیستم', "
+        "        phone_number='09121234567', "
+        "        password='Test@123456'"
+        "    ); "
+        "    user = create_user(db, user_data); "
+        "    print(f'✅ Test user created: ID={user.id}'); "
+        "else: "
+        "    print(f'✅ Test user already exists: ID={user.id}'); "
+        "db.commit(); db.close()"
+    ]
+    subprocess.run(cmd, cwd=str(BACKEND_DIR))
+    
+    print(f"{Colors.GREEN}✅ System data loaded successfully!{Colors.RESET}")
+    print(f"{Colors.BLUE}   👤 Test user: 09121234567{Colors.RESET}")
+    print(f"{Colors.BLUE}   🔑 Password: Test@123456{Colors.RESET}")
 
 # ============================================================
 # Backend Functions
@@ -694,6 +993,9 @@ def main():
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '9':
             view_logs()
+            input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
+        elif choice == '10':
+            reset_database()
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '0':
             print(f"\n{Colors.GREEN}👋 Goodbye!{Colors.RESET}")

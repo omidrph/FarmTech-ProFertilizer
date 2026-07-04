@@ -11,6 +11,8 @@ import type {
     OptimizationOptions
 } from '@/types';
 import { apiService } from '@/services/apiService';
+import { useTargetStore } from './targetStore';
+import { useReportStore } from './reportStore'; // ✅ اضافه کردن import
 
 const ELEMENTS: ElementName[] = [
     'N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl',
@@ -32,7 +34,7 @@ export const useCalcStore = defineStore('calc', () => {
     const reservoirData = ref<ReservoirData>({ A: [], B: [], C: [] });
     const totalCost = ref(0);
     
-    // ===== 🆕 State برای بهینه‌سازی =====
+    // ===== State برای بهینه‌سازی =====
     const optimizationResult = ref<OptimizationResponse | null>(null);
     const optimizationHistory = ref<OptimizationResponse[]>([]);
     const lastOptimizationError = ref<string | null>(null);
@@ -58,7 +60,6 @@ export const useCalcStore = defineStore('calc', () => {
         return calculationRows.value.filter((row: CalculationRow) => !row.isFixedRow);
     });
 
-    // ===== 🆕 Getters برای بهینه‌سازی =====
     const hasOptimizationResult = computed(() => optimizationResult.value !== null);
     const optimizationCost = computed(() => optimizationResult.value?.cost_total || 0);
     const optimizationError = computed(() => optimizationResult.value?.residual_error || 0);
@@ -66,21 +67,10 @@ export const useCalcStore = defineStore('calc', () => {
 
     // ===== Actions =====
 
-    /**
-     * 🆕 تابع مقداردهی اولیه ردیف‌های ثابت - دیگر استفاده نمی‌شود
-     * این تابع برای backward compatibility نگه داشته شده اما کاربردی ندارد
-     * @deprecated دیگر از این تابع استفاده نمی‌شود
-     */
     function initializeFixedRows() {
-        // ⚠️ این تابع دیگر ردیف‌های ثابت را ایجاد نمی‌کند
-        // کاربر باید خودش کودهای مورد نظر را انتخاب کند
         calculationRows.value = [];
     }
 
-    /**
-     * 🆕 افزودن ردیف جدید به جدول محاسبه
-     * این تابع توسط کامپوننت FertilizerCalcTab فراخوانی می‌شود
-     */
     function addCalculationRow(
         fertilizerName: string, 
         elements: Partial<Record<ElementName, number>>, 
@@ -101,9 +91,6 @@ export const useCalcStore = defineStore('calc', () => {
         return newRow;
     }
 
-    /**
-     * به‌روزرسانی یک ردیف موجود
-     */
     function updateCalculationRow(id: string, data: Partial<Omit<CalculationRow, 'id' | 'isFixedRow'>>) {
         const index = calculationRows.value.findIndex((row: CalculationRow) => row.id === id);
         if (index !== -1) {
@@ -121,10 +108,6 @@ export const useCalcStore = defineStore('calc', () => {
         return false;
     }
 
-    /**
-     * حذف یک ردیف از جدول
-     * فقط ردیف‌های غیرثابت (isFixedRow === false) قابل حذف هستند
-     */
     function removeCalculationRow(id: string) {
         const index = calculationRows.value.findIndex((row: CalculationRow) => row.id === id);
         if (index !== -1 && !calculationRows.value[index].isFixedRow) {
@@ -134,17 +117,11 @@ export const useCalcStore = defineStore('calc', () => {
         return false;
     }
 
-    /**
-     * حذف همه ردیف‌ها (به جز ردیف‌های ثابت - که الان وجود ندارند)
-     */
     function clearAllRows() {
         calculationRows.value = [];
         optimizationResult.value = null;
     }
 
-    /**
-     * به‌روزرسانی تنظیمات ورودی محاسبه
-     */
     function updateCalculationInputs(inputs: Partial<CalculationInputs>) {
         const newTankVolume = inputs.tankVolume !== undefined ? inputs.tankVolume : calculationInputs.value.tankVolume;
         const newDilutionFactor = inputs.dilutionFactor !== undefined ? inputs.dilutionFactor : calculationInputs.value.dilutionFactor;
@@ -155,9 +132,6 @@ export const useCalcStore = defineStore('calc', () => {
         };
     }
 
-    /**
-     * 🎯 محاسبه مخازن از طریق API بک‌اند
-     */
     async function calculateReservoirDataFromAPI(): Promise<ReservoirData | null> {
         isLoading.value = true;
         try {
@@ -184,9 +158,6 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
-    /**
-     * 🎯 محاسبه کامل و ذخیره در دیتابیس
-     */
     async function calculateAndSave(reportId: string): Promise<any> {
         isLoading.value = true;
         errorMessages.value = [];
@@ -198,9 +169,21 @@ export const useCalcStore = defineStore('calc', () => {
 
             totalCost.value = calculationRows.value.reduce((sum, row) => sum + (row.cost || 0), 0);
 
+            const finalValues: Record<string, number> = {};
+            for (const row of calculationRows.value) {
+                if (row.elements) {
+                    for (const [element, percentage] of Object.entries(row.elements)) {
+                        if (percentage && percentage > 0 && row.weight && row.weight > 0) {
+                            const contribution = (percentage / 100) * row.weight * (row.purity / 100);
+                            finalValues[element] = (finalValues[element] || 0) + contribution;
+                        }
+                    }
+                }
+            }
+
             const calcData = {
                 target_values: {},
-                final_values: elementTotals.value,
+                final_values: finalValues,
                 reservoir_data: reservoir,
                 calc_rows: calculationRows.value.map((row: CalculationRow) => ({
                     material_name: row.materialName,
@@ -210,7 +193,8 @@ export const useCalcStore = defineStore('calc', () => {
                     elements: row.elements,
                     is_acid: row.isAcid || false,
                     acid_type: row.acidType || null,
-                    is_fixed: row.isFixedRow || false
+                    is_fixed: row.isFixedRow || false,
+                    fertilizer_id: row.fertilizerId || null
                 }))
             };
 
@@ -230,9 +214,6 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
-    /**
-     * بارگذاری محاسبات از دیتابیس
-     */
     async function loadCalculation(reportId: string): Promise<boolean> {
         isLoading.value = true;
         errorMessages.value = [];
@@ -249,6 +230,7 @@ export const useCalcStore = defineStore('calc', () => {
                         elements: row.elements || {},
                         isAcid: row.is_acid || row.isAcid || false,
                         acidType: row.acid_type || row.acidType || null,
+                        fertilizerId: row.fertilizer_id || row.fertilizerId || null,
                         isFixedRow: row.is_fixed || row.isFixedRow || false
                     }));
                 }
@@ -269,23 +251,9 @@ export const useCalcStore = defineStore('calc', () => {
     }
 
     // ============================================================
-    // 🆕 توابع بهینه‌سازی خودکار
+    // توابع بهینه‌سازی خودکار
     // ============================================================
 
-    /**
-     * 🚀 بهینه‌سازی خودکار فرمول کود
-     * 
-     * این تابع قلب تپنده جدید FarmTech است.
-     * با استفاده از الگوریتم NNLS، بهترین ترکیب کودها را محاسبه می‌کند.
-     * 
-     * @param targetValues - عناصر هدف (ppm)
-     * @param waterValues - عناصر موجود در آب (ppm)
-     * @param fertilizers - لیست کودهای انتخاب شده
-     * @param options - تنظیمات بهینه‌سازی
-     * @param tankVolume - حجم مخزن (لیتر)
-     * @param stockVolume - حجم استوک (لیتر)
-     * @param injectionRatio - نسبت تزریق
-     */
     async function optimizeFertilizers(
         targetValues: Record<string, number>,
         waterValues: Record<string, number>,
@@ -300,7 +268,6 @@ export const useCalcStore = defineStore('calc', () => {
         optimizationResult.value = null;
 
         try {
-            // آماده‌سازی داده‌ها برای API
             const requestData: OptimizationRequest = {
                 target_values: targetValues,
                 water_values: waterValues,
@@ -324,13 +291,11 @@ export const useCalcStore = defineStore('calc', () => {
                 injection_ratio: injectionRatio
             };
 
-            // ارسال درخواست به API
             const result = await apiService.optimizeFertilizers(requestData);
             
             if (result) {
                 optimizationResult.value = result;
                 
-                // تبدیل نتایج به ردیف‌های جدول (برای سازگاری با نسخه قبلی)
                 const newRows: CalculationRow[] = [];
                 let totalCostValue = 0;
                 
@@ -355,19 +320,22 @@ export const useCalcStore = defineStore('calc', () => {
                     }
                 }
                 
-                // به‌روزرسانی ردیف‌های جدول
                 calculationRows.value = newRows;
                 totalCost.value = totalCostValue;
                 
-                // به‌روزرسانی مخازن
                 if (result.reservoir_data) {
                     reservoirData.value = result.reservoir_data;
                 }
                 
-                // اضافه کردن به تاریخچه
                 optimizationHistory.value.unshift(result);
                 if (optimizationHistory.value.length > 50) {
                     optimizationHistory.value.pop();
+                }
+                
+                // ✅ اصلاح: استفاده صحیح از useReportStore
+                const reportStore = useReportStore();
+                if (reportStore.currentReportId) {
+                    await reportStore.saveCurrentReport();
                 }
                 
                 return result;
@@ -389,9 +357,6 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
-    /**
-     * ذخیره نتیجه بهینه‌سازی در گزارش
-     */
     async function saveOptimizationToReport(reportId: string): Promise<boolean> {
         if (!optimizationResult.value) {
             errorMessages.value.push('هیچ نتیجه بهینه‌سازی برای ذخیره وجود ندارد');
@@ -407,9 +372,6 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
-    /**
-     * بارگذاری تاریخچه بهینه‌سازی از سرور
-     */
     async function loadOptimizationHistory(
         skip: number = 0, 
         limit: number = 50, 
@@ -417,13 +379,18 @@ export const useCalcStore = defineStore('calc', () => {
     ): Promise<OptimizationResponse[]> {
         try {
             const history = await apiService.getOptimizationHistory(skip, limit, reportId);
-            // تبدیل به فرمت مناسب
-            const formattedHistory = history.map((item: any) => ({
+            // ✅ اصلاح: اضافه کردن فیلدهای مورد نیاز OptimizationResponse
+            const formattedHistory: OptimizationResponse[] = history.map((item: any) => ({
                 weights: item.optimized_weights || {},
                 concentrations: item.final_concentrations || {},
                 residual_error: item.residual_error || 0,
                 cost_total: item.cost_total || 0,
-                ion_balance: item.ion_balance || { cation: 0, anion: 0, isBalanced: true, message: '' },
+                ion_balance: {
+                    cation: item.ion_balance?.cation || 0,
+                    anion: item.ion_balance?.anion || 0,
+                    isBalanced: item.ion_balance?.isBalanced || false,
+                    message: item.ion_balance?.message || ''
+                },
                 target_achievement: {},
                 warnings: item.warnings || [],
                 suggestions: item.suggestions || [],
@@ -431,7 +398,26 @@ export const useCalcStore = defineStore('calc', () => {
                 iterations: item.iterations || 0,
                 convergence_time_ms: item.convergence_time_ms || 0,
                 is_converged: item.is_successful || false,
-                summary: ''
+                summary: '',
+                // ✅ اضافه کردن فیلدهای جدید
+                ec: 0,
+                ph: 7.0,
+                ec_status: '',
+                ph_status: '',
+                ec_ph_status: {
+                    status: 'optimal',
+                    status_label: 'مطلوب',
+                    color: 'success',
+                    message: '',
+                    issues: [],
+                    recommendations: [],
+                    ec: 0,
+                    ph: 7.0,
+                    ec_status: '',
+                    ec_label: '',
+                    ph_status: '',
+                    ph_label: ''
+                }
             }));
             
             optimizationHistory.value = formattedHistory;
@@ -442,17 +428,11 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
-    /**
-     * پاک کردن نتیجه بهینه‌سازی
-     */
     function clearOptimizationResult() {
         optimizationResult.value = null;
         lastOptimizationError.value = null;
     }
 
-    /**
-     * بازنشانی کامل - بدون ردیف‌های ثابت
-     */
     function resetCalculation() {
         calculationRows.value = [];
         errorMessages.value = [];
@@ -466,6 +446,9 @@ export const useCalcStore = defineStore('calc', () => {
         totalCost.value = 0;
         optimizationResult.value = null;
         lastOptimizationError.value = null;
+        
+        const targetStore = useTargetStore();
+        targetStore.resetTargets();
     }
 
     function addError(message: string) {
@@ -486,8 +469,6 @@ export const useCalcStore = defineStore('calc', () => {
     }
 
     // ===== Initialize =====
-    // ⚠️ دیگر initializeFixedRows() در ابتدا اجرا نمی‌شود
-    // جدول محاسبه خالی شروع می‌شود و کاربر باید کودهای خود را انتخاب کند
     calculationRows.value = [];
 
     return {
@@ -501,7 +482,6 @@ export const useCalcStore = defineStore('calc', () => {
         reservoirData,
         totalCost,
         
-        // 🆕 State بهینه‌سازی
         optimizationResult,
         optimizationHistory,
         lastOptimizationError,
@@ -511,8 +491,6 @@ export const useCalcStore = defineStore('calc', () => {
         hasErrors,
         fixedRows,
         dynamicRows,
-        
-        // 🆕 Getters بهینه‌سازی
         hasOptimizationResult,
         optimizationCost,
         optimizationError,
@@ -532,8 +510,6 @@ export const useCalcStore = defineStore('calc', () => {
         addError,
         removeError,
         clearErrors,
-        
-        // 🆕 Actions بهینه‌سازی
         optimizeFertilizers,
         saveOptimizationToReport,
         loadOptimizationHistory,
@@ -541,5 +517,4 @@ export const useCalcStore = defineStore('calc', () => {
     };
 });
 
-// ✅ اضافه کردن export default
 export default useCalcStore;

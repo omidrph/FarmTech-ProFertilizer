@@ -418,8 +418,10 @@ const updateElementValue = (element: string, event: Event) => {
   const target = event.target as HTMLInputElement;
   const displayValue = parseFloat(target.value) || 0;
   const realValue = convertFromDisplay(displayValue, element, targetUnit.value);
+  
+  // تنظیم مقدار در store
   targetStore.setTargetElement(element as any, realValue);
-  triggerAutoSave();
+  
   // به‌روزرسانی جدول توازن
   setTimeout(() => {
     loadConvertedValues();
@@ -428,6 +430,7 @@ const updateElementValue = (element: string, event: Event) => {
 
 const handleUnitChange = () => {
   loadConvertedValues();
+  // ذخیره خودکار
   triggerAutoSave();
 };
 
@@ -435,6 +438,7 @@ const resetTargets = () => {
   targetStore.resetTargets();
   convertedValues.value = null;
   showToast('همه مقادیر بازنشانی شدند', 'success');
+  // ذخیره تغییرات
   triggerAutoSave();
   setTimeout(() => {
     loadConvertedValues();
@@ -443,7 +447,6 @@ const resetTargets = () => {
 
 const openElementGuide = (element: string) => {
   selectedElement.value = element;
-  // اسکرول به بخش راهنما
   setTimeout(() => {
     const guideElement = document.getElementById('balance-guide-section');
     if (guideElement) {
@@ -452,56 +455,25 @@ const openElementGuide = (element: string) => {
   }, 100);
 };
 
-// ===== Auto-save Logic =====
+// ===== ✅ اصلاح: Auto-save Logic با استفاده از reportStore =====
 const triggerAutoSave = () => {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveStatus.value = 'saving';
   saveTimeout = setTimeout(async () => {
-    await performSave();
-  }, 1000);
-};
-
-const performSave = async () => {
-  if (!reportStore.currentReportId) {
-    saveStatus.value = 'idle';
-    return;
-  }
-  isSaving.value = true;
-  try {
-    const targetValuesForSave: Record<string, number> = {};
-    for (const [key, value] of Object.entries(targetValues.value)) {
-      if (value !== undefined && value !== null && typeof value === 'number' && value > 0) {
-        targetValuesForSave[key] = value;
+    if (reportStore.currentReportId) {
+      const success = await reportStore.saveCurrentReport();
+      if (success) {
+        saveStatus.value = 'success';
+        setTimeout(() => { saveStatus.value = 'idle'; }, 2000);
+      } else {
+        saveStatus.value = 'idle';
+        console.warn('⚠️ Auto-save failed');
       }
-    }
-
-    const calcPayload = {
-      target_values: targetValuesForSave,
-      final_values: {},
-      reservoir_data: {},
-      calc_rows: [],
-      interpretation: null
-    };
-
-    let existingCalc = null;
-    try {
-      existingCalc = await apiService.getCalculation(String(reportStore.currentReportId));
-    } catch (e) {}
-
-    if (existingCalc) {
-      await apiService.updateCalculation(String(existingCalc.id), calcPayload);
     } else {
-      await apiService.createCalculation(String(reportStore.currentReportId), calcPayload);
+      saveStatus.value = 'idle';
+      console.log('ℹ️ No report ID available for auto-save');
     }
-
-    saveStatus.value = 'success';
-    setTimeout(() => { saveStatus.value = 'idle'; }, 2000);
-  } catch (error: any) {
-    console.error('Auto-save error:', error);
-    saveStatus.value = 'idle';
-  } finally {
-    isSaving.value = false;
-  }
+  }, 1000);
 };
 
 // ===== Toast =====

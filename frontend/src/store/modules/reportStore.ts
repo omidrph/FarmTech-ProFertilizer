@@ -91,7 +91,7 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * 🆕 بارگذاری لیست گزارش‌های کاربر از API
+   * بارگذاری لیست گزارش‌های کاربر از API
    */
   async function loadReports(): Promise<boolean> {
     isLoading.value = true;
@@ -113,8 +113,7 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * 🆕 ذخیره گزارش فعلی در دیتابیس
-   * شامل تمام داده‌های مرتبط (آب، عناصر هدف، محاسبات)
+   * 🆕 ذخیره کامل گزارش در دیتابیس - نسخه اصلاح شده
    */
   async function saveCurrentReport(): Promise<boolean> {
     isLoading.value = true;
@@ -135,10 +134,8 @@ export const useReportStore = defineStore('report', () => {
 
       let savedReport: any;
       if (currentReportId.value) {
-        // به‌روزرسانی گزارش موجود
         savedReport = await apiService.updateReport(String(currentReportId.value), reportPayload);
       } else {
-        // ایجاد گزارش جدید
         savedReport = await apiService.createReport(reportPayload);
         if (savedReport && savedReport.id) {
           currentReportId.value = savedReport.id;
@@ -151,7 +148,54 @@ export const useReportStore = defineStore('report', () => {
 
       const reportId = String(savedReport.id);
 
-      // 2. ذخیره آنالیز آب
+      // ============================================================
+      // ✅ اصلاح: ذخیره عناصر هدف با استفاده از تابع اختصاصی targetStore
+      // ============================================================
+      const targetValues: Record<string, number> = {};
+      for (const [key, value] of Object.entries(targetStore.targetElements)) {
+        if (value !== undefined && value !== null && typeof value === 'number' && value > 0) {
+          targetValues[key] = value;
+        }
+      }
+
+      // محاسبه final_values از روی calc_rows
+      const finalValues: Record<string, number> = {};
+      for (const row of calcStore.calculationRows) {
+        if (row.elements) {
+          for (const [element, percentage] of Object.entries(row.elements)) {
+            if (percentage && percentage > 0 && row.weight && row.weight > 0) {
+              const contribution = (percentage / 100) * row.weight * (row.purity / 100);
+              finalValues[element] = (finalValues[element] || 0) + contribution;
+            }
+          }
+        }
+      }
+
+      // 2. ذخیره محاسبات (عناصر هدف + نتایج)
+      const calcPayload = {
+        target_values: targetValues,
+        final_values: finalValues,
+        reservoir_data: calcStore.reservoirData || { A: [], B: [], C: [] },
+        calc_rows: calcStore.calculationRows || [],
+        interpretation: null
+      };
+
+      let existingCalc = null;
+      try {
+        existingCalc = await apiService.getCalculation(reportId);
+      } catch (e) {
+        console.log('ℹ️ No existing calculation found, creating new one');
+      }
+
+      if (existingCalc) {
+        await apiService.updateCalculation(String(existingCalc.id), calcPayload);
+        console.log('✅ Calculation updated successfully');
+      } else {
+        await apiService.createCalculation(reportId, calcPayload);
+        console.log('✅ Calculation created successfully');
+      }
+
+      // 3. ذخیره آنالیز آب
       if (waterStore.waterMixData.waterSalinity > 0 || Object.keys(waterStore.waterValues).length > 0) {
         try {
           const existingWaterAnalysis = await apiService.getWaterAnalysis(reportId).catch(() => null);
@@ -173,53 +217,6 @@ export const useReportStore = defineStore('report', () => {
         }
       }
 
-      // 3. ذخیره محاسبات (عناصر هدف + نتایج)
-      const targetKeys = Object.keys(targetStore.targetElements);
-      const hasTargets = targetKeys.some(key => {
-        const value = targetStore.targetElements[key as keyof typeof targetStore.targetElements];
-        // اصلاح: بررسی نوع value قبل از مقایسه
-        if (value === undefined || value === null) {
-          return false;
-        }
-        if (typeof value === 'number') {
-          return value > 0;
-        }
-        return false;
-      });
-
-      if (hasTargets || calcStore.calculationRows.length > 0) {
-        try {
-          // اطمینان از اینکه targetElements به درستی ذخیره می‌شود
-          const targetValues: Record<string, number> = {};
-          for (const [key, value] of Object.entries(targetStore.targetElements)) {
-            // اصلاح: بررسی نوع value قبل از استفاده
-            if (value === undefined || value === null) {
-              continue;
-            }
-            if (typeof value === 'number' && value > 0) {
-              targetValues[key] = value;
-            }
-          }
-
-          const calcPayload = {
-            target_values: targetValues,
-            final_values: {},
-            reservoir_data: calcStore.reservoirData,
-            calc_rows: calcStore.calculationRows,
-            interpretation: null
-          };
-
-          const existingCalc = await apiService.getCalculation(reportId).catch(() => null);
-          if (existingCalc) {
-            await apiService.updateCalculation(String(existingCalc.id), calcPayload);
-          } else {
-            await apiService.createCalculation(reportId, calcPayload);
-          }
-        } catch (err) {
-          console.warn('خطا در ذخیره محاسبات:', err);
-        }
-      }
-
       // بارگذاری مجدد گزارش‌ها
       await loadReports();
       return true;
@@ -233,10 +230,7 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * 🆕 بارگذاری یک گزارش خاص و تمام داده‌های مرتبط آن
-   * 
-   * 🐛 رفع باگ: قبل از بارگذاری گزارش جدید، همه storeها ریست می‌شوند
-   * تا داده‌های گزارش قبلی باقی نمانند
+   * بارگذاری یک گزارش خاص و تمام داده‌های مرتبط آن
    */
   async function loadReport(reportId: number): Promise<boolean> {
     isLoading.value = true;
@@ -246,8 +240,7 @@ export const useReportStore = defineStore('report', () => {
       const targetStore = useTargetStore();
       const calcStore = useCalcStore();
 
-      // 🐛🔧 رفع باگ: ریست کردن storeها قبل از بارگذاری گزارش جدید
-      // این کار باعث می‌شود داده‌های گزارش قبلی پاک شوند و با داده‌های جدید جایگزین شوند
+      // 🐛 ریست کردن storeها قبل از بارگذاری گزارش جدید
       waterStore.resetWaterData();
       targetStore.resetTargets();
       calcStore.resetCalculation();
@@ -258,7 +251,6 @@ export const useReportStore = defineStore('report', () => {
         throw new Error('گزارش پیدا نشد');
       }
 
-      // به‌روزرسانی reportData
       reportData.value = {
         reportName: report.report_name || '',
         plantName: report.plant_name || '',
@@ -296,10 +288,9 @@ export const useReportStore = defineStore('report', () => {
       try {
         const calculation = await apiService.getCalculation(String(reportId));
         if (calculation) {
-          // ===== اصلاح: اطمینان از اینکه target_values به درستی در targetStore قرار می‌گیرد =====
+          // بارگذاری target_values
           if (calculation.target_values) {
             let targetValues = calculation.target_values;
-            // اگر target_values رشته JSON است، آن را تبدیل کن
             if (typeof targetValues === 'string') {
               try {
                 targetValues = JSON.parse(targetValues);
@@ -308,23 +299,14 @@ export const useReportStore = defineStore('report', () => {
                 targetValues = {};
               }
             }
-            // اگر target_values دیکشنری است، آن را در targetStore قرار بده
             if (typeof targetValues === 'object' && targetValues !== null) {
-              console.log('Loading target_values into store:', targetValues);
+              console.log('📥 Loading target_values into store:', targetValues);
               for (const [key, value] of Object.entries(targetValues)) {
-                // اصلاح: بررسی نوع value قبل از استفاده
-                if (value === undefined || value === null) {
-                  continue;
-                }
-                if (typeof value === 'number' && value > 0) {
-                  targetStore.setTargetElement(key as any, value as number);
+                if (value !== undefined && value !== null && typeof value === 'number' && value > 0) {
+                  targetStore.setTargetElement(key as any, value);
                 }
               }
-            } else {
-              console.warn('target_values is not an object:', typeof targetValues);
             }
-          } else {
-            console.warn('calculation.target_values is null or undefined');
           }
 
           // بارگذاری calc_rows
@@ -345,8 +327,21 @@ export const useReportStore = defineStore('report', () => {
             }
             calcStore.reservoirData = reservoirData;
           }
-        } else {
-          console.warn('No calculation found for report:', reportId);
+
+          // بارگذاری final_values
+          if (calculation.final_values) {
+            let finalValues = calculation.final_values;
+            if (typeof finalValues === 'string') {
+              try {
+                finalValues = JSON.parse(finalValues);
+              } catch (e) {
+                console.error('Error parsing final_values JSON:', e);
+                finalValues = {};
+              }
+            }
+            // به‌روزرسانی elementTotals در calcStore
+            // (این کار از طریق getter انجام می‌شود)
+          }
         }
       } catch (err) {
         console.warn('محاسبات برای این گزارش وجود ندارد:', err);
@@ -363,7 +358,7 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * 🆕 حذف گزارش فعلی
+   * حذف گزارش فعلی
    */
   async function deleteCurrentReport(): Promise<boolean> {
     if (!currentReportId.value) {
@@ -387,7 +382,7 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * 🆕 حذف یک گزارش خاص
+   * حذف یک گزارش خاص
    */
   async function deleteReport(reportId: number): Promise<boolean> {
     isLoading.value = true;

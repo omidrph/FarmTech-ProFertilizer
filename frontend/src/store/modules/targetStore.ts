@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { apiService } from '@/services/apiService';
+import { useReportStore } from './reportStore';
 
 type Unit = 'ppm' | 'meq' | 'mmol';
 
@@ -16,6 +17,7 @@ export const useTargetStore = defineStore('target', () => {
   const targetUnit = ref<Unit>(DEFAULT_UNIT);
   const ionBalance = ref({ cation: 0, anion: 0, isBalanced: false });
   const isCalculatingBalance = ref(false);
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // ===== Getters =====
   const isBalanced = computed(() => ionBalance.value.isBalanced);
@@ -28,6 +30,66 @@ export const useTargetStore = defineStore('target', () => {
   });
 
   // ===== Actions =====
+
+  /**
+   * 🆕 ذخیره عناصر هدف در سرور
+   */
+  async function saveTargetsToServer(reportId?: string): Promise<boolean> {
+    const reportStore = useReportStore();
+    const targetId = reportId || String(reportStore.currentReportId);
+    
+    if (!targetId || targetId === 'null') {
+      console.warn('⚠️ No report ID available for saving targets');
+      return false;
+    }
+
+    // فیلتر کردن عناصر با مقدار مثبت
+    const targetValues: Record<string, number> = {};
+    for (const [key, value] of Object.entries(targetElements.value)) {
+      if (value !== undefined && value !== null && typeof value === 'number' && value > 0) {
+        targetValues[key] = value;
+      }
+    }
+
+    // اگر هیچ عنصری وجود نداشته باشد، ذخیره نکن
+    if (Object.keys(targetValues).length === 0) {
+      console.log('ℹ️ No target values to save');
+      return true;
+    }
+
+    try {
+      console.log('💾 Saving targets to server:', targetValues);
+      
+      // دریافت محاسبات موجود
+      let existingCalc = null;
+      try {
+        existingCalc = await apiService.getCalculation(targetId);
+      } catch (e) {
+        console.log('ℹ️ No existing calculation found, creating new one');
+      }
+
+      const calcPayload = {
+        target_values: targetValues,
+        final_values: existingCalc?.final_values || {},
+        reservoir_data: existingCalc?.reservoir_data || { A: [], B: [], C: [] },
+        calc_rows: existingCalc?.calc_rows || [],
+        interpretation: existingCalc?.interpretation || null
+      };
+
+      if (existingCalc) {
+        await apiService.updateCalculation(String(existingCalc.id), calcPayload);
+        console.log('✅ Targets updated successfully');
+      } else {
+        await apiService.createCalculation(targetId, calcPayload);
+        console.log('✅ Targets created successfully');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('❌ Error saving targets to server:', error);
+      return false;
+    }
+  }
 
   /**
    * 🎯 محاسبه تعادل یونی از طریق API بک‌اند
@@ -58,10 +120,33 @@ export const useTargetStore = defineStore('target', () => {
     }
   }
 
+  /**
+   * تنظیم مقدار یک عنصر هدف
+   */
   function setTargetElement(element: ElementName, value: number) {
-    console.log(`Setting target element: ${element} = ${value}`);
+    console.log(`🎯 Setting target element: ${element} = ${value}`);
     targetElements.value[element] = value;
+    
+    // محاسبه تعادل یونی
     debounceCalculateBalance();
+    
+    // 🆕 ذخیره خودکار در سرور (با تأخیر)
+    debounceSaveToServer();
+  }
+
+  /**
+   * ذخیره با تأخیر (Debounce)
+   */
+  function debounceSaveToServer() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    saveTimeout = setTimeout(async () => {
+      const reportStore = useReportStore();
+      if (reportStore.currentReportId) {
+        await saveTargetsToServer();
+      }
+    }, 500);
   }
 
   function setTargetUnit(unit: Unit) {
@@ -79,11 +164,10 @@ export const useTargetStore = defineStore('target', () => {
   }
 
   /**
-   * 🆕 بارگذاری دستی عناصر هدف از یک شیء
-   * این تابع برای بارگذاری داده‌های ذخیره شده از دیتابیس استفاده می‌شود
+   * بارگذاری عناصر هدف از یک شیء
    */
   function loadTargetsFromObject(data: Record<string, number>) {
-    console.log('Loading targets from object:', data);
+    console.log('📥 Loading targets from object:', data);
     if (data && typeof data === 'object') {
       for (const [key, value] of Object.entries(data)) {
         if (ELEMENTS.includes(key as any) && value !== undefined && value !== null && value > 0) {
@@ -93,7 +177,7 @@ export const useTargetStore = defineStore('target', () => {
       // محاسبه تعادل یونی پس از بارگذاری
       calculateIonBalanceFromAPI();
     } else {
-      console.warn('Invalid data for loadTargetsFromObject:', data);
+      console.warn('⚠️ Invalid data for loadTargetsFromObject:', data);
     }
   }
 
@@ -121,9 +205,9 @@ export const useTargetStore = defineStore('target', () => {
     resetTargets,
     getTargetElement,
     calculateIonBalanceFromAPI,
-    loadTargetsFromObject  // 🆕 تابع جدید
+    loadTargetsFromObject,
+    saveTargetsToServer // 🆕 تابع جدید برای ذخیره‌سازی
   };
 });
 
-// ✅ اضافه کردن export default
 export default useTargetStore;

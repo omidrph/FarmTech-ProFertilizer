@@ -501,13 +501,12 @@ const filteredReports = computed(() => {
   );
 });
 
+// ✅ اصلاح: حذف استفاده از isDirty
 const getReportStatusClass = computed(() => {
   if (!reportStore.hasCurrentReport) {
     return 'bg-gray-300 dark:bg-gray-600';
   }
-  if (reportStore.isDirty) {
-    return 'bg-yellow-500 animate-pulse';
-  }
+  // فقط بر اساس وجود گزارش، وضعیت را نشان بده
   return 'bg-green-500';
 });
 
@@ -591,13 +590,16 @@ const formatDate = (dateString: string): string => {
 };
 
 // ===== File Menu Actions =====
+// ✅ اصلاح: حذف استفاده از isDirty
 const handleNewReport = (event?: MouseEvent) => {
   if (event) {
     event.preventDefault();
   }
   closeFileMenu();
-  if (reportStore.hasCurrentReport && reportStore.isDirty) {
-    if (!confirm('گزارش فعلی ذخیره نشده است. آیا مطمئن هستید که می‌خواهید گزارش جدید ایجاد کنید؟')) {
+  
+  // فقط بررسی وجود گزارش
+  if (reportStore.hasCurrentReport) {
+    if (!confirm('آیا مطمئن هستید که می‌خواهید گزارش جدید ایجاد کنید؟')) {
       return;
     }
   }
@@ -672,9 +674,11 @@ const closeOpenModal = () => {
   searchQuery.value = '';
 };
 
+// ✅ اصلاح: حذف استفاده از isDirty
 const loadSelectedReport = async (reportId: number) => {
-  if (reportStore.hasCurrentReport && reportStore.currentReportId !== reportId && reportStore.isDirty) {
-    if (!confirm('گزارش فعلی ذخیره نشده است. آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
+  // فقط بررسی وجود گزارش فعلی
+  if (reportStore.hasCurrentReport && reportStore.currentReportId !== reportId) {
+    if (!confirm('آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
       return;
     }
   }
@@ -714,7 +718,6 @@ const deleteSelectedReport = async (reportId: number) => {
 
 // ===== Keyboard Shortcuts =====
 const handleKeyboard = (event: KeyboardEvent) => {
-  // جلوگیری از باز شدن تب جدید در مرورگر
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
       case 'n':
