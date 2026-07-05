@@ -1,28 +1,87 @@
-version: '3.8'
-
 services:
+  # ============================================================
+  # PostgreSQL Database
+  # ============================================================
+  db:
+    image: postgres:15-alpine
+    container_name: farmtech-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-farmtech_db}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - farmtech-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-farmtech_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================
+  # pgAdmin - مدیریت گرافیکی دیتابیس
+  # ============================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: farmtech-pgadmin
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@farmtech.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./scripts/pgadmin_servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - farmtech-network
+
+  # ============================================================
+  # Backend (FastAPI)
+  # ============================================================
   backend:
     build:
-      context: ./backend
-      dockerfile: ../Dockerfile
+      context: .
+      dockerfile: Dockerfile.backend
     container_name: farmtech-backend
+    restart: unless-stopped
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - ./backend/farmtech.db:/app/farmtech.db
+      - ./logs:/app/logs
     environment:
-      - DATABASE_URL=sqlite:///./farmtech.db
-      - DEBUG=True
-    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-farmtech_db}
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-this-in-production}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173","http://127.0.0.1:3000","http://127.0.0.1:5173"]}
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - farmtech-network
 
+  # ============================================================
+  # Frontend (Vue 3)
+  # ============================================================
   frontend:
     build:
-      context: ./frontend
-      dockerfile: ../Dockerfile.frontend
+      context: .
+      dockerfile: Dockerfile.frontend
     container_name: farmtech-frontend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
@@ -30,12 +89,24 @@ services:
       - /app/node_modules
     environment:
       - VITE_API_URL=http://localhost:8000/api/v1
-    command: npm run dev -- --host 0.0.0.0 --port 3000
     depends_on:
       - backend
+    command: npm run dev -- --host 0.0.0.0 --port 3000
     networks:
       - farmtech-network
 
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# ============================================================
+# Networks
+# ============================================================
 networks:
   farmtech-network:
     driver: bridge

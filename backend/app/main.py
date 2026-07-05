@@ -162,6 +162,7 @@ async def startup_event():
     """
     logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"🔧 Debug mode: {settings.DEBUG}")
+    logger.info(f"🗄️ Database URL: {settings.DATABASE_URL}")
     
     # ===== مرحله ۱: ساخت جداول دیتابیس =====
     try:

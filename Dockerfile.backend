@@ -1,0 +1,27 @@
+# Dockerfile.backend
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# نصب وابستگی‌های سیستم مورد نیاز برای psycopg2
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# کپی و نصب وابستگی‌های Python
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# کپی کد بک‌اند
+COPY backend/ .
+
+# کپی اسکریپت‌های مدیریتی
+COPY scripts/ ./scripts/
+
+# ایجاد کاربر غیرroot برای امنیت بیشتر
+RUN useradd -m -u 1000 farmtech && chown -R farmtech:farmtech /app
+USER farmtech
+
+# اجرای برنامه
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

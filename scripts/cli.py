@@ -2,7 +2,7 @@
 # scripts/cli.py
 """
 FarmTech-ProFertilizer - CLI Management Tool
-Improved version with dynamic ports, better error handling, and full English UI
+Complete version with Docker support and PostgreSQL integration
 """
 
 import os
@@ -15,6 +15,7 @@ import signal
 import shutil
 import urllib.request
 import urllib.error
+import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -35,16 +36,16 @@ except ImportError:
 # ============================================================
 # Base Configuration
 # ============================================================
-# Project root directory (parent of scripts folder)
 BASE_DIR = Path(__file__).parent.parent.absolute()
 BACKEND_DIR = BASE_DIR / "backend"
 FRONTEND_DIR = BASE_DIR / "frontend"
 LOGS_DIR = BASE_DIR / "logs"
 SCRIPTS_DIR = BASE_DIR / "scripts"
 
-# Default ports
 DEFAULT_BACKEND_PORT = 8000
 DEFAULT_FRONTEND_PORT = 3000
+DEFAULT_DB_PORT = 5432
+DEFAULT_PGADMIN_PORT = 5050
 
 # ============================================================
 # Colors Class
@@ -118,7 +119,6 @@ def kill_process_on_port(port: int) -> bool:
     """Try to kill process running on specified port"""
     try:
         if platform.system() == 'Windows':
-            # Find PID using netstat
             result = subprocess.run(
                 f'netstat -ano | findstr :{port}',
                 shell=True,
@@ -134,7 +134,6 @@ def kill_process_on_port(port: int) -> bool:
                             subprocess.run(f'taskkill /PID {pid} /F', shell=True, capture_output=True)
                             return True
         else:
-            # Linux/Mac - use lsof
             result = subprocess.run(
                 f'lsof -ti :{port}',
                 shell=True,
@@ -190,307 +189,181 @@ def print_menu():
     print(f"  {Colors.BOLD}{Colors.GREEN}7{Colors.RESET}  🧹 Clean Cache Files")
     print(f"  {Colors.BOLD}{Colors.YELLOW}8{Colors.RESET}  🔧 Free Occupied Ports")
     print(f"  {Colors.BOLD}{Colors.CYAN}9{Colors.RESET}  📊 View Logs")
-    print(f"  {Colors.BOLD}{Colors.MAGENTA}10{Colors.RESET} 🗄️  Reset Database (Create Fresh)")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}10{Colors.RESET} 🗄️  Reset Database (PostgreSQL)")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}11{Colors.RESET} 🐳  Docker: Build and Run")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}12{Colors.RESET} 🐳  Docker: Stop and Remove")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}13{Colors.RESET} 🐳  Docker: View Logs")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}14{Colors.RESET} 🐘  Docker: Start pgAdmin")
     print(f"  {Colors.BOLD}{Colors.RED}0{Colors.RESET}  🚪 Exit")
     print()
 
 # ============================================================
-# 🆕 Reset Database Function
+# Docker Management Functions
 # ============================================================
-def reset_database():
-    """Reset and recreate database with all tables"""
-    print(f"\n{Colors.BLUE}🗄️  Resetting Database...{Colors.RESET}")
+def docker_build_and_run():
+    """Build and run with Docker Compose"""
+    print(f"\n{Colors.BLUE}🐳 Building and running with Docker Compose...{Colors.RESET}")
     
-    db_path = BACKEND_DIR / "farmtech.db"
-    
-    # 1. حذف دیتابیس قدیمی
-    if db_path.exists():
-        print(f"{Colors.YELLOW}⚠️  Removing old database...{Colors.RESET}")
-        try:
-            db_path.unlink()
-            print(f"{Colors.GREEN}✅ Old database removed{Colors.RESET}")
-        except Exception as e:
-            print(f"{Colors.RED}❌ Error removing database: {e}{Colors.RESET}")
+    # Check if .env exists
+    env_file = BASE_DIR / ".env"
+    if not env_file.exists():
+        print(f"{Colors.YELLOW}⚠️  .env file not found. Creating from .env.example...{Colors.RESET}")
+        env_example = BASE_DIR / ".env.example"
+        if env_example.exists():
+            shutil.copy(env_example, env_file)
+            print(f"{Colors.GREEN}✅ .env created from .env.example{Colors.RESET}")
+        else:
+            print(f"{Colors.RED}❌ .env.example not found{Colors.RESET}")
             return
     
-    # 2. ایجاد دیتابیس جدید با SQL مستقیم
-    print(f"{Colors.BLUE}📦 Creating new database with all tables...{Colors.RESET}")
+    # Check docker-compose.yml
+    compose_file = BASE_DIR / "docker-compose.yml"
+    if not compose_file.exists():
+        print(f"{Colors.RED}❌ docker-compose.yml not found{Colors.RESET}")
+        return
     
-    # محتوای اسکریپت موقت
-    temp_script_content = '''import sys
-import sqlite3
-from pathlib import Path
-
-DB_PATH = Path(__file__).parent / "farmtech.db"
-
-TABLES_SQL = {
-    "users": """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            first_name VARCHAR(50) NOT NULL,
-            last_name VARCHAR(50) NOT NULL,
-            phone_number VARCHAR(15) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            is_active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME
-        )
-    """,
-    "user_sessions": """
-        CREATE TABLE IF NOT EXISTS user_sessions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token VARCHAR(255) UNIQUE NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at DATETIME,
-            is_active BOOLEAN DEFAULT 1,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """,
-    "reports": """
-        CREATE TABLE IF NOT EXISTS reports (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            report_name VARCHAR(100),
-            plant_name VARCHAR(50),
-            season VARCHAR(20),
-            growth_stage VARCHAR(50),
-            report_date VARCHAR(20),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """,
-    "fertilizers": """
-        CREATE TABLE IF NOT EXISTS fertilizers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            name VARCHAR(100) NOT NULL,
-            brand VARCHAR(100),
-            category VARCHAR(50),
-            form VARCHAR(20),
-            concentration FLOAT DEFAULT 100.0,
-            elements JSON,
-            price_per_kg FLOAT DEFAULT 0.0,
-            is_acid BOOLEAN DEFAULT 0,
-            acid_type VARCHAR(10),
-            ph_level FLOAT,
-            description TEXT,
-            is_system_default BOOLEAN DEFAULT 0,
-            source_system_id INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """,
-    "water_analyses": """
-        CREATE TABLE IF NOT EXISTS water_analyses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            report_id INTEGER NOT NULL,
-            water_percentage FLOAT DEFAULT 80.0,
-            wastewater_percentage FLOAT DEFAULT 20.0,
-            water_salinity FLOAT DEFAULT 0.0,
-            wastewater_values JSON,
-            water_values JSON,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
-        )
-    """,
-    "calculations": """
-        CREATE TABLE IF NOT EXISTS calculations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            report_id INTEGER NOT NULL,
-            target_values JSON,
-            final_values JSON,
-            reservoir_data JSON,
-            calc_rows JSON,
-            interpretation TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
-        )
-    """,
-    "recipes": """
-        CREATE TABLE IF NOT EXISTS recipes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name VARCHAR(100) NOT NULL,
-            description TEXT,
-            is_system BOOLEAN DEFAULT 0,
-            user_id INTEGER,
-            target_values JSON NOT NULL,
-            category VARCHAR(50),
-            stage VARCHAR(50),
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """,
-    "water_analysis_templates": """
-        CREATE TABLE IF NOT EXISTS water_analysis_templates (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            name VARCHAR(100) NOT NULL,
-            description TEXT,
-            water_percentage FLOAT DEFAULT 100.0,
-            wastewater_percentage FLOAT DEFAULT 0.0,
-            water_salinity FLOAT DEFAULT 0.8,
-            water_salinity_unit VARCHAR(10) DEFAULT "dS/m",
-            water_ph FLOAT,
-            water_values JSON,
-            wastewater_values JSON,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        )
-    """,
-    "optimization_logs": """
-        CREATE TABLE IF NOT EXISTS optimization_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            report_id INTEGER,
-            target_values JSON NOT NULL,
-            water_values JSON,
-            fertilizers_selected JSON,
-            optimization_options JSON,
-            optimized_weights JSON,
-            final_concentrations JSON,
-            residual_error FLOAT,
-            cost_total FLOAT,
-            iterations INTEGER,
-            convergence_time_ms FLOAT,
-            ion_balance JSON,
-            warnings JSON,
-            suggestions JSON,
-            is_successful BOOLEAN DEFAULT 1,
-            error_message TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE
-        )
-    """
-}
-
-def main():
-    db_path = Path(__file__).parent / "farmtech.db"
+    # Build and run
+    print(f"{Colors.YELLOW}⏳ Building and starting containers...{Colors.RESET}")
+    result = subprocess.run(
+        ["docker-compose", "up", "--build", "-d"],
+        cwd=str(BASE_DIR)
+    )
     
-    print("📦 Creating database tables...")
+    if result.returncode == 0:
+        print(f"{Colors.GREEN}✅ Docker containers started successfully!{Colors.RESET}")
+        print(f"\n{Colors.BLUE}  🌐 Frontend: http://localhost:3000{Colors.RESET}")
+        print(f"{Colors.BLUE}  🔌 Backend:  http://localhost:8000{Colors.RESET}")
+        print(f"{Colors.BLUE}  📄 API Docs: http://localhost:8000/docs{Colors.RESET}")
+        print(f"{Colors.BLUE}  🗄️  Database: localhost:5432{Colors.RESET}")
+        print(f"{Colors.BLUE}  🐘  pgAdmin:  http://localhost:5050{Colors.RESET}")
+        print(f"{Colors.BLUE}       Email: admin@farmtech.com{Colors.RESET}")
+        print(f"{Colors.BLUE}       Password: admin{Colors.RESET}")
+        print(f"\n{Colors.YELLOW}📋 Useful commands:{Colors.RESET}")
+        print(f"  docker-compose logs -f     # View logs")
+        print(f"  docker-compose ps          # Check status")
+        print(f"  docker-compose down        # Stop services")
+    else:
+        print(f"{Colors.RED}❌ Docker build failed{Colors.RESET}")
+
+def docker_stop():
+    """Stop and remove Docker containers"""
+    print(f"\n{Colors.BLUE}🐳 Stopping and removing Docker containers...{Colors.RESET}")
     
+    compose_file = BASE_DIR / "docker-compose.yml"
+    if not compose_file.exists():
+        print(f"{Colors.RED}❌ docker-compose.yml not found{Colors.RESET}")
+        return
+    
+    result = subprocess.run(
+        ["docker-compose", "down"],
+        cwd=str(BASE_DIR)
+    )
+    
+    if result.returncode == 0:
+        print(f"{Colors.GREEN}✅ Docker containers stopped and removed{Colors.RESET}")
+    else:
+        print(f"{Colors.RED}❌ Failed to stop containers{Colors.RESET}")
+
+def docker_logs():
+    """View Docker logs"""
+    print(f"\n{Colors.BLUE}🐳 Viewing Docker logs...{Colors.RESET}")
+    
+    compose_file = BASE_DIR / "docker-compose.yml"
+    if not compose_file.exists():
+        print(f"{Colors.RED}❌ docker-compose.yml not found{Colors.RESET}")
+        return
+    
+    subprocess.run(
+        ["docker-compose", "logs", "-f", "--tail=50"],
+        cwd=str(BASE_DIR)
+    )
+
+def docker_pgadmin():
+    """Start pgAdmin container"""
+    print(f"\n{Colors.BLUE}🐘 Starting pgAdmin...{Colors.RESET}")
+    
+    # Check if pgadmin container already exists
+    result = subprocess.run(
+        ["docker", "ps", "-a", "--format", "{{.Names}}"],
+        capture_output=True,
+        text=True
+    )
+    
+    if "farmtech-pgadmin" in result.stdout:
+        print(f"{Colors.YELLOW}⚠️  pgAdmin container already exists. Starting it...{Colors.RESET}")
+        subprocess.run(["docker", "start", "farmtech-pgadmin"], cwd=str(BASE_DIR))
+    else:
+        print(f"{Colors.YELLOW}⏳ Creating and starting pgAdmin container...{Colors.RESET}")
+        subprocess.run([
+            "docker", "run", "-d",
+            "--name", "farmtech-pgadmin",
+            "-p", "5050:80",
+            "-e", "PGADMIN_DEFAULT_EMAIL=admin@farmtech.com",
+            "-e", "PGADMIN_DEFAULT_PASSWORD=admin",
+            "-e", "PGADMIN_CONFIG_SERVER_MODE=False",
+            "-e", "PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False",
+            "--network", "farmtech-profertilizer_farmtech-network",
+            "--restart", "unless-stopped",
+            "dpage/pgadmin4:latest"
+        ], cwd=str(BASE_DIR))
+    
+    print(f"{Colors.GREEN}✅ pgAdmin is ready!{Colors.RESET}")
+    print(f"{Colors.BLUE}  🌐 http://localhost:5050{Colors.RESET}")
+    print(f"{Colors.BLUE}  📧 Email: admin@farmtech.com{Colors.RESET}")
+    print(f"{Colors.BLUE}  🔑 Password: admin{Colors.RESET}")
+    print(f"{Colors.YELLOW}💡 To connect to database, use:{Colors.RESET}")
+    print(f"  Host: db{Colors.RESET}")
+    print(f"  Port: 5432{Colors.RESET}")
+    print(f"  Database: farmtech_db{Colors.RESET}")
+    print(f"  Username: postgres{Colors.RESET}")
+    print(f"  Password: postgres{Colors.RESET}")
+
+# ============================================================
+# Database Reset Functions (PostgreSQL)
+# ============================================================
+def reset_database():
+    """Reset PostgreSQL database"""
+    print(f"\n{Colors.BLUE}🗄️  Resetting PostgreSQL Database...{Colors.RESET}")
+    
+    # Check if docker is running
     try:
-        conn = sqlite3.connect(str(db_path))
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA foreign_keys = ON")
-        
-        for table_name, sql in TABLES_SQL.items():
-            try:
-                cursor.execute(sql)
-                print(f"   ✅ Table {table_name} created")
-            except Exception as e:
-                print(f"   ❌ Error creating {table_name}: {e}")
-        
-        conn.commit()
-        
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [row[0] for row in cursor.fetchall()]
-        conn.close()
-        
-        print(f"\n📊 Tables created: {len(tables)}")
-        for table in tables:
-            print(f"   - {table}")
-        
-        print("\n✅ Database created successfully!")
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return False
-
-if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)'''
-
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-        f.write(temp_script_content)
-        temp_script = f.name
+        subprocess.run(["docker", "ps"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"{Colors.RED}❌ Docker is not running or not installed{Colors.RESET}")
+        print(f"{Colors.YELLOW}💡 Please install Docker and start Docker Desktop{Colors.RESET}")
+        return
     
-    try:
-        # اجرای اسکریپت موقت
-        result = subprocess.run(
-            [sys.executable, temp_script],
-            cwd=str(BACKEND_DIR)
-        )
-        
-        if result.returncode == 0:
-            print(f"{Colors.GREEN}✅ Database reset successfully!{Colors.RESET}")
-            
-            # بارگذاری داده‌های سیستمی
-            print(f"{Colors.BLUE}🌱 Loading system data...{Colors.RESET}")
-            load_system_data()
-        else:
-            print(f"{Colors.RED}❌ Failed to reset database{Colors.RESET}")
-            
-    finally:
-        # حذف فایل موقت
-        try:
-            os.unlink(temp_script)
-        except:
-            pass
-
-def load_system_data():
-    """Load system fertilizers and recipes"""
-    python_exe = get_python_executable()
+    # Check if db container exists
+    result = subprocess.run(
+        ["docker", "ps", "-a", "--format", "{{.Names}}"],
+        capture_output=True,
+        text=True
+    )
     
-    # بارگذاری کودهای سیستمی
-    print(f"{Colors.BLUE}   📦 Loading system fertilizers...{Colors.RESET}")
-    cmd = [
-        python_exe, "-c",
-        "from app.seeds.fertilizer_seeds import seed_system_fertilizers; "
-        "from app.database import SessionLocal; "
-        "db = SessionLocal(); "
-        "stats = seed_system_fertilizers(db); "
-        "db.commit(); db.close(); "
-        "print(f'✅ {stats[\\\"added\\\"]} fertilizers added')"
-    ]
-    subprocess.run(cmd, cwd=str(BACKEND_DIR))
+    if "farmtech-db" not in result.stdout:
+        print(f"{Colors.YELLOW}⚠️  Database container not found. Please run Docker first.{Colors.RESET}")
+        return
     
-    # بارگذاری رسپی‌های سیستمی
-    print(f"{Colors.BLUE}   📋 Loading system recipes...{Colors.RESET}")
-    cmd = [
-        python_exe, "-c",
-        "from app.seeds.recipe_seeds import seed_system_recipes; "
-        "from app.database import SessionLocal; "
-        "db = SessionLocal(); "
-        "stats = seed_system_recipes(db); "
-        "db.commit(); db.close(); "
-        "print(f'✅ {stats[\\\"added\\\"]} recipes added')"
-    ]
-    subprocess.run(cmd, cwd=str(BACKEND_DIR))
+    # Stop and remove db container
+    print(f"{Colors.YELLOW}⏳ Stopping and removing database container...{Colors.RESET}")
+    subprocess.run(["docker-compose", "down", "-v"], cwd=str(BASE_DIR))
     
-    # ایجاد کاربر تست
-    print(f"{Colors.BLUE}   👤 Creating test user...{Colors.RESET}")
-    cmd = [
-        python_exe, "-c",
-        "from app.crud import create_user, get_user_by_phone; "
-        "from app.schemas import UserCreate; "
-        "from app.database import SessionLocal; "
-        "db = SessionLocal(); "
-        "user = get_user_by_phone(db, '09121234567'); "
-        "if not user: "
-        "    user_data = UserCreate("
-        "        first_name='تست', "
-        "        last_name='سیستم', "
-        "        phone_number='09121234567', "
-        "        password='Test@123456'"
-        "    ); "
-        "    user = create_user(db, user_data); "
-        "    print(f'✅ Test user created: ID={user.id}'); "
-        "else: "
-        "    print(f'✅ Test user already exists: ID={user.id}'); "
-        "db.commit(); db.close()"
-    ]
-    subprocess.run(cmd, cwd=str(BACKEND_DIR))
+    # Start fresh
+    print(f"{Colors.YELLOW}⏳ Starting fresh database container...{Colors.RESET}")
+    subprocess.run(["docker-compose", "up", "-d", "db"], cwd=str(BASE_DIR))
     
-    print(f"{Colors.GREEN}✅ System data loaded successfully!{Colors.RESET}")
-    print(f"{Colors.BLUE}   👤 Test user: 09121234567{Colors.RESET}")
-    print(f"{Colors.BLUE}   🔑 Password: Test@123456{Colors.RESET}")
+    # Wait for db to be ready
+    print(f"{Colors.YELLOW}⏳ Waiting for database to be ready...{Colors.RESET}")
+    time.sleep(5)
+    
+    # Initialize database
+    print(f"{Colors.YELLOW}⏳ Initializing database...{Colors.RESET}")
+    subprocess.run(
+        ["docker-compose", "exec", "backend", "python", "scripts/init_db.py"],
+        cwd=str(BASE_DIR)
+    )
+    
+    print(f"{Colors.GREEN}✅ Database reset completed!{Colors.RESET}")
 
 # ============================================================
 # Backend Functions
@@ -499,18 +372,15 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
     """Run backend server and return process and port"""
     ensure_logs_dir()
     
-    # Check backend directory
     if not check_directory_exists(BACKEND_DIR, "Backend"):
         return None, 0
     
-    # Check virtual environment
     python_exe = get_python_executable()
     if not Path(python_exe).exists():
         print(f"{Colors.YELLOW}⚠️  Virtual environment not found. Installing dependencies...{Colors.RESET}")
         install_dependencies_backend()
         python_exe = get_python_executable()
     
-    # Find available port
     if port is None:
         port = DEFAULT_BACKEND_PORT
     
@@ -525,7 +395,6 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
     
     print(f"\n{Colors.BLUE}🚀 Starting Backend on port {port}...{Colors.RESET}")
     
-    # Prepare command
     cmd = [
         python_exe, "-m", "uvicorn",
         "app.main:app",
@@ -534,7 +403,6 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
         "--port", str(port)
     ]
     
-    # Log handling
     log_file = LOGS_DIR / "backend.log"
     if show_logs:
         log_handle = open(log_file, "w", encoding="utf-8")
@@ -554,7 +422,6 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
             stderr=subprocess.DEVNULL
         )
     
-    # Wait for backend to be ready
     print(f"{Colors.YELLOW}⏳ Waiting for Backend to start...{Colors.RESET}")
     if wait_for_service(f"http://localhost:{port}/health", timeout=30):
         print(f"{Colors.GREEN}✅ Backend is ready: http://localhost:{port}{Colors.RESET}")
@@ -564,7 +431,6 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
     else:
         print(f"{Colors.RED}❌ Backend failed to start. Please check logs:{Colors.RESET}")
         print(f"{Colors.BLUE}   {log_file}{Colors.RESET}")
-        # Show last 10 lines of log
         try:
             with open(log_file, "r", encoding="utf-8") as f:
                 lines = f.readlines()
@@ -580,17 +446,14 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
 # ============================================================
 def run_frontend(port: Optional[int] = None) -> Tuple[Optional[subprocess.Popen], int]:
     """Run frontend server and return process and port"""
-    # Check frontend directory
     if not check_directory_exists(FRONTEND_DIR, "Frontend"):
         return None, 0
     
-    # Check node_modules
     node_modules = FRONTEND_DIR / "node_modules"
     if not node_modules.exists():
         print(f"{Colors.YELLOW}⚠️  node_modules not found. Installing dependencies...{Colors.RESET}")
         install_dependencies_frontend()
     
-    # Find available port
     if port is None:
         port = DEFAULT_FRONTEND_PORT
     
@@ -605,11 +468,9 @@ def run_frontend(port: Optional[int] = None) -> Tuple[Optional[subprocess.Popen]
     
     print(f"\n{Colors.BLUE}🚀 Starting Frontend on port {port}...{Colors.RESET}")
     
-    # Set environment variable for port
     env = os.environ.copy()
     env['PORT'] = str(port)
     
-    # Use cmd.exe on Windows
     if platform.system() == 'Windows':
         cmd = f'set PORT={port}&& npm run dev'
     else:
@@ -622,7 +483,6 @@ def run_frontend(port: Optional[int] = None) -> Tuple[Optional[subprocess.Popen]
         env=env
     )
     
-    # Wait for frontend to be ready
     print(f"{Colors.YELLOW}⏳ Waiting for Frontend to start...{Colors.RESET}")
     if wait_for_service(f"http://localhost:{port}", timeout=60):
         print(f"{Colors.GREEN}✅ Frontend is ready: http://localhost:{port}{Colors.RESET}")
@@ -638,13 +498,11 @@ def install_dependencies_backend():
     """Install backend dependencies"""
     print(f"\n{Colors.YELLOW}📦 Installing Backend Dependencies...{Colors.RESET}")
     
-    # Create venv if it doesn't exist
     venv_dir = BACKEND_DIR / "venv"
     if not venv_dir.exists():
         print(f"{Colors.BLUE}🔧 Creating virtual environment...{Colors.RESET}")
         subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
     
-    # Install requirements
     python_exe = get_python_executable()
     requirements = BACKEND_DIR / "requirements.txt"
     
@@ -665,7 +523,6 @@ def install_dependencies_frontend():
     """Install frontend dependencies"""
     print(f"\n{Colors.YELLOW}📦 Installing Frontend Dependencies...{Colors.RESET}")
     
-    # Check npm
     npm_cmd = 'npm.cmd' if platform.system() == 'Windows' else 'npm'
     try:
         subprocess.run([npm_cmd, '--version'], capture_output=True, check=True)
@@ -673,7 +530,6 @@ def install_dependencies_frontend():
         print(f"{Colors.RED}❌ npm not found. Please install Node.js{Colors.RESET}")
         return
     
-    # Install packages
     result = subprocess.run(
         [npm_cmd, 'install'],
         cwd=str(FRONTEND_DIR)
@@ -705,7 +561,6 @@ def run_tests():
         print(f"{Colors.RED}❌ Test file not found: {test_file}{Colors.RESET}")
         return
     
-    # Start backend first
     print(f"{Colors.YELLOW}⏳ Starting Backend for tests...{Colors.RESET}")
     backend_process, backend_port = run_backend(show_logs=False)
     
@@ -714,7 +569,6 @@ def run_tests():
         return
     
     try:
-        # Run tests
         print(f"{Colors.BLUE}🧪 Running tests...{Colors.RESET}")
         result = subprocess.run(
             [python_exe, str(test_file)],
@@ -726,7 +580,6 @@ def run_tests():
         else:
             print(f"\n{Colors.RED}❌ Some tests failed{Colors.RESET}")
     finally:
-        # Stop backend
         print(f"{Colors.YELLOW}⏹️  Stopping Backend...{Colors.RESET}")
         backend_process.terminate()
         try:
@@ -741,7 +594,6 @@ def build_production():
     """Build production version"""
     print(f"\n{Colors.BLUE}🏗️  Building Production Version...{Colors.RESET}")
     
-    # Backend
     print(f"\n{Colors.YELLOW}📦 Preparing Backend...{Colors.RESET}")
     pip_exe = get_pip_executable()
     
@@ -758,7 +610,6 @@ def build_production():
             f.write(result.stdout)
         print(f"{Colors.GREEN}✅ requirements.txt updated{Colors.RESET}")
     
-    # Frontend
     print(f"\n{Colors.YELLOW}📦 Building Frontend...{Colors.RESET}")
     npm_cmd = 'npm.cmd' if platform.system() == 'Windows' else 'npm'
     
@@ -780,7 +631,6 @@ def clean_cache():
     """Clean cache files"""
     print(f"\n{Colors.BLUE}🧹 Cleaning Cache Files...{Colors.RESET}")
     
-    # Clean __pycache__ in backend
     for root, dirs, files in os.walk(BACKEND_DIR):
         for d in dirs:
             if d == "__pycache__":
@@ -791,7 +641,6 @@ def clean_cache():
                 except Exception as e:
                     print(f"{Colors.RED}❌ Error removing {path}: {e}{Colors.RESET}")
     
-    # Clean .pytest_cache
     pytest_cache = BACKEND_DIR / ".pytest_cache"
     if pytest_cache.exists():
         try:
@@ -800,7 +649,6 @@ def clean_cache():
         except Exception as e:
             print(f"{Colors.RED}❌ Error: {e}{Colors.RESET}")
     
-    # Clean Frontend cache
     vite_cache = FRONTEND_DIR / "node_modules" / ".vite"
     if vite_cache.exists():
         try:
@@ -817,7 +665,6 @@ def clean_cache():
         except Exception as e:
             print(f"{Colors.RED}❌ Error: {e}{Colors.RESET}")
     
-    # Clean logs
     if LOGS_DIR.exists():
         try:
             shutil.rmtree(LOGS_DIR)
@@ -834,7 +681,7 @@ def free_ports():
     """Free occupied ports"""
     print(f"\n{Colors.BLUE}🔧 Checking Occupied Ports...{Colors.RESET}")
     
-    ports_to_check = [DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT]
+    ports_to_check = [DEFAULT_BACKEND_PORT, DEFAULT_FRONTEND_PORT, DEFAULT_DB_PORT, DEFAULT_PGADMIN_PORT]
     
     for port in ports_to_check:
         if not is_port_available(port):
@@ -865,12 +712,11 @@ def view_logs():
     try:
         with open(log_file, "r", encoding="utf-8") as f:
             lines = f.readlines()
-            
+        
         if not lines:
             print(f"{Colors.YELLOW}⚠️  Log file is empty{Colors.RESET}")
             return
         
-        # Show last 50 lines
         print(f"\n{Colors.CYAN}--- Last 50 lines of {log_file.name} ---{Colors.RESET}")
         for line in lines[-50:]:
             print(line.rstrip())
@@ -889,14 +735,12 @@ def run_full():
     print(f"\n{Colors.BLUE}🚀 Running Full Application...{Colors.RESET}")
     print(f"{Colors.YELLOW}⚠️  Press Ctrl+C to stop{Colors.RESET}\n")
     
-    # Start Backend
     backend_process, backend_port = run_backend()
     
     if backend_process is None:
         print(f"{Colors.RED}❌ Backend failed to start{Colors.RESET}")
         return
     
-    # Start Frontend
     frontend_process, frontend_port = run_frontend()
     
     if frontend_process is None:
@@ -913,12 +757,10 @@ def run_full():
     print(f"{Colors.GREEN}{'='*70}{Colors.RESET}\n")
     
     try:
-        # Wait for frontend to finish
         frontend_process.wait()
     except KeyboardInterrupt:
         print(f"\n\n{Colors.YELLOW}⏹️  Stopping application...{Colors.RESET}")
     finally:
-        # Stop processes
         print(f"{Colors.YELLOW}⏹️  Stopping Backend...{Colors.RESET}")
         backend_process.terminate()
         try:
@@ -933,7 +775,6 @@ def run_full():
         except subprocess.TimeoutExpired:
             frontend_process.kill()
         
-        # On Windows, processes may still be running
         if platform.system() == 'Windows':
             time.sleep(1)
             kill_process_on_port(backend_port)
@@ -996,6 +837,18 @@ def main():
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '10':
             reset_database()
+            input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
+        elif choice == '11':
+            docker_build_and_run()
+            input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
+        elif choice == '12':
+            docker_stop()
+            input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
+        elif choice == '13':
+            docker_logs()
+            input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
+        elif choice == '14':
+            docker_pgadmin()
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '0':
             print(f"\n{Colors.GREEN}👋 Goodbye!{Colors.RESET}")

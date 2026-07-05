@@ -1,0 +1,16 @@
+# Dockerfile.frontend
+FROM node:18-alpine
+
+WORKDIR /app
+
+# کپی package.json و package-lock.json برای نصب وابستگی‌ها
+COPY frontend/package*.json ./
+
+# نصب وابستگی‌ها
+RUN npm install
+
+# کپی کد فرانت‌اند
+COPY frontend/ .
+
+# اجرای برنامه در حالت توسعه
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

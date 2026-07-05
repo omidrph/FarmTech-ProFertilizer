@@ -5,9 +5,9 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Vue](https://img.shields.io/badge/Vue-3.4.0-4FC08D?logo=vuedotjs)](https://vuejs.org)
 [![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4.0-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
-[![SQLite](https://img.shields.io/badge/SQLite-3.0-003B57?logo=sqlite)](https://sqlite.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql)](https://postgresql.org)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)](https://python.org)
-[![License](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker)](https://docker.com)
 
 ---
 
@@ -40,10 +40,11 @@
 |------|--------|
 | **فرانت‌اند** | Vue 3، TypeScript، Tailwind CSS، Vite، Pinia |
 | **بک‌اند** | FastAPI، Python 3.11، SQLAlchemy |
-| **دیتابیس** | SQLite (محلی و بدون نیاز به سرور) |
+| **دیتابیس** | PostgreSQL 15 (با پشتیبانی از SQLite برای توسعه) |
 | **احراز هویت** | توکن‌های نشست با ذخیره‌سازی در دیتابیس |
 | **بهینه‌سازی** | NumPy، SciPy (الگوریتم NNLS) |
 | **HTTP Client** | Axios |
+| **Containerization** | Docker، Docker Compose |
 
 ---
 
@@ -53,69 +54,75 @@ FarmTech-ProFertilizer/
 ├── backend/ 📁 بک‌اند FastAPI
 │ ├── app/
 │ │ ├── main.py 🚀 نقطه ورود برنامه
-│ │ ├── config.py ⚙️ تنظیمات (SQLite)
+│ │ ├── config.py ⚙️ تنظیمات (PostgreSQL)
 │ │ ├── models.py 📊 مدل‌های دیتابیس
 │ │ ├── schemas.py 📝 طرح‌های Pydantic
 │ │ ├── crud.py 📂 عملیات CRUD
-│ │ ├── services.py 🧮 الگوریتم‌های محاسباتی (NNLS)
 │ │ ├── security.py 🔒 احراز هویت و توکن
+│ │ ├── database.py 🗄️ اتصال به PostgreSQL
 │ │ ├── routes/ 🛣️ مسیرهای API
 │ │ └── seeds/ 🌱 داده‌های اولیه (کودها، رسپی‌ها)
-│ │
 │ ├── tests/ 🧪 تست‌های جامع
-│ ├── requirements.txt 📦 وابستگی‌ها
-│ └── farmtech.db 🗄️ فایل دیتابیس
+│ └── requirements.txt 📦 وابستگی‌ها
 │
 ├── frontend/ 📁 فرانت‌اند Vue 3
 │ ├── src/
 │ │ ├── components/ 📁 کامپوننت‌ها
-│ │ │ ├── features/ ویژگی‌های اصلی
-│ │ │ ├── common/ کامپوننت‌های عمومی
-│ │ │ └── layout/ چیدمان (هدر، فوتر)
-│ │ │
 │ │ ├── store/ 📁 مدیریت State (Pinia)
 │ │ ├── composables/ 📁 توابع ترکیبی
 │ │ ├── services/ 📁 ارتباط با API
 │ │ ├── types/ 📁 تعاریف TypeScript
-│ │ ├── utils/ 📁 ابزارهای کمکی
 │ │ └── views/ 📁 صفحات اصلی
-│ │
-│ ├── public/fonts/ 📁 فونت‌های فارسی (۲۳ فایل)
-│ ├── index.html 📄 صفحه اصلی
+│ ├── public/fonts/ 📁 فونت‌های فارسی
 │ ├── package.json 📦 وابستگی‌ها
 │ └── vite.config.ts ⚙️ تنظیمات Vite
 │
 ├── scripts/ 📁 اسکریپت‌های مدیریتی
 │ ├── cli.py 🖥️ منوی خط فرمان (CLI)
-│ ├── deploy.sh 🚀 استقرار در لینوکس
-│ └── deploy.bat 🚀 استقرار در ویندوز
+│ ├── init_db.py 🗄️ مقداردهی اولیه دیتابیس│ └── init_db.sql 🗄️ اسکریپت SQL اولیه
 │
 ├── docker-compose.yml 🐳 Docker Compose
-├── Dockerfile 🐳 Dockerfile
+├── Dockerfile.backend 🐳 Dockerfile بک‌اند
+├── Dockerfile.frontend 🐳 Dockerfile فرانت‌اند
+├── .env 🔐 متغیرهای محیطی
+├── .env.example 📄 نمونه متغیرهای محیطی
 └── README.md 📄 این مستندات
+
+text
+
 ---
 
 ## 🚀 نصب و راه‌اندازی
 
 ### پیش‌نیازها
 
-- Python 3.11 یا بالاتر
-- Node.js 18 یا بالاتر
-- npm یا yarn
+- Docker 24.0+
+- Docker Compose 2.20+
+- Git
 
-### روش سریع (با CLI)
+### روش سریع با Docker
 
 ```bash
 # ۱. کلون کردن مخزن
 git clone https://github.com/yourusername/FarmTech-ProFertilizer.git
 cd FarmTech-ProFertilizer
 
-# ۲. اجرای منوی مدیریتی
-python scripts/cli.py
+# ۲. کپی و ویرایش فایل محیطی
+cp .env.example .env
+# ویرایش .env با تنظیمات مورد نظر
 
-# ۳. انتخاب گزینه ۴ برای نصب وابستگی‌ها
-# ۴. انتخاب گزینه ۱ برای اجرای کامل برنامه
-روش دستی
+# ۳. ساختن و اجرای سرویس‌ها
+docker-compose up --build -d
+
+# ۴. بررسی وضعیت
+docker-compose ps
+
+# ۵. مشاهده لاگ‌ها
+docker-compose logs -f
+
+# ۶. مقداردهی اولیه دیتابیس (اختیاری - خودکار انجام می‌شود)
+docker-compose exec backend python scripts/init_db.py
+روش دستی (بدون Docker)
 bash
 # ----- بک‌اند -----
 cd backend
@@ -133,39 +140,77 @@ npm run dev
 فرانت‌اند	http://localhost:3000
 بک‌اند (API)	http://localhost:8000
 مستندات API	http://localhost:8000/docs
-سلامت سرور http://localhost:8000/health
+سلامت سرور	http://localhost:8000/health
+اطلاعات کاربر تست
+فیلد	مقدار
+شماره تلفن	09121234567
+رمز عبور	Test@123456
 🧪 اجرای تست‌ها
 bash
-cd backend
-python tests/test_all.py
-یا از طریق منوی CLI (گزینه ۵).
-🐳 استقرار با Docker
+# با Docker
+docker-compose exec backend python tests/test_all.py
+
+# یا از طریق CLI
+python scripts/cli.py
+# سپس گزینه ۵ را انتخاب کنید
+🐳 دستورات مفید Docker
 bash
-# ساخت و اجرا
-docker-compose up --build
+# مشاهده لاگ‌های یک سرویس خاص
+docker-compose logs -f backend
+docker-compose logs -f frontend
+docker-compose logs -f db
 
-# توقف
+# ورود به کانتینر بک‌اند
+docker-compose exec backend bash
+
+# ورود به دیتابیس
+docker-compose exec db psql -U postgres -d farmtech_db
+
+# توقف سرویس‌ها
 docker-compose down
-🔧 متغیرهای محیطی
-فایل .env در ریشه پروژه:
 
-env
-# دیتابیس
-DATABASE_URL=sqlite:///./farmtech.db
+# توقف و حذف کامل داده‌ها
+docker-compose down -v
 
-# امنیت
-SECRET_KEY=your-super-secret-key-change-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
+# بازسازی و اجرا
+docker-compose up --build -d
 
-# برنامه
-APP_NAME=FarmTech - ProFertilizer
-APP_VERSION=0.1.0
-DEBUG=True
+# بررسی وضعیت سلامت
+docker-compose ps
 
-# API (فرانت‌اند)
-VITE_API_URL=http://localhost:8000/api/v1
+# مشاهده استفاده از منابع
+docker stats
+💾 بکاپ دیتابیس
+bash
+# بکاپ گرفتن از دیتابیس
+docker-compose exec db pg_dump -U postgres -d farmtech_db > backup_$(date +%Y%m%d_%H%M%S).sql
 
+# ریستور بکاپ
+cat backup.sql | docker-compose exec -T db psql -U postgres -d farmtech_db
+🔧 عیب‌یابی
+❌ خطای اتصال به دیتابیس
+bash
+# بررسی آمادگی دیتابیس
+docker-compose exec db pg_isready -U postgres
+
+# مشاهده لاگ‌های دیتابیس
+docker-compose logs db
+
+# ریستارت دیتابیس
+docker-compose restart db
+❌ خطای psycopg2
+bash
+# اطمینان از نصب پکیج‌های مورد نیاز در Dockerfile
+apt-get install -y gcc libpq-dev
+❌ خطای پورت درگیر
+bash
+# بررسی پورت‌های درگیر
+sudo lsof -i :8000
+sudo lsof -i :3000
+sudo lsof -i :5432
+
+# کشتن پروسه درگیر
+sudo kill -9 <PID>
 🧠 الگوریتم محاسبه
 قلب محاسباتی برنامه بر اساس روش NNLS (Non-Negative Least Squares) طراحی شده است:
 
@@ -196,10 +241,6 @@ VITE_API_URL=http://localhost:8000/api/v1
 
 گیت‌هاب: github.com/omidrph
 
-🏢 سازمان
-FarmTech
-راهکارهای هوشمند کشاورزی
-
 📄 مجوز
 نرم‌افزار اختصاصی (Proprietary)
 
@@ -215,3 +256,27 @@ FarmTech
 وب‌سایت: www.farmtech.ir
 
 تلفن: ۰۲۱-۸۸۴۱۴۶۷۹
+
+
+========================
+# ===== توقف سرویس‌ها =====
+docker-compose down
+
+# ===== توقف و حذف کامل داده‌ها (دیتابیس پاک می‌شود) =====
+docker-compose down -v
+
+# ===== ری‌استارت یک سرویس =====
+docker-compose restart backend
+docker-compose restart frontend
+
+# ===== بازسازی و اجرا =====
+docker-compose up --build -d
+
+# ===== ورود به شل بک‌اند =====
+docker-compose exec backend bash
+
+# ===== ورود به شل فرانت‌اند =====
+docker-compose exec frontend sh
+
+# ===== ورود به دیتابیس =====
+docker-compose exec db psql -U postgres -d farmtech_db

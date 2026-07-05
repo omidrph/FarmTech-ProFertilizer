@@ -46,3 +46,78 @@ logs/
 
 # Docker
 *.pid
+.docker/
+data/
+postgres_data/
+
+# ============================================================
+# 🆕 موارد اضافه شده برای ساخت نسخه اجرایی
+# ============================================================
+
+# پکیج‌های نهایی ساخت شده
+FarmTech_Desktop*.zip
+FarmTech_Desktop/
+FarmTech_Backup*.zip
+
+# فایل‌های موقت PyInstaller
+*.spec
+*.pkg
+*.pyz
+
+# پوشه‌های موقت
+build_temp/
+temp/
+tmp/
+
+# فایل‌های اجرایی (اگر در پروژه باشند)
+*.exe
+*.dll
+*.so
+*.dylib
+
+# فایل‌های خروجی
+*.log
+*.pid
+
+# ============================================================
+# 🆕 Docker و PostgreSQL
+# ============================================================
+
+# Docker Compose override
+docker-compose.override.yml
+.dockerignore
+
+# PostgreSQL data directory
+postgres_data/
+*.pgdata
+pgdata/
+
+# ============================================================
+# 🆕 Frontend
+# ============================================================
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# ============================================================
+# 🆕 Backup files
+# ============================================================
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

@@ -11,10 +11,10 @@ load_dotenv()
 
 
 class Settings(BaseSettings):
-    # ===== تنظیمات دیتابیس (SQLite) =====
+    # ===== تنظیمات دیتابیس (PostgreSQL) =====
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "sqlite:///./farmtech.db"  # تغییر به SQLite
+        "postgresql://postgres:postgres@db:5432/farmtech_db"
     )
     
     # ===== تنظیمات امنیت =====
@@ -30,14 +30,15 @@ class Settings(BaseSettings):
     APP_VERSION: str = "0.1.0"
     DEBUG: bool = True
     
-    # ===== تنظیمات CORS =====
+    # ===== ✅ تنظیمات CORS (با مقدار پیش‌فرض) =====
     CORS_ORIGINS: List[str] = Field(
         default=[
             "http://localhost:3000",
             "http://localhost:5173",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:5173"
-        ]
+        ],
+        description="لیست آدرس‌های مجاز CORS"
     )
     
     API_PREFIX: str = "/api/v1"
