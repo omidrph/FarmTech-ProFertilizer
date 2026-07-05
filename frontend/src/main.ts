@@ -13,14 +13,6 @@ import './assets/styles/fonts.css';
 // Import print styles (only for print)
 import './assets/styles/print.css';
 
-// 🆕 Import test (فقط در حالت development)
-if (import.meta.env.DEV) {
-  import('./test').then(() => {
-    console.log('🧪 تست فرانت‌اند بارگذاری شد!');
-    console.log('📝 برای اجرا: openTestRunner()');
-  });
-}
-
 const app = createApp(App);
 
 // Plugins
