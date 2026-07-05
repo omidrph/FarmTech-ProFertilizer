@@ -416,38 +416,26 @@ const handleDeleteFertilizer = async (id: string) => {
 };
 
 // ============================================================
-// ✅ اصلاح شده: تابع ایجاد گزارش جدید با مدیریت کامل
+// ✅ اصلاح شده: handleNewReport
 // ============================================================
 const handleNewReport = async () => {
   console.log('📄 Creating new report...');
   
-  // 1. Reset all stores
-  reportStore.resetReportData();
-  waterStore.resetWaterData();
-  targetStore.resetTargets();
-  calcStore.resetCalculation();
+  // استفاده از createNewReport در reportStore
+  reportStore.createNewReport();
   
-  // 2. Clear currentReportId
-  reportStore.setCurrentReportId(null);
-  
-  // 3. Clear interpretation result
-  interpretationResult.value = null;
-  
-  // 4. Set active tab to home
+  // تنظیم تب‌ها به حالت پیش‌فرض
   activeSubTab.value = 'home';
   
-  // 5. Force re-render with new keys
+  // افزایش کلیدهای رندر مجدد
   homeTabKey.value++;
   waterTabKey.value++;
   targetTabKey.value++;
   
-  // 6. Wait for DOM update
+  // منتظر ماندن برای انجام تغییرات DOM
   await nextTick();
   
-  // 7. Dispatch event for HomeTab
-  window.dispatchEvent(new CustomEvent('report-changed'));
-  
-  // 8. Show success toast
+  // نمایش پیام موفقیت
   showToast('گزارش جدید ایجاد شد', 'success');
 };
 

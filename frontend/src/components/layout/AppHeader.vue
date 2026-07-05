@@ -66,7 +66,8 @@
 
               <div class="border-t border-gray-200 dark:border-gray-700 my-1"></div>
 
-              <button @click="handleDeleteReport" :disabled="!reportStore.hasCurrentReport" class="flex items-center gap-3 w-full text-right px-4 py-2.5 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <!-- ✅ فقط اینجا confirm دارد -->
+              <button @click="handleDeleteReport" :disabled="!hasCurrentReport" class="flex items-center gap-3 w-full text-right px-4 py-2.5 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                 </svg>
@@ -135,7 +136,8 @@
             <span>{{ isSaving ? 'در حال ذخیره...' : 'ذخیره' }}</span>
           </button>
 
-          <button @click="handleDeleteReport" :disabled="!reportStore.hasCurrentReport" class="flex items-center gap-2 w-full text-right px-3 py-2 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors disabled:opacity-50">
+          <!-- ✅ فقط اینجا confirm دارد -->
+          <button @click="handleDeleteReport" :disabled="!hasCurrentReport" class="flex items-center gap-2 w-full text-right px-3 py-2 text-sm text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-danger-900/20 rounded-lg transition-colors disabled:opacity-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
             </svg>
@@ -260,6 +262,7 @@
                           </svg>
                           <span>بارگذاری</span>
                         </button>
+                        <!-- ✅ فقط اینجا confirm دارد -->
                         <button @click.stop="deleteSelectedReport(report.id)" class="p-1.5 rounded-lg text-danger-600 hover:text-danger-800 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors" title="حذف">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -341,6 +344,8 @@ const toastType = ref<'success' | 'error'>('success');
 // ===== Computed =====
 const currentActiveTab = computed(() => props.activeTab || 'home');
 
+const hasCurrentReport = computed(() => reportStore.hasActiveReport);
+
 const filteredReports = computed(() => {
   if (!searchQuery.value.trim()) {
     return reportStore.reports;
@@ -355,7 +360,7 @@ const filteredReports = computed(() => {
 });
 
 const getReportStatusClass = computed(() => {
-  if (!reportStore.hasCurrentReport) {
+  if (!reportStore.hasActiveReport) {
     return 'bg-gray-300 dark:bg-gray-600';
   }
   return 'bg-green-500';
@@ -441,29 +446,25 @@ const formatDate = (dateString: string): string => {
 };
 
 // ============================================================
-// ✅ اصلاحات اصلی: ارسال رویداد report-reset
+// ✅ handleNewReport - بدون confirm
 // ============================================================
-
-// ===== ✅ اصلاح: handleNewReport =====
 const handleNewReport = (event?: MouseEvent) => {
   if (event) {
     event.preventDefault();
   }
   closeFileMenu();
   
-  // ✅ ریست کردن همه داده‌ها
-  reportStore.resetReportData();
-  waterStore.resetWaterData();
-  targetStore.resetTargets();
-  calcStore.resetCalculation(); // ✅ این تابع الان کامل است
+  reportStore.createNewReport();
   
-  // 🆕 ارسال رویداد برای ریست کردن HomeTab
   window.dispatchEvent(new CustomEvent('report-changed'));
   window.dispatchEvent(new CustomEvent('report-reset'));
   emit('new-report');
   showToast('گزارش جدید ایجاد شد', 'success');
 };
 
+// ============================================================
+// ✅ handleOpenReport - بدون confirm
+// ============================================================
 const handleOpenReport = (event?: MouseEvent) => {
   if (event) {
     event.preventDefault();
@@ -474,32 +475,43 @@ const handleOpenReport = (event?: MouseEvent) => {
   reportStore.loadReports();
 };
 
-const handleSaveReport = (event?: MouseEvent) => {
+// ============================================================
+// ✅ handleSaveReport - بدون confirm
+// ============================================================
+const handleSaveReport = async (event?: MouseEvent) => {
   if (event) {
     event.preventDefault();
   }
   closeFileMenu();
+  
   if (!reportStore.reportData.reportName && !reportStore.reportData.plantName) {
     showToast('لطفاً ابتدا اطلاعات گزارش را وارد کنید', 'error');
     return;
   }
   
   isSaving.value = true;
-  reportStore.saveCurrentReport().then((success) => {
-    isSaving.value = false;
+  try {
+    const success = await reportStore.saveCurrentReport();
     if (success) {
       showToast('گزارش با موفقیت ذخیره شد', 'success');
-      reportStore.loadReports();
+      await reportStore.loadReports();
     } else {
       showToast(reportStore.error || 'خطا در ذخیره گزارش', 'error');
     }
-  });
+  } catch (error) {
+    showToast('خطا در ذخیره گزارش', 'error');
+  } finally {
+    isSaving.value = false;
+  }
 };
 
-// ===== ✅ اصلاح: handleDeleteReport =====
-const handleDeleteReport = () => {
+// ============================================================
+// ✅ handleDeleteReport - فقط اینجا confirm دارد
+// ============================================================
+const handleDeleteReport = async () => {
   closeFileMenu();
-  if (!reportStore.hasCurrentReport) {
+  
+  if (!reportStore.hasActiveReport) {
     showToast('هیچ گزارشی برای حذف وجود ندارد', 'error');
     return;
   }
@@ -508,7 +520,11 @@ const handleDeleteReport = () => {
     return;
   }
   
-  reportStore.deleteCurrentReport().then((success) => {
+  const reportId = reportStore.currentReportId;
+  if (!reportId) return;
+  
+  try {
+    const success = await reportStore.deleteReport(reportId);
     if (success) {
       showToast('گزارش با موفقیت حذف شد', 'success');
       waterStore.resetWaterData();
@@ -519,7 +535,9 @@ const handleDeleteReport = () => {
     } else {
       showToast(reportStore.error || 'خطا در حذف گزارش', 'error');
     }
-  });
+  } catch (error) {
+    showToast('خطا در حذف گزارش', 'error');
+  }
 };
 
 const closeOpenModal = () => {
@@ -527,50 +545,66 @@ const closeOpenModal = () => {
   searchQuery.value = '';
 };
 
-// ===== ✅ اصلاح: loadSelectedReport =====
+// ============================================================
+// ✅ loadSelectedReport - بدون confirm
+// ============================================================
 const loadSelectedReport = async (reportId: number) => {
-  if (reportStore.hasCurrentReport && reportStore.currentReportId !== reportId) {
-    if (!confirm('آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
-      return;
-    }
-  }
+  // ❌ حذف کامل شرط confirm
+  // if (reportStore.hasActiveReport && reportStore.currentReportId !== reportId) {
+  //   if (!confirm('آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
+  //     return;
+  //   }
+  // }
   
   isLoadingReport.value = true;
   loadingReportId.value = reportId;
-  const success = await reportStore.loadReport(reportId);
-  isLoadingReport.value = false;
-  loadingReportId.value = null;
   
-  if (success) {
-    showToast('گزارش با موفقیت بارگذاری شد', 'success');
-    closeOpenModal();
-    // reportStore.loadReport خودش رویدادهای report-changed و report-reset را ارسال می‌کند
-  } else {
-    showToast(reportStore.error || 'خطا در بارگذاری گزارش', 'error');
+  try {
+    const success = await reportStore.loadReport(reportId);
+    if (success) {
+      showToast('گزارش با موفقیت بارگذاری شد', 'success');
+      closeOpenModal();
+    } else {
+      showToast(reportStore.error || 'خطا در بارگذاری گزارش', 'error');
+    }
+  } catch (error) {
+    showToast('خطا در بارگذاری گزارش', 'error');
+  } finally {
+    isLoadingReport.value = false;
+    loadingReportId.value = null;
   }
 };
 
+// ============================================================
+// ✅ deleteSelectedReport - فقط اینجا confirm دارد
+// ============================================================
 const deleteSelectedReport = async (reportId: number) => {
-  if (!confirm('آیا از حذف این گزارش اطمینان دارید؟')) {
+  if (!confirm('آیا از حذف این گزارش اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')) {
     return;
   }
   
-  const success = await reportStore.deleteReport(reportId);
-  if (success) {
-    showToast('گزارش با موفقیت حذف شد', 'success');
-    if (reportStore.currentReportId === reportId) {
-      waterStore.resetWaterData();
-      targetStore.resetTargets();
-      calcStore.resetCalculation();
-      window.dispatchEvent(new CustomEvent('report-changed'));
-      window.dispatchEvent(new CustomEvent('report-reset'));
+  try {
+    const success = await reportStore.deleteReport(reportId);
+    if (success) {
+      showToast('گزارش با موفقیت حذف شد', 'success');
+      if (reportStore.currentReportId === reportId) {
+        waterStore.resetWaterData();
+        targetStore.resetTargets();
+        calcStore.resetCalculation();
+        window.dispatchEvent(new CustomEvent('report-changed'));
+        window.dispatchEvent(new CustomEvent('report-reset'));
+      }
+    } else {
+      showToast(reportStore.error || 'خطا در حذف گزارش', 'error');
     }
-  } else {
-    showToast(reportStore.error || 'خطا در حذف گزارش', 'error');
+  } catch (error) {
+    showToast('خطا در حذف گزارش', 'error');
   }
 };
 
-// ===== Keyboard Shortcuts =====
+// ============================================================
+// Keyboard Shortcuts
+// ============================================================
 const handleKeyboard = (event: KeyboardEvent) => {
   if (event.ctrlKey || event.metaKey) {
     switch (event.key.toLowerCase()) {
@@ -593,14 +627,18 @@ const handleKeyboard = (event: KeyboardEvent) => {
   }
 };
 
-// ===== Click Outside Handler =====
+// ============================================================
+// Click Outside Handler
+// ============================================================
 const handleClickOutside = (event: MouseEvent) => {
   if (fileMenuRef.value && !fileMenuRef.value.contains(event.target as Node)) {
     fileMenuOpen.value = false;
   }
 };
 
-// ===== Lifecycle =====
+// ============================================================
+// Lifecycle
+// ============================================================
 onMounted(() => {
   const savedTheme = localStorage.getItem('theme');
   if (savedTheme === 'dark') {
@@ -617,7 +655,9 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyboard);
 });
 
-// ===== Watch =====
+// ============================================================
+// Watch
+// ============================================================
 watch(mobileMenuOpen, (newVal) => {
   if (newVal) {
     document.body.style.overflow = 'hidden';

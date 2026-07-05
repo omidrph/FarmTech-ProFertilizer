@@ -3,12 +3,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { WaterMixData } from '@/types';
 
-// عناصری که در جدول آنالیز آب نمایش داده می‌شوند
 const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
-// ============================================================
-// 🆕 ثابت‌های استاندارد EC
-// ============================================================
 export const EC_STANDARDS = {
   MIN_VALID_EC: 0.1,
   DEFAULT_EC: 0.8,
@@ -20,13 +16,10 @@ export const EC_STANDARDS = {
   ]
 } as const;
 
-// ============================================================
-// 🆕 ثابت‌های استاندارد pH
-// ============================================================
 export const PH_STANDARDS = {
   MIN_VALID_PH: 0,
   MAX_VALID_PH: 14,
-  DEFAULT_PH: 7,  // مقدار پیش‌فرض و خنثی
+  DEFAULT_PH: 7,
   RANGES: [
     { min: 0, max: 5.5, level: 'acidic', label: 'اسیدی', color: 'warning', description: 'نیاز به تنظیم pH' },
     { min: 5.5, max: 6.5, level: 'slightly_acidic', label: 'کمی اسیدی', color: 'success', description: 'مناسب برای اکثر گیاهان' },
@@ -36,25 +29,20 @@ export const PH_STANDARDS = {
   ]
 } as const;
 
-// ============================================================
-// 🆕 توابع تبدیل واحد EC
-// ============================================================
 export function convertECUnit(value: number, fromUnit: string, toUnit: string): number {
   if (fromUnit === toUnit) return value;
 
-  // تبدیل به dS/m
   let dsValue: number;
   if (fromUnit === 'dS/m') {
     dsValue = value;
   } else if (fromUnit === 'mS/cm') {
-    dsValue = value; // 1 mS/cm = 1 dS/m
+    dsValue = value;
   } else if (fromUnit === 'μS/cm') {
     dsValue = value / 1000;
   } else {
     return value;
   }
 
-  // تبدیل از dS/m به واحد مقصد
   if (toUnit === 'dS/m') {
     return dsValue;
   } else if (toUnit === 'mS/cm') {
@@ -66,11 +54,8 @@ export function convertECUnit(value: number, fromUnit: string, toUnit: string): 
   return value;
 }
 
-// ============================================================
-// 🆕 محاسبه TDS از EC
-// ============================================================
 export function calculateTDS(ecDS: number): number {
-  return ecDS * 640; // TDS (mg/L) ≈ EC (dS/m) × 640
+  return ecDS * 640;
 }
 
 export const useWaterStore = defineStore('water', () => {
@@ -81,12 +66,8 @@ export const useWaterStore = defineStore('water', () => {
     waterSalinity: EC_STANDARDS.DEFAULT_EC
   });
 
-  // 🆕 واحد EC و pH
   const ecUnit = ref<'dS/m' | 'mS/cm' | 'μS/cm'>('dS/m');
-  
-  // 🆕 مقدار پیش‌فرض pH روی ۷ تنظیم شده (مقدار خنثی و استاندارد)
   const waterPH = ref<number | null>(PH_STANDARDS.DEFAULT_PH);
-  
   const wastewaterValues = ref<Record<string, number>>({});
   const waterValues = ref<Record<string, number>>({});
 
@@ -114,13 +95,11 @@ export const useWaterStore = defineStore('water', () => {
     }));
   });
 
-  // 🆕 محاسبه TDS
   const tds = computed(() => {
     const ecDS = convertECUnit(waterMixData.value.waterSalinity, ecUnit.value, 'dS/m');
     return calculateTDS(ecDS);
   });
 
-  // 🆕 وضعیت pH
   const phStatus = computed(() => {
     if (waterPH.value === null) return null;
     
@@ -137,6 +116,13 @@ export const useWaterStore = defineStore('water', () => {
     return null;
   });
 
+  // ===== Getters جدید =====
+  const hasWaterData = computed(() => {
+    return waterMixData.value.waterSalinity > 0 || 
+           Object.keys(waterValues.value).some(k => waterValues.value[k] > 0) ||
+           Object.keys(wastewaterValues.value).some(k => wastewaterValues.value[k] > 0);
+  });
+
   // ===== Actions =====
   function setWaterMix(data: Partial<WaterMixData>) {
     waterMixData.value = {
@@ -146,7 +132,6 @@ export const useWaterStore = defineStore('water', () => {
   }
 
   function setECUnit(unit: 'dS/m' | 'mS/cm' | 'μS/cm') {
-    // تبدیل مقدار EC به واحد جدید
     const currentValue = waterMixData.value.waterSalinity;
     const newValue = convertECUnit(currentValue, ecUnit.value, unit);
     
@@ -175,12 +160,40 @@ export const useWaterStore = defineStore('water', () => {
       waterSalinity: EC_STANDARDS.DEFAULT_EC
     };
     ecUnit.value = 'dS/m';
-    // 🆕 مقدار pH هم به حالت پیش‌فرض (۷) بازنشانی می‌شود
     waterPH.value = PH_STANDARDS.DEFAULT_PH;
   }
 
   function getElementFinalValue(element: string): number {
     return finalValues.value[element] || 0;
+  }
+
+  // ============================================================
+  // 🆕 متد جدید برای بارگذاری از API
+  // ============================================================
+  function loadFromAPI(data: any) {
+    if (!data) return;
+    
+    waterMixData.value = {
+      waterPercentage: data.water_percentage || 100,
+      wastewaterPercentage: data.wastewater_percentage || 0,
+      waterSalinity: data.water_salinity || EC_STANDARDS.DEFAULT_EC
+    };
+    
+    if (data.water_values) {
+      for (const [key, value] of Object.entries(data.water_values)) {
+        if (value && typeof value === 'number' && value > 0) {
+          waterValues.value[key] = value;
+        }
+      }
+    }
+    
+    if (data.wastewater_values) {
+      for (const [key, value] of Object.entries(data.wastewater_values)) {
+        if (value && typeof value === 'number' && value > 0) {
+          wastewaterValues.value[key] = value;
+        }
+      }
+    }
   }
 
   return {
@@ -193,13 +206,15 @@ export const useWaterStore = defineStore('water', () => {
     analysisRows,
     tds,
     phStatus,
+    hasWaterData,
     setWaterMix,
     setECUnit,
     setWaterPH,
     setWastewaterValue,
     setWaterValue,
     resetWaterData,
-    getElementFinalValue
+    getElementFinalValue,
+    loadFromAPI
   };
 });
 

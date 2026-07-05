@@ -33,16 +33,9 @@ const getCurrentShamsiDate = (): string => {
   return now.toLocaleDateString('fa-IR');
 };
 
-// ============================================================
-// 🆕 ReportStore - بازطراحی کامل با معماری جدید
-// ============================================================
 export const useReportStore = defineStore('report', () => {
   // ===== State =====
-  
-  /** شناسه گزارش فعلی (null یعنی هیچ گزارشی فعال نیست) */
   const currentReportId = ref<number | null>(null);
-  
-  /** داده‌های گزارش فعلی */
   const reportData = ref<ReportData>({
     id: null,
     reportName: '',
@@ -53,25 +46,13 @@ export const useReportStore = defineStore('report', () => {
     createdAt: null,
     updatedAt: null
   });
-  
-  /** لیست همه گزارش‌های کاربر */
   const reports = ref<ReportListItem[]>([]);
-  
-  /** وضعیت بارگذاری */
   const isLoading = ref(false);
-  
-  /** خطا */
   const error = ref<string | null>(null);
-
-  /** آیا در حال ذخیره‌سازی هستیم؟ */
   const isSaving = ref(false);
 
   // ===== Getters =====
-  
-  /** آیا گزارشی فعال است؟ */
   const hasActiveReport = computed(() => currentReportId.value !== null);
-  
-  /** آیا گزارش کامل است؟ */
   const isReportComplete = computed(() => {
     return !!(
       reportData.value.reportName &&
@@ -80,22 +61,15 @@ export const useReportStore = defineStore('report', () => {
       reportData.value.growthStage
     );
   });
-  
-  /** خلاصه گزارش */
   const reportSummary = computed(() => {
     return `${reportData.value.reportName} - ${reportData.value.plantName} (${reportData.value.season})`;
   });
 
   // ===== Actions =====
 
-  /**
-   * 🆕 ایجاد یک گزارش جدید (خالی)
-   * این تابع همه داده‌ها را ریست می‌کند و حالت جدید ایجاد می‌کند
-   */
   function createNewReport(): void {
     console.log('📄 Creating new empty report...');
     
-    // 1. Reset report data
     reportData.value = {
       id: null,
       reportName: '',
@@ -107,10 +81,8 @@ export const useReportStore = defineStore('report', () => {
       updatedAt: null
     };
     
-    // 2. Clear current report ID
     currentReportId.value = null;
     
-    // 3. Reset all dependent stores
     const targetStore = useTargetStore();
     const waterStore = useWaterStore();
     const calcStore = useCalcStore();
@@ -119,16 +91,12 @@ export const useReportStore = defineStore('report', () => {
     waterStore.resetWaterData();
     calcStore.resetCalculation();
     
-    // 4. Dispatch event for UI update
     window.dispatchEvent(new CustomEvent('report-reset'));
     window.dispatchEvent(new CustomEvent('report-changed'));
     
     console.log('✅ New report created, all stores reset');
   }
 
-  /**
-   * 🆕 بارگذاری یک گزارش موجود
-   */
   async function loadReport(reportId: number): Promise<boolean> {
     console.log(`📂 Loading report ${reportId}...`);
     
@@ -136,7 +104,6 @@ export const useReportStore = defineStore('report', () => {
     error.value = null;
     
     try {
-      // 1. Reset all stores first (clean state)
       const targetStore = useTargetStore();
       const waterStore = useWaterStore();
       const calcStore = useCalcStore();
@@ -145,13 +112,11 @@ export const useReportStore = defineStore('report', () => {
       waterStore.resetWaterData();
       calcStore.resetCalculation();
       
-      // 2. Fetch report data
       const report = await apiService.getReport(String(reportId));
       if (!report) {
         throw new Error('گزارش پیدا نشد');
       }
       
-      // 3. Update report data
       reportData.value = {
         id: report.id,
         reportName: report.report_name || '',
@@ -165,7 +130,7 @@ export const useReportStore = defineStore('report', () => {
       
       currentReportId.value = report.id;
       
-      // 4. Load water analysis
+      // Water analysis
       try {
         const waterAnalysis = await apiService.getWaterAnalysis(String(reportId));
         if (waterAnalysis) {
@@ -173,10 +138,10 @@ export const useReportStore = defineStore('report', () => {
           console.log('💧 Water analysis loaded');
         }
       } catch (err) {
-        console.log('ℹ️ No water analysis found for this report');
+        console.log('ℹ️ No water analysis found');
       }
       
-      // 5. Load calculation data
+      // Calculation data
       try {
         const calculation = await apiService.getCalculation(String(reportId));
         if (calculation) {
@@ -216,10 +181,9 @@ export const useReportStore = defineStore('report', () => {
           console.log('🧮 Calculation data loaded');
         }
       } catch (err) {
-        console.log('ℹ️ No calculation found for this report');
+        console.log('ℹ️ No calculation found');
       }
       
-      // 6. Dispatch event for UI update
       window.dispatchEvent(new CustomEvent('report-changed'));
       
       console.log(`✅ Report ${reportId} loaded successfully`);
@@ -234,9 +198,6 @@ export const useReportStore = defineStore('report', () => {
     }
   }
 
-  /**
-   * 🆕 ذخیره گزارش فعلی
-   */
   async function saveCurrentReport(): Promise<boolean> {
     if (!hasActiveReport.value && !reportData.value.reportName) {
       error.value = 'لطفاً ابتدا اطلاعات گزارش را وارد کنید';
@@ -251,7 +212,6 @@ export const useReportStore = defineStore('report', () => {
       const waterStore = useWaterStore();
       const calcStore = useCalcStore();
       
-      // 1. Prepare report payload
       const reportPayload = {
         report_name: reportData.value.reportName || `گزارش ${reportData.value.date}`,
         plant_name: reportData.value.plantName || '',
@@ -262,7 +222,6 @@ export const useReportStore = defineStore('report', () => {
       
       let savedReport: any;
       
-      // 2. Create or update report
       if (currentReportId.value) {
         savedReport = await apiService.updateReport(String(currentReportId.value), reportPayload);
         console.log(`📝 Updating report ${currentReportId.value}`);
@@ -281,8 +240,8 @@ export const useReportStore = defineStore('report', () => {
       
       const reportId = String(savedReport.id);
       
-      // 3. Save water analysis
-      if (waterStore.hasWaterData.value) {
+      // Water analysis
+      if (waterStore.hasWaterData) {
         try {
           const waterPayload = {
             water_percentage: waterStore.waterMixData.waterPercentage,
@@ -303,7 +262,7 @@ export const useReportStore = defineStore('report', () => {
         }
       }
       
-      // 4. Save calculation data
+      // Calculation data
       const calcPayload = {
         target_values: targetStore.targetElements,
         final_values: calcStore.getFinalConcentrations(),
@@ -323,7 +282,6 @@ export const useReportStore = defineStore('report', () => {
         console.warn('خطا در ذخیره محاسبات:', err);
       }
       
-      // 5. Refresh reports list
       await loadReports();
       
       console.log('✅ Report saved successfully');
@@ -338,9 +296,6 @@ export const useReportStore = defineStore('report', () => {
     }
   }
 
-  /**
-   * بارگذاری لیست گزارش‌ها
-   */
   async function loadReports(): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
@@ -357,16 +312,12 @@ export const useReportStore = defineStore('report', () => {
     }
   }
 
-  /**
-   * حذف یک گزارش
-   */
   async function deleteReport(reportId: number): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
     try {
       await apiService.deleteReport(String(reportId));
       
-      // If current report was deleted, reset state
       if (currentReportId.value === reportId) {
         createNewReport();
       }
@@ -382,9 +333,6 @@ export const useReportStore = defineStore('report', () => {
     }
   }
 
-  /**
-   * به‌روزرسانی داده‌های گزارش
-   */
   function updateReportData(data: Partial<ReportData>) {
     reportData.value = {
       ...reportData.value,
@@ -392,9 +340,6 @@ export const useReportStore = defineStore('report', () => {
     };
   }
 
-  /**
-   * تنظیم شناسه گزارش فعلی
-   */
   function setCurrentReportId(id: number | null) {
     currentReportId.value = id;
     if (id === null) {
@@ -402,9 +347,6 @@ export const useReportStore = defineStore('report', () => {
     }
   }
 
-  /**
-   * پاک کردن خطا
-   */
   function clearError() {
     error.value = null;
   }
