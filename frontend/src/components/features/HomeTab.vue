@@ -9,7 +9,7 @@
         <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-200 dark:border-primary-900"></div>
         <div class="animate-spin rounded-full h-16 w-16 border-4 border-primary-600 border-t-transparent absolute top-0"></div>
       </div>
-      <p class="mt-4 text-gray-600 dark:text-gray-400 text-sm">در حال بارگذاری داده‌ها از سرور...</p>
+      <p class="mt-4 text-gray-600 dark:text-gray-400 text-sm">در حال بارگذاری داده‌ها...</p>
     </div>
 
     <!-- ============================================================ -->
@@ -26,7 +26,7 @@
           <h4 class="text-sm font-semibold text-danger-700 dark:text-danger-400">خطا در دریافت داده‌ها</h4>
           <p class="text-sm text-danger-600 dark:text-danger-500 mt-1">{{ error }}</p>
           <button
-            @click="loadData"
+            @click="loadDashboardData"
             class="mt-3 px-4 py-1.5 bg-danger-600 hover:bg-danger-700 text-white text-sm rounded-lg transition-colors"
           >
             تلاش مجدد
@@ -36,66 +36,54 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- Empty State -->
+    <!-- ✅ Empty State - وقتی هیچ گزارشی وجود ندارد -->
     <!-- ============================================================ -->
-    <div v-else-if="!summary?.has_data" class="card text-center py-16">
+    <div v-else-if="!hasActiveReport" class="card text-center py-16">
       <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/30 dark:to-primary-800/30 flex items-center justify-center">
         <svg class="w-12 h-12 text-primary-500 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
         </svg>
       </div>
       <h4 class="text-lg font-bold text-gray-900 dark:text-white mb-2">
-        هنوز داده‌ای برای نمایش وجود ندارد
+        هیچ گزارشی وجود ندارد
       </h4>
       <p class="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
-        {{ summary?.message || 'برای مشاهده داشبورد، ابتدا در بخش‌های مختلف داده‌ها را وارد کرده و محاسبات را انجام دهید.' }}
+        برای شروع، یک گزارش جدید ایجاد کنید یا یک گزارش موجود را باز کنید.
       </p>
       <div class="mt-6 flex flex-wrap justify-center gap-2">
         <span class="px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-lg text-xs">
-          ۱. آنالیز آب
+          فایل → جدید
         </span>
         <span class="px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-lg text-xs">
-          ۲. عناصر هدف
-        </span>
-        <span class="px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400 rounded-lg text-xs">
-          ۳. محاسبه کود
+          فایل → بازکردن
         </span>
       </div>
     </div>
 
     <!-- ============================================================ -->
-    <!-- Data Loaded - Full Dashboard -->
+    <!-- ✅ نمایش داده‌های واقعی از storeها -->
     <!-- ============================================================ -->
     <template v-else>
       <!-- بخش 1: کارت‌های خلاصه داشبورد -->
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <!-- کارت 1: وضعیت تعادل یونی -->
-        <div
-          class="card group hover:scale-[1.02] transition-all duration-300"
-          :class="ionBalanceStatus.borderClass"
-        >
+        <div class="card border-l-4" :class="ionBalanceStatus.borderClass">
           <div class="flex items-start justify-between mb-3">
-            <div
-              class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-colors"
-              :class="ionBalanceStatus.bgClass"
-            >
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center" :class="ionBalanceStatus.bgClass">
               <svg class="w-5 h-5 sm:w-6 sm:h-6" :class="ionBalanceStatus.iconClass" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
             </div>
-            <span
-              class="px-2 py-0.5 rounded-full text-xs font-semibold"
-              :class="ionBalanceStatus.badgeClass"
-            >
-              {{ summary.ion_balance?.is_balanced ? 'متعادل' : 'نامتعادل' }}
+            <span class="px-2 py-0.5 rounded-full text-xs font-semibold" :class="ionBalanceStatus.badgeClass">
+              {{ ionBalance.isBalanced ? 'متعادل' : 'نامتعادل' }}
             </span>
           </div>
           <h3 class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">تعادل یونی</h3>
           <div class="flex items-baseline gap-2">
             <span class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
-              {{ formatNumber(summary.ion_balance?.cation) }}
+              {{ ionBalance.cation.toFixed(2) }}
             </span>
-            <span class="text-xs text-gray-400">/ {{ formatNumber(summary.ion_balance?.anion) }}</span>
+            <span class="text-xs text-gray-400">/ {{ ionBalance.anion.toFixed(2) }}</span>
           </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">کاتیون / آنیون (meq/L)</p>
         </div>
@@ -109,13 +97,13 @@
               </svg>
             </div>
             <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400">
-              {{ summary.active_elements_count }}/{{ summary.total_elements }}
+              {{ activeElementsCount }}/15
             </span>
           </div>
           <h3 class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">عناصر فعال</h3>
           <div class="flex items-baseline gap-2">
             <span class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
-              {{ summary.active_elements_count }}
+              {{ activeElementsCount }}
             </span>
             <span class="text-xs text-gray-400">عنصر</span>
           </div>
@@ -131,13 +119,13 @@
               </svg>
             </div>
             <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-success-50 dark:bg-success-900/30 text-success-700 dark:text-success-400">
-              {{ summary.active_reservoirs_count }}/3
+              {{ activeReservoirsCount }}/3
             </span>
           </div>
           <h3 class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">مخازن فعال</h3>
           <div class="flex items-baseline gap-2">
             <span class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
-              {{ summary.active_reservoirs_count }}
+              {{ activeReservoirsCount }}
             </span>
             <span class="text-xs text-gray-400">مخزن</span>
           </div>
@@ -159,7 +147,7 @@
           <h3 class="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-1">هزینه کل</h3>
           <div class="flex items-baseline gap-2">
             <span class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white tabular-nums">
-              {{ formatCurrency(summary.total_cost) }}
+              {{ totalCost.toLocaleString('fa-IR') }}
             </span>
           </div>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">مجموع هزینه کودها</p>
@@ -167,7 +155,7 @@
       </div>
 
       <!-- ============================================================ -->
-      <!-- بخش 2: جدول هدف و محلول نهایی -->
+      <!-- بخش 2: جدول مقایسه عناصر -->
       <!-- ============================================================ -->
       <div class="card">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
@@ -194,6 +182,7 @@
           </div>
         </div>
 
+        <!-- جدول -->
         <div class="overflow-x-auto -mx-4 sm:mx-0">
           <div class="inline-block min-w-full align-middle px-4 sm:px-0">
             <table class="min-w-full border-collapse">
@@ -203,34 +192,22 @@
                     عنصر
                   </th>
                   <th class="bg-gray-50 dark:bg-gray-700 px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-600 min-w-[90px]">
-                    <div class="flex flex-col items-center gap-1">
-                      <span>هدف</span>
-                      <span class="text-[10px] text-gray-400 font-normal">Target</span>
-                    </div>
+                    هدف
                   </th>
                   <th class="bg-gray-50 dark:bg-gray-700 px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-600 min-w-[90px]">
-                    <div class="flex flex-col items-center gap-1">
-                      <span>تامین شده</span>
-                      <span class="text-[10px] text-gray-400 font-normal">Actual</span>
-                    </div>
+                    تامین شده
                   </th>
                   <th class="bg-gray-50 dark:bg-gray-700 px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-600 min-w-[120px]">
-                    <div class="flex flex-col items-center gap-1">
-                      <span>وضعیت</span>
-                      <span class="text-[10px] text-gray-400 font-normal">Progress</span>
-                    </div>
+                    وضعیت
                   </th>
                   <th class="bg-gray-50 dark:bg-gray-700 px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-600 min-w-[80px]">
-                    <div class="flex flex-col items-center gap-1">
-                      <span>اختلاف</span>
-                      <span class="text-[10px] text-gray-400 font-normal">Diff</span>
-                    </div>
+                    اختلاف
                   </th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 <tr
-                  v-for="item in summary.elements_data"
+                  v-for="item in elementComparisonData"
                   :key="item.element"
                   class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                 >
@@ -253,7 +230,7 @@
                     </span>
                   </td>
                   <td class="px-3 py-3 text-center">
-                    <span class="text-sm font-semibold tabular-nums" :class="getActualValueClass(item.progress_percent)">
+                    <span class="text-sm font-semibold tabular-nums" :class="getActualValueClass(item.progressPercent)">
                       {{ item.actual.toFixed(2) }}
                     </span>
                   </td>
@@ -262,12 +239,12 @@
                       <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div
                           class="h-full rounded-full transition-all duration-500"
-                          :class="getProgressClass(item.progress_percent)"
-                          :style="{ width: Math.min(item.progress_percent, 100) + '%' }"
+                          :class="getProgressClass(item.progressPercent)"
+                          :style="{ width: Math.min(item.progressPercent, 100) + '%' }"
                         ></div>
                       </div>
-                      <span class="text-xs font-semibold min-w-[35px] text-right tabular-nums" :class="getProgressTextClass(item.progress_percent)">
-                        {{ Math.round(item.progress_percent) }}%
+                      <span class="text-xs font-semibold min-w-[35px] text-right tabular-nums" :class="getProgressTextClass(item.progressPercent)">
+                        {{ Math.round(item.progressPercent) }}%
                       </span>
                     </div>
                   </td>
@@ -295,6 +272,7 @@
           </div>
         </div>
 
+        <!-- راهنمای رنگ‌ها -->
         <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div class="flex flex-wrap items-center gap-3 text-xs">
             <span class="text-gray-500 dark:text-gray-400">راهنما:</span>
@@ -318,129 +296,57 @@
       <!-- بخش 3: اطلاعات مخازن -->
       <!-- ============================================================ -->
       <div class="card">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-success-50 dark:bg-success-900/30 flex items-center justify-center">
-              <svg class="w-5 h-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                توزیع مواد در مخازن
-              </h3>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                تقسیم‌بندی کودها بر اساس سازگاری شیمیایی
-              </p>
-            </div>
+        <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div class="w-10 h-10 rounded-lg bg-success-50 dark:bg-success-900/30 flex items-center justify-center">
+            <svg class="w-5 h-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+              توزیع مواد در مخازن
+            </h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              تقسیم‌بندی کودها بر اساس سازگاری شیمیایی
+            </p>
           </div>
         </div>
 
+        <!-- کارت‌های مخازن -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- مخزن A -->
-          <div class="relative overflow-hidden rounded-xl border-2 border-primary-200 dark:border-primary-800 bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/20 dark:to-gray-800 p-4 transition-all hover:shadow-lg">
-            <div class="absolute top-0 right-0 w-20 h-20 bg-primary-100 dark:bg-primary-900/30 rounded-full -mr-10 -mt-10 opacity-50"></div>
+          <div
+            v-for="(reservoir, key) in reservoirData"
+            :key="key"
+            class="relative overflow-hidden rounded-xl border-2 p-4 transition-all hover:shadow-lg"
+            :class="getReservoirBorderClass(key)"
+          >
+            <div class="absolute top-0 right-0 w-20 h-20 rounded-full -mr-10 -mt-10 opacity-50" :class="getReservoirBgClass(key)"></div>
             <div class="relative">
               <div class="flex items-center justify-between mb-3">
                 <div class="flex items-center gap-2">
-                  <div class="w-10 h-10 rounded-lg bg-primary-500 text-white flex items-center justify-center font-bold text-lg shadow-md">
-                    A
+                  <div class="w-10 h-10 rounded-lg text-white flex items-center justify-center font-bold text-lg shadow-md" :class="getReservoirColorClass(key)">
+                    {{ key }}
                   </div>
                   <div>
-                    <h4 class="font-bold text-gray-900 dark:text-white text-sm">مخزن کلسیم</h4>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">کودهای کلسیمی</p>
+                    <h4 class="font-bold text-gray-900 dark:text-white text-sm">{{ getReservoirName(key) }}</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ getReservoirDesc(key) }}</p>
                   </div>
                 </div>
-                <span class="px-2 py-1 bg-primary-500 text-white rounded-lg text-xs font-bold tabular-nums">
-                  {{ getReservoirTotal('A').toFixed(2) }}g
+                <span class="px-2 py-1 text-white rounded-lg text-xs font-bold tabular-nums" :class="getReservoirColorClass(key)">
+                  {{ getReservoirTotal(key).toFixed(2) }}g
                 </span>
               </div>
-              <div v-if="getReservoirItems('A').length > 0" class="space-y-2">
+              <div v-if="reservoir.length > 0" class="space-y-2">
                 <div
-                  v-for="(item, idx) in getReservoirItems('A')"
+                  v-for="(item, idx) in reservoir"
                   :key="idx"
-                  class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-primary-100 dark:border-primary-900/50"
+                  class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border"
+                  :class="getReservoirItemBorderClass(key)"
                 >
                   <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
                     {{ item.name }}
                   </span>
-                  <span class="text-xs font-bold text-primary-600 dark:text-primary-400 tabular-nums">
-                    {{ item.amount?.toFixed(3) || '0.000' }}g
-                  </span>
-                </div>
-              </div>
-              <div v-else class="text-center py-4 text-xs text-gray-400 dark:text-gray-500">
-                خالی
-              </div>
-            </div>
-          </div>
-
-          <!-- مخزن B -->
-          <div class="relative overflow-hidden rounded-xl border-2 border-success-200 dark:border-success-800 bg-gradient-to-br from-success-50 to-white dark:from-success-900/20 dark:to-gray-800 p-4 transition-all hover:shadow-lg">
-            <div class="absolute top-0 right-0 w-20 h-20 bg-success-100 dark:bg-success-900/30 rounded-full -mr-10 -mt-10 opacity-50"></div>
-            <div class="relative">
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2">
-                  <div class="w-10 h-10 rounded-lg bg-success-500 text-white flex items-center justify-center font-bold text-lg shadow-md">
-                    B
-                  </div>
-                  <div>
-                    <h4 class="font-bold text-gray-900 dark:text-white text-sm">مخزن اصلی</h4>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">سایر کودها</p>
-                  </div>
-                </div>
-                <span class="px-2 py-1 bg-success-500 text-white rounded-lg text-xs font-bold tabular-nums">
-                  {{ getReservoirTotal('B').toFixed(2) }}g
-                </span>
-              </div>
-              <div v-if="getReservoirItems('B').length > 0" class="space-y-2">
-                <div
-                  v-for="(item, idx) in getReservoirItems('B')"
-                  :key="idx"
-                  class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-success-100 dark:border-success-900/50"
-                >
-                  <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
-                    {{ item.name }}
-                  </span>
-                  <span class="text-xs font-bold text-success-600 dark:text-success-400 tabular-nums">
-                    {{ item.amount?.toFixed(3) || '0.000' }}g
-                  </span>
-                </div>
-              </div>
-              <div v-else class="text-center py-4 text-xs text-gray-400 dark:text-gray-500">
-                خالی
-              </div>
-            </div>
-          </div>
-
-          <!-- مخزن C -->
-          <div class="relative overflow-hidden rounded-xl border-2 border-warning-200 dark:border-warning-800 bg-gradient-to-br from-warning-50 to-white dark:from-warning-900/20 dark:to-gray-800 p-4 transition-all hover:shadow-lg">
-            <div class="absolute top-0 right-0 w-20 h-20 bg-warning-100 dark:bg-warning-900/30 rounded-full -mr-10 -mt-10 opacity-50"></div>
-            <div class="relative">
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2">
-                  <div class="w-10 h-10 rounded-lg bg-warning-500 text-white flex items-center justify-center font-bold text-lg shadow-md">
-                    C
-                  </div>
-                  <div>
-                    <h4 class="font-bold text-gray-900 dark:text-white text-sm">مخزن اسید</h4>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">تنظیم pH</p>
-                  </div>
-                </div>
-                <span class="px-2 py-1 bg-warning-500 text-white rounded-lg text-xs font-bold tabular-nums">
-                  {{ getReservoirTotal('C').toFixed(2) }}g
-                </span>
-              </div>
-              <div v-if="getReservoirItems('C').length > 0" class="space-y-2">
-                <div
-                  v-for="(item, idx) in getReservoirItems('C')"
-                  :key="idx"
-                  class="flex items-center justify-between bg-white dark:bg-gray-700/50 rounded-lg px-3 py-2 border border-warning-100 dark:border-warning-900/50"
-                >
-                  <span class="text-xs font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]">
-                    {{ item.name }}
-                  </span>
-                  <span class="text-xs font-bold text-warning-600 dark:text-warning-400 tabular-nums">
+                  <span class="text-xs font-bold tabular-nums" :class="getReservoirItemTextClass(key)">
                     {{ item.amount?.toFixed(3) || '0.000' }}g
                   </span>
                 </div>
@@ -458,7 +364,7 @@
               <div class="flex items-center gap-2">
                 <span class="text-gray-500 dark:text-gray-400">مجموع کل:</span>
                 <span class="font-bold text-gray-900 dark:text-white tabular-nums">
-                  {{ summary.total_reservoir_weight?.toFixed(2) }} گرم
+                  {{ totalReservoirWeight.toFixed(2) }} گرم
                 </span>
               </div>
             </div>
@@ -473,9 +379,9 @@
       </div>
 
       <!-- ============================================================ -->
-      <!-- بخش 4: نکات و توصیه‌های سریع -->
+      <!-- بخش 4: توصیه‌ها -->
       <!-- ============================================================ -->
-      <div v-if="summary.recommendations?.length > 0" class="card border-l-4 border-l-primary-500">
+      <div v-if="recommendations.length > 0" class="card border-l-4 border-l-primary-500">
         <div class="flex items-center gap-3 mb-4">
           <div class="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
             <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,7 +399,7 @@
         </div>
         <div class="space-y-2">
           <div
-            v-for="(rec, idx) in summary.recommendations"
+            v-for="(rec, idx) in recommendations"
             :key="idx"
             class="flex items-start gap-3 p-3 rounded-lg"
             :class="getRecommendationBgClass(rec.type)"
@@ -523,46 +429,130 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { apiService } from '@/services/apiService';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
+import { useWaterStore } from '@/store/modules/waterStore';
 import { useCalcStore } from '@/store/modules/calcStore';
+import { apiService } from '@/services/apiService';
+
+// ============================================================
+// Props
+// ============================================================
+interface Props {
+  targetUnit?: string;
+}
+
+const props = defineProps<Props>();
 
 // ============================================================
 // Stores
 // ============================================================
+const reportStore = useReportStore();
 const targetStore = useTargetStore();
+const waterStore = useWaterStore();
 const calcStore = useCalcStore();
 
 // ============================================================
 // State
 // ============================================================
-const summary = ref<any>(null);
-const isLoading = ref(true);
+const isLoading = ref(false);
 const error = ref<string | null>(null);
 
+// لیست عناصر
+const ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
+
 // ============================================================
-// Computed
+// Computed - داده‌ها از storeها
 // ============================================================
-const ionBalanceStatus = computed(() => {
-  if (!summary.value?.ion_balance) {
+
+/** آیا گزارشی فعال است؟ */
+const hasActiveReport = computed(() => reportStore.hasActiveReport);
+
+/** تعادل یونی از targetStore */
+const ionBalance = computed(() => targetStore.ionBalance);
+
+/** عناصر هدف از targetStore */
+const targetElements = computed(() => targetStore.targetElements);
+
+/** عناصر تامین شده از calcStore (concentrations) */
+const actualElements = computed(() => {
+  if (calcStore.optimizationResult?.concentrations) {
+    return calcStore.optimizationResult.concentrations;
+  }
+  // اگر نتیجه بهینه‌سازی وجود ندارد، از finalValues استفاده کن
+  return calcStore.elementTotals || {};
+});
+
+/** تعداد عناصر فعال */
+const activeElementsCount = computed(() => {
+  return Object.values(targetElements.value).filter(v => v && v > 0).length;
+});
+
+/** داده‌های مخازن */
+const reservoirData = computed(() => calcStore.reservoirData);
+
+/** تعداد مخازن فعال */
+const activeReservoirsCount = computed(() => {
+  let count = 0;
+  if (reservoirData.value.A?.length > 0) count++;
+  if (reservoirData.value.B?.length > 0) count++;
+  if (reservoirData.value.C?.length > 0) count++;
+  return count;
+});
+
+/** مجموع وزن مخازن */
+const totalReservoirWeight = computed(() => {
+  let total = 0;
+  for (const key of ['A', 'B', 'C'] as const) {
+    for (const item of (reservoirData.value[key] || [])) {
+      total += item.amount || 0;
+    }
+  }
+  return total;
+});
+
+/** هزینه کل */
+const totalCost = computed(() => calcStore.totalCost || 0);
+
+/** داده‌های مقایسه عناصر */
+const elementComparisonData = computed(() => {
+  return ELEMENTS.map(element => {
+    const target = (targetElements.value as any)[element] || 0;
+    const actual = (actualElements.value as any)[element] || 0;
+    const difference = actual - target;
+    const progressPercent = target > 0 ? Math.min((actual / target) * 100, 150) : 0;
+    
     return {
-      borderClass: 'border-l-4 border-l-gray-300 dark:border-l-gray-600',
+      element,
+      target,
+      actual,
+      difference,
+      progressPercent
+    };
+  });
+});
+
+/** وضعیت تعادل یونی برای کارت */
+const ionBalanceStatus = computed(() => {
+  if (!ionBalance.value) {
+    return {
+      borderClass: 'border-l-gray-300 dark:border-l-gray-600',
       bgClass: 'bg-gray-100 dark:bg-gray-700',
       iconClass: 'text-gray-500 dark:text-gray-400',
       badgeClass: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
     };
   }
-  if (summary.value.ion_balance.is_balanced) {
+  if (ionBalance.value.isBalanced) {
     return {
-      borderClass: 'border-l-4 border-l-success-500',
+      borderClass: 'border-l-success-500',
       bgClass: 'bg-success-50 dark:bg-success-900/30',
       iconClass: 'text-success-600 dark:text-success-400',
       badgeClass: 'bg-success-100 dark:bg-success-900/50 text-success-700 dark:text-success-400'
     };
   } else {
     return {
-      borderClass: 'border-l-4 border-l-danger-500',
+      borderClass: 'border-l-danger-500',
       bgClass: 'bg-danger-50 dark:bg-danger-900/30',
       iconClass: 'text-danger-600 dark:text-danger-400',
       badgeClass: 'bg-danger-100 dark:bg-danger-900/50 text-danger-700 dark:text-danger-400'
@@ -570,177 +560,171 @@ const ionBalanceStatus = computed(() => {
   }
 });
 
-// ============================================================
-// Methods
-// ============================================================
-const loadData = async () => {
-  isLoading.value = true;
-  error.value = null;
-  try {
-    const data = await apiService.getHomeSummary();
-    
-    if (data && data.has_data) {
-      // اگر elements_data خالی است، از storeها پر کن
-      if (!data.elements_data || data.elements_data.length === 0) {
-        data.elements_data = buildElementsData();
-      }
-      
-      // اگر reservoir_data خالی است، از calcStore پر کن
-      if (!data.reservoir_data || Object.keys(data.reservoir_data).length === 0) {
-        data.reservoir_data = calcStore.reservoirData || { A: [], B: [], C: [] };
-      }
-      
-      // محاسبه مجموع وزن مخازن
-      if (data.reservoir_data) {
-        let totalWeight = 0;
-        const reservoirKeys = ['A', 'B', 'C'] as const;
-        for (const key of reservoirKeys) {
-          const items = data.reservoir_data[key];
-          if (items && Array.isArray(items)) {
-            totalWeight += items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
-          }
-        }
-        data.total_reservoir_weight = totalWeight;
-      }
-    }
-    
-    summary.value = data;
-  } catch (err: any) {
-    error.value = err.message || 'خطا در بارگذاری داده‌ها از سرور';
-    console.error('Error loading home summary:', err);
-    
-    // در صورت خطا، از داده‌های محلی استفاده کن
-    const localData = buildLocalSummary();
-    if (localData) {
-      summary.value = localData;
-    }
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// ============================================================
-// توابع ساخت داده از storeها
-// ============================================================
-
-const buildElementsData = () => {
-  const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
-  const result = [];
+/** تولید توصیه‌ها */
+const recommendations = computed(() => {
+  const recs: Array<{ type: 'success' | 'warning' | 'danger'; title: string; description: string }> = [];
   
-  const finalValues: Record<string, number> = {};
-  for (const row of calcStore.calculationRows) {
-    if (row.elements) {
-      for (const [element, percentage] of Object.entries(row.elements)) {
-        if (percentage && percentage > 0 && row.weight && row.weight > 0) {
-          const contribution = (percentage / 100) * row.weight * (row.purity / 100);
-          finalValues[element] = (finalValues[element] || 0) + contribution;
-        }
-      }
-    }
-  }
-  
-  for (const element of elements) {
-    const target = (targetStore.targetElements as Record<string, number>)[element] || 0;
-    const actual = finalValues[element] || 0;
-    const diff = actual - target;
-    const progressPercent = target > 0 ? (actual / target) * 100 : 0;
-    
-    result.push({
-      element,
-      target,
-      actual,
-      difference: diff,
-      progress_percent: Math.min(progressPercent, 150)
+  // 1. تعادل یونی
+  if (!ionBalance.value.isBalanced) {
+    const diff = Math.abs(ionBalance.value.cation - ionBalance.value.anion);
+    recs.push({
+      type: 'danger',
+      title: 'عدم تعادل یونی',
+      description: `اختلاف کاتیون و آنیون ${diff.toFixed(2)} meq/L است.`
     });
   }
   
-  return result;
-};
+  // 2. بررسی عناصر کمبود/بیش‌بود
+  const deficient: string[] = [];
+  const excessive: string[] = [];
+  
+  for (const item of elementComparisonData.value) {
+    if (item.target === 0) continue;
+    if (item.progressPercent < 70) {
+      deficient.push(item.element);
+    } else if (item.progressPercent > 130) {
+      excessive.push(item.element);
+    }
+  }
+  
+  if (deficient.length > 0) {
+    recs.push({
+      type: 'warning',
+      title: `${deficient.length} عنصر با کمبود شدید`,
+      description: `عناصر ${deficient.slice(0, 3).join(', ')}${deficient.length > 3 ? ' و...' : ''} کمتر از 70% مقدار هدف هستند.`
+    });
+  }
+  
+  if (excessive.length > 0) {
+    recs.push({
+      type: 'warning',
+      title: `${excessive.length} عنصر با بیش‌بود`,
+      description: `عناصر ${excessive.slice(0, 3).join(', ')}${excessive.length > 3 ? ' و...' : ''} بیشتر از 130% مقدار هدف هستند.`
+    });
+  }
+  
+  // 3. EC
+  if (calcStore.optimizationResult?.ec !== undefined) {
+    const ec = calcStore.optimizationResult.ec;
+    if (ec < 0.8) {
+      recs.push({
+        type: 'warning',
+        title: 'EC کم',
+        description: `EC پایین است (${ec.toFixed(2)} dS/m). ممکن است نیاز به افزایش غلظت کودها باشد.`
+      });
+    } else if (ec > 3.5) {
+      recs.push({
+        type: 'danger',
+        title: 'EC بحرانی',
+        description: `EC بسیار بالا است (${ec.toFixed(2)} dS/m). خطر شوری جدی است!`
+      });
+    }
+  }
+  
+  // 4. pH
+  if (calcStore.optimizationResult?.ph !== undefined) {
+    const ph = calcStore.optimizationResult.ph;
+    if (ph < 5.5) {
+      recs.push({
+        type: 'warning',
+        title: 'pH اسیدی',
+        description: `pH پایین است (${ph.toFixed(2)}). ممکن است جذب برخی عناصر کاهش یابد.`
+      });
+    } else if (ph > 7.0) {
+      recs.push({
+        type: 'warning',
+        title: 'pH قلیایی',
+        description: `pH بالا است (${ph.toFixed(2)}). ممکن است جذب ریزمغذی‌ها کاهش یابد.`
+      });
+    }
+  }
+  
+  if (recs.length === 0) {
+    recs.push({
+      type: 'success',
+      title: 'وضعیت مطلوب',
+      description: 'تمام پارامترها در محدوده مناسب قرار دارند.'
+    });
+  }
+  
+  return recs;
+});
 
-const buildLocalSummary = () => {
-  const elementsData = buildElementsData();
-  const hasTargets = elementsData.some(item => item.target > 0);
-  
-  if (!hasTargets) {
-    return null;
-  }
-  
-  const activeElementsCount = elementsData.filter(item => item.target > 0).length;
-  
-  let totalReservoirWeight = 0;
-  const reservoirData = calcStore.reservoirData || { A: [], B: [], C: [] };
-  const reservoirKeys = ['A', 'B', 'C'] as const;
-  for (const key of reservoirKeys) {
-    const items = reservoirData[key];
-    if (items && Array.isArray(items)) {
-      totalReservoirWeight += items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
-    }
-  }
-  
-  let activeReservoirsCount = 0;
-  for (const key of reservoirKeys) {
-    const items = reservoirData[key];
-    if (items && Array.isArray(items) && items.length > 0) {
-      activeReservoirsCount++;
-    }
-  }
-  
-  return {
-    has_data: true,
-    ion_balance: targetStore.ionBalance || { cation: 0, anion: 0, is_balanced: false },
-    active_elements_count: activeElementsCount,
-    total_elements: 15,
-    active_reservoirs_count: activeReservoirsCount,
-    total_cost: calcStore.totalCost || 0,
-    total_reservoir_weight: totalReservoirWeight,
-    reservoir_data: reservoirData,
-    elements_data: elementsData,
-    recommendations: []
+// ============================================================
+// Helper Functions - مخازن
+// ============================================================
+
+const getReservoirColorClass = (key: string): string => {
+  const classes: Record<string, string> = {
+    'A': 'bg-primary-500',
+    'B': 'bg-success-500',
+    'C': 'bg-warning-500'
   };
+  return classes[key] || 'bg-gray-500';
+};
+
+const getReservoirBorderClass = (key: string): string => {
+  const classes: Record<string, string> = {
+    'A': 'border-primary-200 dark:border-primary-800',
+    'B': 'border-success-200 dark:border-success-800',
+    'C': 'border-warning-200 dark:border-warning-800'
+  };
+  return classes[key] || 'border-gray-200 dark:border-gray-700';
+};
+
+const getReservoirBgClass = (key: string): string => {
+  const classes: Record<string, string> = {
+    'A': 'bg-primary-100 dark:bg-primary-900/30',
+    'B': 'bg-success-100 dark:bg-success-900/30',
+    'C': 'bg-warning-100 dark:bg-warning-900/30'
+  };
+  return classes[key] || 'bg-gray-100 dark:bg-gray-700/30';
+};
+
+const getReservoirName = (key: string): string => {
+  const names: Record<string, string> = {
+    'A': 'مخزن کلسیم',
+    'B': 'مخزن اصلی',
+    'C': 'مخزن اسید'
+  };
+  return names[key] || key;
+};
+
+const getReservoirDesc = (key: string): string => {
+  const descs: Record<string, string> = {
+    'A': 'کودهای کلسیمی',
+    'B': 'سایر کودها',
+    'C': 'تنظیم pH'
+  };
+  return descs[key] || '';
+};
+
+const getReservoirItemBorderClass = (key: string): string => {
+  const classes: Record<string, string> = {
+    'A': 'border-primary-100 dark:border-primary-900/50',
+    'B': 'border-success-100 dark:border-success-900/50',
+    'C': 'border-warning-100 dark:border-warning-900/50'
+  };
+  return classes[key] || 'border-gray-100 dark:border-gray-700';
+};
+
+const getReservoirItemTextClass = (key: string): string => {
+  const classes: Record<string, string> = {
+    'A': 'text-primary-600 dark:text-primary-400',
+    'B': 'text-success-600 dark:text-success-400',
+    'C': 'text-warning-600 dark:text-warning-400'
+  };
+  return classes[key] || 'text-gray-600 dark:text-gray-400';
+};
+
+const getReservoirTotal = (key: string): number => {
+  const data = reservoirData.value?.[key as keyof typeof reservoirData.value] || [];
+  return data.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
 };
 
 // ============================================================
-// توابع مخازن
+// Helper Functions - عناصر
 // ============================================================
-
-const getReservoirItems = (reservoir: 'A' | 'B' | 'C') => {
-  const data = summary.value?.reservoir_data || calcStore.reservoirData || { A: [], B: [], C: [] };
-  return data[reservoir] || [];
-};
-
-const getReservoirTotal = (reservoir: 'A' | 'B' | 'C'): number => {
-  const items = getReservoirItems(reservoir);
-  return items.reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
-};
-
-// ============================================================
-// Event Handlers
-// ============================================================
-
-const handleReportChanged = () => {
-  console.log('📊 Report changed, reloading home summary...');
-  loadData();
-};
-
-const handleReportReset = () => {
-  console.log('🔄 Report reset, clearing home summary...');
-  summary.value = null;
-  loadData();
-};
-
-// ============================================================
-// توابع کمکی نمایش
-// ============================================================
-
-const formatNumber = (value: number | undefined | null): string => {
-  if (value === undefined || value === null) return '0.00';
-  return Number(value).toFixed(2);
-};
-
-const formatCurrency = (value: number | undefined | null): string => {
-  if (value === undefined || value === null) return '0';
-  return Math.round(value).toLocaleString('fa-IR');
-};
 
 const getElementSymbol = (element: string): string => {
   const symbols: Record<string, string> = {
@@ -753,13 +737,10 @@ const getElementSymbol = (element: string): string => {
 
 const getElementBadgeClass = (element: string): string => {
   const macroElements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg'];
-  const secondaryElements = ['Na', 'Cl'];
   const microElements = ['Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
   
   if (macroElements.includes(element)) {
     return 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400';
-  } else if (secondaryElements.includes(element)) {
-    return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400';
   } else if (microElements.includes(element)) {
     return 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400';
   }
@@ -793,6 +774,10 @@ const getDiffClass = (diff: number, target: number): string => {
   return 'bg-danger-100 dark:bg-danger-900/30 text-danger-700 dark:text-danger-400';
 };
 
+// ============================================================
+// Helper Functions - توصیه‌ها
+// ============================================================
+
 const getRecommendationBgClass = (type: string): string => {
   if (type === 'danger') return 'bg-danger-50 dark:bg-danger-900/20';
   if (type === 'warning') return 'bg-warning-50 dark:bg-warning-900/20';
@@ -824,15 +809,93 @@ const getRecommendationDescClass = (type: string): string => {
 };
 
 // ============================================================
+// Load Dashboard Data
+// ============================================================
+const loadDashboardData = async () => {
+  // اگر هیچ گزارشی فعال نیست، کاری نکن
+  if (!hasActiveReport.value) {
+    isLoading.value = false;
+    return;
+  }
+  
+  isLoading.value = true;
+  error.value = null;
+  
+  try {
+    // محاسبه تعادل یونی
+    await targetStore.calculateIonBalanceFromAPI();
+    
+    // اگر نتیجه بهینه‌سازی وجود ندارد، از calcStore استفاده کن
+    if (!calcStore.optimizationResult) {
+      // محاسبات ساده از روی calcRows
+      calcStore.calculateTotals();
+    }
+    
+    // بارگذاری آنالیز آب (اگر قبلاً بارگذاری نشده)
+    if (Object.keys(waterStore.waterValues).length === 0 && hasActiveReport.value) {
+      try {
+        const waterData = await apiService.getWaterAnalysis(String(reportStore.currentReportId));
+        if (waterData) {
+          waterStore.loadFromAPI(waterData);
+        }
+      } catch (e) {
+        // آنالیز آب وجود ندارد - اشکالی ندارد
+      }
+    }
+    
+  } catch (err: any) {
+    error.value = err.message || 'خطا در بارگذاری داده‌ها';
+    console.error('Error loading dashboard data:', err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// ============================================================
+// Watch برای تغییرات
+// ============================================================
+watch(
+  () => reportStore.currentReportId,
+  (newId, oldId) => {
+    console.log(`🔄 Report ID changed: ${oldId} → ${newId}`);
+    if (newId === null) {
+      // ریست کردن داده‌ها
+      isLoading.value = false;
+      error.value = null;
+    } else {
+      // بارگذاری داده‌های جدید
+      loadDashboardData();
+    }
+  },
+  { immediate: true }
+);
+
+// ============================================================
+// Event Listeners
+// ============================================================
+const handleReportChanged = () => {
+  console.log('📊 Report changed event received');
+  loadDashboardData();
+};
+
+const handleReportReset = () => {
+  console.log('🔄 Report reset event received');
+  isLoading.value = false;
+  error.value = null;
+};
+
+// ============================================================
 // Lifecycle
 // ============================================================
 onMounted(() => {
-  loadData();
+  console.log('🏠 HomeTab mounted');
+  loadDashboardData();
   window.addEventListener('report-changed', handleReportChanged);
   window.addEventListener('report-reset', handleReportReset);
 });
 
 onUnmounted(() => {
+  console.log('🏠 HomeTab unmounted');
   window.removeEventListener('report-changed', handleReportChanged);
   window.removeEventListener('report-reset', handleReportReset);
 });

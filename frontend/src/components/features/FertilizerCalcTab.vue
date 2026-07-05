@@ -11,7 +11,7 @@
           <li>کودهای مورد نظر خود را از لیست انتخاب کنید و روی دکمه <strong>بهینه‌سازی خودکار</strong> کلیک کنید.</li>
           <li>نرم‌افزار با استفاده از الگوریتم هوشمند NNLS، بهترین ترکیب کودها را برای دستیابی به عناصر هدف محاسبه می‌کند.</li>
           <li>گزینه <strong>تعادل یونی خودکار</strong> در صورت فعال بودن، به طور خودکار یون‌های پادبار (Na یا Cl) را برای برقراری تعادل یونی به ترکیب نهایی اضافه می‌کند.</li>
-          <li>پس از بهینه‌سازی، نتیجه به صورت خودکار در گزارش ذخیره می‌شود و می‌توانید به صورت <strong>فایل CSV</strong> خروجی بگیرید.</li>
+          <li>پس از بهینه‌سازی، نتیجه به صورت <strong>خودکار در گزارش ذخیره</strong> می‌شود و می‌توانید به صورت <strong>فایل CSV</strong> خروجی بگیرید.</li>
         </ul>
       </div>
     </div>
@@ -34,7 +34,7 @@
     />
 
     <!-- ============================================================ -->
-    <!-- دکمه‌های اقدام - با دکمه ذخیره بازگردانده شده -->
+    <!-- دکمه‌های اقدام (بدون دکمه ذخیره - ذخیره خودکار) -->
     <!-- ============================================================ -->
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
       <div class="flex flex-wrap items-center gap-3">
@@ -67,26 +67,8 @@
         </label>
       </div>
 
-      <!-- ============================================================ -->
-      <!-- ردیف دوم: دکمه‌های عملیاتی -->
-      <!-- ============================================================ -->
+      <!-- ردیف دوم: دکمه‌های عملیاتی (بدون دکمه ذخیره) -->
       <div class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <!-- ✅ دکمه ذخیره در گزارش (بازگردانده شده) -->
-        <button
-          @click="saveToReport"
-          :disabled="!hasOptimizationResult || isSaving"
-          class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors duration-200"
-        >
-          <svg v-if="!isSaving" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-          </svg>
-          <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          {{ isSaving ? 'در حال ذخیره...' : 'ذخیره در گزارش' }}
-        </button>
-
         <!-- دکمه خروجی CSV -->
         <button
           @click="exportCSV"
@@ -211,7 +193,6 @@ const localSelectedFertilizers = ref<string[]>([...props.selectedFertilizers]);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
 const autoBalanceEnabled = ref(true);
-const isSaving = ref(false);
 
 // ===== Computed =====
 const hasOptimizationResult = computed(() => calcStore.optimizationResult !== null);
@@ -264,37 +245,6 @@ const handleAutoOptimize = async () => {
     }
   } catch (error: any) {
     showToast(error.message || 'خطا در بهینه‌سازی', 'error');
-  }
-};
-
-// ============================================================
-// ✅ تابع ذخیره در گزارش (بازگردانده شده)
-// ============================================================
-const saveToReport = async () => {
-  if (!calcStore.optimizationResult) {
-    showToast('هیچ نتیجه بهینه‌سازی برای ذخیره وجود ندارد', 'error');
-    return;
-  }
-
-  if (!reportStore.reportData.reportName) {
-    reportStore.updateReportData({
-      reportName: `گزارش ${new Date().toLocaleDateString('fa-IR')}`,
-      date: new Date().toLocaleDateString('fa-IR')
-    });
-  }
-
-  isSaving.value = true;
-  try {
-    const success = await reportStore.saveCurrentReport();
-    if (success) {
-      showToast('گزارش با موفقیت ذخیره شد', 'success');
-    } else {
-      showToast(reportStore.error || 'خطا در ذخیره گزارش', 'error');
-    }
-  } catch (error: any) {
-    showToast(error.message || 'خطا در ذخیره گزارش', 'error');
-  } finally {
-    isSaving.value = false;
   }
 };
 

@@ -2,21 +2,23 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { apiService } from '@/services/apiService';
-import { useWaterStore } from './waterStore';
 import { useTargetStore } from './targetStore';
+import { useWaterStore } from './waterStore';
 import { useCalcStore } from './calcStore';
 
-interface ReportData {
+export interface ReportData {
+  id: number | null;
   reportName: string;
   plantName: string;
   season: string;
   growthStage: string;
   date: string;
+  createdAt: string | null;
+  updatedAt: string | null;
 }
 
-interface Report {
+export interface ReportListItem {
   id: number;
-  user_id: number;
   report_name: string | null;
   plant_name: string | null;
   season: string | null;
@@ -31,21 +33,45 @@ const getCurrentShamsiDate = (): string => {
   return now.toLocaleDateString('fa-IR');
 };
 
+// ============================================================
+// 🆕 ReportStore - بازطراحی کامل با معماری جدید
+// ============================================================
 export const useReportStore = defineStore('report', () => {
   // ===== State =====
+  
+  /** شناسه گزارش فعلی (null یعنی هیچ گزارشی فعال نیست) */
+  const currentReportId = ref<number | null>(null);
+  
+  /** داده‌های گزارش فعلی */
   const reportData = ref<ReportData>({
+    id: null,
     reportName: '',
     plantName: '',
     season: '',
     growthStage: '',
-    date: getCurrentShamsiDate()
+    date: getCurrentShamsiDate(),
+    createdAt: null,
+    updatedAt: null
   });
-  const currentReportId = ref<number | null>(null);
-  const reports = ref<Report[]>([]);
+  
+  /** لیست همه گزارش‌های کاربر */
+  const reports = ref<ReportListItem[]>([]);
+  
+  /** وضعیت بارگذاری */
   const isLoading = ref(false);
+  
+  /** خطا */
   const error = ref<string | null>(null);
 
+  /** آیا در حال ذخیره‌سازی هستیم؟ */
+  const isSaving = ref(false);
+
   // ===== Getters =====
+  
+  /** آیا گزارشی فعال است؟ */
+  const hasActiveReport = computed(() => currentReportId.value !== null);
+  
+  /** آیا گزارش کامل است؟ */
   const isReportComplete = computed(() => {
     return !!(
       reportData.value.reportName &&
@@ -54,300 +80,151 @@ export const useReportStore = defineStore('report', () => {
       reportData.value.growthStage
     );
   });
-
+  
+  /** خلاصه گزارش */
   const reportSummary = computed(() => {
     return `${reportData.value.reportName} - ${reportData.value.plantName} (${reportData.value.season})`;
   });
 
-  const hasCurrentReport = computed(() => {
-    return currentReportId.value !== null;
-  });
-
   // ===== Actions =====
-  function updateReportData(data: Partial<ReportData>) {
-    reportData.value = {
-      ...reportData.value,
-      ...data
-    };
-  }
 
-  function resetReportData() {
+  /**
+   * 🆕 ایجاد یک گزارش جدید (خالی)
+   * این تابع همه داده‌ها را ریست می‌کند و حالت جدید ایجاد می‌کند
+   */
+  function createNewReport(): void {
+    console.log('📄 Creating new empty report...');
+    
+    // 1. Reset report data
     reportData.value = {
+      id: null,
       reportName: '',
       plantName: '',
       season: '',
       growthStage: '',
-      date: getCurrentShamsiDate()
+      date: getCurrentShamsiDate(),
+      createdAt: null,
+      updatedAt: null
     };
+    
+    // 2. Clear current report ID
     currentReportId.value = null;
-  }
-
-  function setDate(date: string) {
-    reportData.value.date = date;
-  }
-
-  function setCurrentReportId(id: number | null) {
-    currentReportId.value = id;
-  }
-
-  /**
-   * بارگذاری لیست گزارش‌های کاربر از API
-   */
-  async function loadReports(): Promise<boolean> {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const data = await apiService.getReports();
-      if (data && Array.isArray(data)) {
-        reports.value = data;
-        return true;
-      }
-      return false;
-    } catch (err: any) {
-      error.value = err.message || 'خطا در بارگذاری گزارش‌ها';
-      console.error('Error loading reports:', err);
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
+    
+    // 3. Reset all dependent stores
+    const targetStore = useTargetStore();
+    const waterStore = useWaterStore();
+    const calcStore = useCalcStore();
+    
+    targetStore.resetTargets();
+    waterStore.resetWaterData();
+    calcStore.resetCalculation();
+    
+    // 4. Dispatch event for UI update
+    window.dispatchEvent(new CustomEvent('report-reset'));
+    window.dispatchEvent(new CustomEvent('report-changed'));
+    
+    console.log('✅ New report created, all stores reset');
   }
 
   /**
-   * 🆕 ذخیره کامل گزارش در دیتابیس - نسخه اصلاح شده
-   */
-  async function saveCurrentReport(): Promise<boolean> {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      const waterStore = useWaterStore();
-      const targetStore = useTargetStore();
-      const calcStore = useCalcStore();
-
-      // 1. ذخیره یا به‌روزرسانی گزارش اصلی
-      const reportPayload = {
-        report_name: reportData.value.reportName || `گزارش ${reportData.value.date}`,
-        plant_name: reportData.value.plantName,
-        season: reportData.value.season,
-        growth_stage: reportData.value.growthStage,
-        report_date: reportData.value.date
-      };
-
-      let savedReport: any;
-      if (currentReportId.value) {
-        savedReport = await apiService.updateReport(String(currentReportId.value), reportPayload);
-      } else {
-        savedReport = await apiService.createReport(reportPayload);
-        if (savedReport && savedReport.id) {
-          currentReportId.value = savedReport.id;
-        }
-      }
-
-      if (!savedReport || !savedReport.id) {
-        throw new Error('خطا در ذخیره گزارش');
-      }
-
-      const reportId = String(savedReport.id);
-
-      // ============================================================
-      // ✅ اصلاح: ذخیره عناصر هدف با استفاده از تابع اختصاصی targetStore
-      // ============================================================
-      const targetValues: Record<string, number> = {};
-      for (const [key, value] of Object.entries(targetStore.targetElements)) {
-        if (value !== undefined && value !== null && typeof value === 'number' && value > 0) {
-          targetValues[key] = value;
-        }
-      }
-
-      // محاسبه final_values از روی calc_rows
-      const finalValues: Record<string, number> = {};
-      for (const row of calcStore.calculationRows) {
-        if (row.elements) {
-          for (const [element, percentage] of Object.entries(row.elements)) {
-            if (percentage && percentage > 0 && row.weight && row.weight > 0) {
-              const contribution = (percentage / 100) * row.weight * (row.purity / 100);
-              finalValues[element] = (finalValues[element] || 0) + contribution;
-            }
-          }
-        }
-      }
-
-      // 2. ذخیره محاسبات (عناصر هدف + نتایج)
-      const calcPayload = {
-        target_values: targetValues,
-        final_values: finalValues,
-        reservoir_data: calcStore.reservoirData || { A: [], B: [], C: [] },
-        calc_rows: calcStore.calculationRows || [],
-        interpretation: null
-      };
-
-      let existingCalc = null;
-      try {
-        existingCalc = await apiService.getCalculation(reportId);
-      } catch (e) {
-        console.log('ℹ️ No existing calculation found, creating new one');
-      }
-
-      if (existingCalc) {
-        await apiService.updateCalculation(String(existingCalc.id), calcPayload);
-        console.log('✅ Calculation updated successfully');
-      } else {
-        await apiService.createCalculation(reportId, calcPayload);
-        console.log('✅ Calculation created successfully');
-      }
-
-      // 3. ذخیره آنالیز آب
-      if (waterStore.waterMixData.waterSalinity > 0 || Object.keys(waterStore.waterValues).length > 0) {
-        try {
-          const existingWaterAnalysis = await apiService.getWaterAnalysis(reportId).catch(() => null);
-          const waterPayload = {
-            water_percentage: waterStore.waterMixData.waterPercentage,
-            wastewater_percentage: waterStore.waterMixData.wastewaterPercentage,
-            water_salinity: waterStore.waterMixData.waterSalinity,
-            water_values: waterStore.waterValues,
-            wastewater_values: waterStore.wastewaterValues
-          };
-
-          if (existingWaterAnalysis) {
-            await apiService.updateWaterAnalysis(String(existingWaterAnalysis.id), waterPayload);
-          } else {
-            await apiService.createWaterAnalysis(reportId, waterPayload);
-          }
-        } catch (err) {
-          console.warn('خطا در ذخیره آنالیز آب:', err);
-        }
-      }
-
-      // بارگذاری مجدد گزارش‌ها
-      await loadReports();
-      return true;
-    } catch (err: any) {
-      error.value = err.message || 'خطا در ذخیره گزارش';
-      console.error('Error saving report:', err);
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  /**
-   * بارگذاری یک گزارش خاص و تمام داده‌های مرتبط آن
+   * 🆕 بارگذاری یک گزارش موجود
    */
   async function loadReport(reportId: number): Promise<boolean> {
+    console.log(`📂 Loading report ${reportId}...`);
+    
     isLoading.value = true;
     error.value = null;
+    
     try {
-      const waterStore = useWaterStore();
+      // 1. Reset all stores first (clean state)
       const targetStore = useTargetStore();
+      const waterStore = useWaterStore();
       const calcStore = useCalcStore();
-
-      // 🐛 ریست کردن storeها قبل از بارگذاری گزارش جدید
-      waterStore.resetWaterData();
+      
       targetStore.resetTargets();
+      waterStore.resetWaterData();
       calcStore.resetCalculation();
-
-      // 1. بارگذاری گزارش اصلی
+      
+      // 2. Fetch report data
       const report = await apiService.getReport(String(reportId));
       if (!report) {
         throw new Error('گزارش پیدا نشد');
       }
-
+      
+      // 3. Update report data
       reportData.value = {
+        id: report.id,
         reportName: report.report_name || '',
         plantName: report.plant_name || '',
         season: report.season || '',
         growthStage: report.growth_stage || '',
-        date: report.report_date || getCurrentShamsiDate()
+        date: report.report_date || getCurrentShamsiDate(),
+        createdAt: report.created_at || null,
+        updatedAt: report.updated_at || null
       };
+      
       currentReportId.value = report.id;
-
-      // 2. بارگذاری آنالیز آب
+      
+      // 4. Load water analysis
       try {
         const waterAnalysis = await apiService.getWaterAnalysis(String(reportId));
         if (waterAnalysis) {
-          waterStore.setWaterMix({
-            waterPercentage: waterAnalysis.water_percentage,
-            wastewaterPercentage: waterAnalysis.wastewater_percentage,
-            waterSalinity: waterAnalysis.water_salinity
-          });
-          if (waterAnalysis.water_values) {
-            for (const [key, value] of Object.entries(waterAnalysis.water_values)) {
-              waterStore.setWaterValue(key, value as number);
-            }
-          }
-          if (waterAnalysis.wastewater_values) {
-            for (const [key, value] of Object.entries(waterAnalysis.wastewater_values)) {
-              waterStore.setWastewaterValue(key, value as number);
-            }
-          }
+          waterStore.loadFromAPI(waterAnalysis);
+          console.log('💧 Water analysis loaded');
         }
       } catch (err) {
-        console.warn('آنالیز آب برای این گزارش وجود ندارد');
+        console.log('ℹ️ No water analysis found for this report');
       }
-
-      // 3. بارگذاری محاسبات
+      
+      // 5. Load calculation data
       try {
         const calculation = await apiService.getCalculation(String(reportId));
         if (calculation) {
-          // بارگذاری target_values
+          // Load targets
           if (calculation.target_values) {
             let targetValues = calculation.target_values;
             if (typeof targetValues === 'string') {
               try {
                 targetValues = JSON.parse(targetValues);
               } catch (e) {
-                console.error('Error parsing target_values JSON:', e);
                 targetValues = {};
               }
             }
             if (typeof targetValues === 'object' && targetValues !== null) {
-              console.log('📥 Loading target_values into store:', targetValues);
-              for (const [key, value] of Object.entries(targetValues)) {
-                if (value !== undefined && value !== null && typeof value === 'number' && value > 0) {
-                  targetStore.setTargetElement(key as any, value);
-                }
-              }
+              targetStore.loadTargetsFromObject(targetValues);
             }
           }
-
-          // بارگذاری calc_rows
+          
+          // Load calc rows
           if (calculation.calc_rows && Array.isArray(calculation.calc_rows)) {
-            calcStore.calculationRows = calculation.calc_rows;
+            calcStore.setCalculationRows(calculation.calc_rows);
           }
-
-          // بارگذاری reservoir_data
+          
+          // Load reservoir data
           if (calculation.reservoir_data) {
             let reservoirData = calculation.reservoir_data;
             if (typeof reservoirData === 'string') {
               try {
                 reservoirData = JSON.parse(reservoirData);
               } catch (e) {
-                console.error('Error parsing reservoir_data JSON:', e);
                 reservoirData = { A: [], B: [], C: [] };
               }
             }
-            calcStore.reservoirData = reservoirData;
+            calcStore.setReservoirData(reservoirData);
           }
-
-          // بارگذاری final_values
-          if (calculation.final_values) {
-            let finalValues = calculation.final_values;
-            if (typeof finalValues === 'string') {
-              try {
-                finalValues = JSON.parse(finalValues);
-              } catch (e) {
-                console.error('Error parsing final_values JSON:', e);
-                finalValues = {};
-              }
-            }
-            // به‌روزرسانی elementTotals در calcStore
-            // (این کار از طریق getter انجام می‌شود)
-          }
+          
+          console.log('🧮 Calculation data loaded');
         }
       } catch (err) {
-        console.warn('محاسبات برای این گزارش وجود ندارد:', err);
+        console.log('ℹ️ No calculation found for this report');
       }
-
+      
+      // 6. Dispatch event for UI update
+      window.dispatchEvent(new CustomEvent('report-changed'));
+      
+      console.log(`✅ Report ${reportId} loaded successfully`);
       return true;
+      
     } catch (err: any) {
       error.value = err.message || 'خطا در بارگذاری گزارش';
       console.error('Error loading report:', err);
@@ -358,18 +235,142 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * حذف گزارش فعلی
+   * 🆕 ذخیره گزارش فعلی
    */
-  async function deleteCurrentReport(): Promise<boolean> {
-    if (!currentReportId.value) {
-      error.value = 'هیچ گزارشی برای حذف وجود ندارد';
+  async function saveCurrentReport(): Promise<boolean> {
+    if (!hasActiveReport.value && !reportData.value.reportName) {
+      error.value = 'لطفاً ابتدا اطلاعات گزارش را وارد کنید';
       return false;
     }
+    
+    isSaving.value = true;
+    error.value = null;
+    
+    try {
+      const targetStore = useTargetStore();
+      const waterStore = useWaterStore();
+      const calcStore = useCalcStore();
+      
+      // 1. Prepare report payload
+      const reportPayload = {
+        report_name: reportData.value.reportName || `گزارش ${reportData.value.date}`,
+        plant_name: reportData.value.plantName || '',
+        season: reportData.value.season || '',
+        growth_stage: reportData.value.growthStage || '',
+        report_date: reportData.value.date || getCurrentShamsiDate()
+      };
+      
+      let savedReport: any;
+      
+      // 2. Create or update report
+      if (currentReportId.value) {
+        savedReport = await apiService.updateReport(String(currentReportId.value), reportPayload);
+        console.log(`📝 Updating report ${currentReportId.value}`);
+      } else {
+        savedReport = await apiService.createReport(reportPayload);
+        if (savedReport && savedReport.id) {
+          currentReportId.value = savedReport.id;
+          reportData.value.id = savedReport.id;
+          console.log(`📝 Created new report with ID: ${currentReportId.value}`);
+        }
+      }
+      
+      if (!savedReport || !savedReport.id) {
+        throw new Error('خطا در ذخیره گزارش');
+      }
+      
+      const reportId = String(savedReport.id);
+      
+      // 3. Save water analysis
+      if (waterStore.hasWaterData.value) {
+        try {
+          const waterPayload = {
+            water_percentage: waterStore.waterMixData.waterPercentage,
+            wastewater_percentage: waterStore.waterMixData.wastewaterPercentage,
+            water_salinity: waterStore.waterMixData.waterSalinity,
+            water_values: waterStore.waterValues,
+            wastewater_values: waterStore.wastewaterValues
+          };
+          
+          const existingWater = await apiService.getWaterAnalysis(reportId).catch(() => null);
+          if (existingWater) {
+            await apiService.updateWaterAnalysis(String(existingWater.id), waterPayload);
+          } else {
+            await apiService.createWaterAnalysis(reportId, waterPayload);
+          }
+        } catch (err) {
+          console.warn('خطا در ذخیره آنالیز آب:', err);
+        }
+      }
+      
+      // 4. Save calculation data
+      const calcPayload = {
+        target_values: targetStore.targetElements,
+        final_values: calcStore.getFinalConcentrations(),
+        reservoir_data: calcStore.reservoirData,
+        calc_rows: calcStore.calculationRows,
+        interpretation: null
+      };
+      
+      try {
+        const existingCalc = await apiService.getCalculation(reportId).catch(() => null);
+        if (existingCalc) {
+          await apiService.updateCalculation(String(existingCalc.id), calcPayload);
+        } else {
+          await apiService.createCalculation(reportId, calcPayload);
+        }
+      } catch (err) {
+        console.warn('خطا در ذخیره محاسبات:', err);
+      }
+      
+      // 5. Refresh reports list
+      await loadReports();
+      
+      console.log('✅ Report saved successfully');
+      return true;
+      
+    } catch (err: any) {
+      error.value = err.message || 'خطا در ذخیره گزارش';
+      console.error('Error saving report:', err);
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
+  }
+
+  /**
+   * بارگذاری لیست گزارش‌ها
+   */
+  async function loadReports(): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
     try {
-      await apiService.deleteReport(String(currentReportId.value));
-      resetReportData();
+      const data = await apiService.getReports();
+      reports.value = Array.isArray(data) ? data : [];
+      return true;
+    } catch (err: any) {
+      error.value = err.message || 'خطا در بارگذاری گزارش‌ها';
+      console.error('Error loading reports:', err);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /**
+   * حذف یک گزارش
+   */
+  async function deleteReport(reportId: number): Promise<boolean> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await apiService.deleteReport(String(reportId));
+      
+      // If current report was deleted, reset state
+      if (currentReportId.value === reportId) {
+        createNewReport();
+      }
+      
       await loadReports();
       return true;
     } catch (err: any) {
@@ -382,52 +383,54 @@ export const useReportStore = defineStore('report', () => {
   }
 
   /**
-   * حذف یک گزارش خاص
+   * به‌روزرسانی داده‌های گزارش
    */
-  async function deleteReport(reportId: number): Promise<boolean> {
-    isLoading.value = true;
-    error.value = null;
-    try {
-      await apiService.deleteReport(String(reportId));
-      if (currentReportId.value === reportId) {
-        resetReportData();
-      }
-      await loadReports();
-      return true;
-    } catch (err: any) {
-      error.value = err.message || 'خطا در حذف گزارش';
-      console.error('Error deleting report:', err);
-      return false;
-    } finally {
-      isLoading.value = false;
+  function updateReportData(data: Partial<ReportData>) {
+    reportData.value = {
+      ...reportData.value,
+      ...data
+    };
+  }
+
+  /**
+   * تنظیم شناسه گزارش فعلی
+   */
+  function setCurrentReportId(id: number | null) {
+    currentReportId.value = id;
+    if (id === null) {
+      reportData.value.id = null;
     }
   }
 
+  /**
+   * پاک کردن خطا
+   */
   function clearError() {
     error.value = null;
   }
 
   return {
     // State
-    reportData,
     currentReportId,
+    reportData,
     reports,
     isLoading,
     error,
+    isSaving,
+    
     // Getters
+    hasActiveReport,
     isReportComplete,
     reportSummary,
-    hasCurrentReport,
+    
     // Actions
-    updateReportData,
-    resetReportData,
-    setDate,
-    setCurrentReportId,
-    loadReports,
-    saveCurrentReport,
+    createNewReport,
     loadReport,
-    deleteCurrentReport,
+    saveCurrentReport,
+    loadReports,
     deleteReport,
+    updateReportData,
+    setCurrentReportId,
     clearError
   };
 });

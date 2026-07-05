@@ -7,11 +7,9 @@ import type {
     ElementName, 
     ReservoirData,
     OptimizationResponse,
-    OptimizationRequest,
     OptimizationOptions
 } from '@/types';
 import { apiService } from '@/services/apiService';
-import { useTargetStore } from './targetStore';
 import { useReportStore } from './reportStore';
 
 const ELEMENTS: ElementName[] = [
@@ -34,7 +32,6 @@ export const useCalcStore = defineStore('calc', () => {
     const reservoirData = ref<ReservoirData>({ A: [], B: [], C: [] });
     const totalCost = ref(0);
     
-    // ===== State برای بهینه‌سازی =====
     const optimizationResult = ref<OptimizationResponse | null>(null);
     const optimizationHistory = ref<OptimizationResponse[]>([]);
     const lastOptimizationError = ref<string | null>(null);
@@ -51,15 +48,12 @@ export const useCalcStore = defineStore('calc', () => {
     });
 
     const hasErrors = computed(() => errorMessages.value.length > 0);
-
     const fixedRows = computed(() => {
         return calculationRows.value.filter((row: CalculationRow) => row.isFixedRow);
     });
-
     const dynamicRows = computed(() => {
         return calculationRows.value.filter((row: CalculationRow) => !row.isFixedRow);
     });
-
     const hasOptimizationResult = computed(() => optimizationResult.value !== null);
     const optimizationCost = computed(() => optimizationResult.value?.cost_total || 0);
     const optimizationError = computed(() => optimizationResult.value?.residual_error || 0);
@@ -131,6 +125,66 @@ export const useCalcStore = defineStore('calc', () => {
             totalLiter: newTankVolume * newDilutionFactor
         };
     }
+
+    // ============================================================
+    // 🆕 متدهای جدید برای HomeTab و reportStore
+    // ============================================================
+
+    /**
+     * محاسبه مجموع غلظت‌های نهایی از ردیف‌های محاسبه
+     */
+    function calculateTotals() {
+        // این متد قبلاً به عنوان computed وجود دارد
+        // فقط برای اطمینان از محاسبه مجدد
+        return elementTotals.value;
+    }
+
+    /**
+     * دریافت غلظت‌های نهایی
+     */
+    function getFinalConcentrations(): Record<string, number> {
+        const result: Record<string, number> = {};
+        for (const row of calculationRows.value) {
+            if (row.elements) {
+                for (const [element, percentage] of Object.entries(row.elements)) {
+                    if (percentage && percentage > 0 && row.weight && row.weight > 0) {
+                        const contribution = (percentage / 100) * row.weight * (row.purity / 100);
+                        result[element] = (result[element] || 0) + contribution;
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * تنظیم ردیف‌های محاسبه از داده‌های بارگذاری شده
+     */
+    function setCalculationRows(rows: any[]) {
+        calculationRows.value = rows.map((row: any) => ({
+            id: row.id || `row-${Date.now()}-${Math.random()}`,
+            materialName: row.material_name || row.materialName || 'نامشخص',
+            weight: row.weight || 0,
+            purity: row.purity || 100,
+            cost: row.cost || 0,
+            elements: row.elements || {},
+            isAcid: row.is_acid || row.isAcid || false,
+            acidType: row.acid_type || row.acidType || null,
+            fertilizerId: row.fertilizer_id || row.fertilizerId || null,
+            isFixedRow: row.is_fixed || row.isFixedRow || false
+        }));
+    }
+
+    /**
+     * تنظیم داده‌های مخازن
+     */
+    function setReservoirData(data: ReservoirData) {
+        reservoirData.value = data;
+    }
+
+    // ============================================================
+    // توابع موجود
+    // ============================================================
 
     async function calculateReservoirDataFromAPI(): Promise<ReservoirData | null> {
         isLoading.value = true;
@@ -221,21 +275,10 @@ export const useCalcStore = defineStore('calc', () => {
             const data = await apiService.getCalculation(reportId);
             if (data) {
                 if (data.calc_rows && Array.isArray(data.calc_rows)) {
-                    calculationRows.value = data.calc_rows.map((row: any) => ({
-                        id: row.id || `row-${Date.now()}-${Math.random()}`,
-                        materialName: row.material_name || row.materialName,
-                        weight: row.weight || 0,
-                        purity: row.purity || 100,
-                        cost: row.cost || 0,
-                        elements: row.elements || {},
-                        isAcid: row.is_acid || row.isAcid || false,
-                        acidType: row.acid_type || row.acidType || null,
-                        fertilizerId: row.fertilizer_id || row.fertilizerId || null,
-                        isFixedRow: row.is_fixed || row.isFixedRow || false
-                    }));
+                    setCalculationRows(data.calc_rows);
                 }
                 if (data.reservoir_data) {
-                    reservoirData.value = data.reservoir_data;
+                    setReservoirData(data.reservoir_data);
                 }
                 currentReportId.value = reportId;
                 return true;
@@ -251,7 +294,7 @@ export const useCalcStore = defineStore('calc', () => {
     }
 
     // ============================================================
-    // توابع بهینه‌سازی خودکار
+    // بهینه‌سازی
     // ============================================================
 
     async function optimizeFertilizers(
@@ -268,7 +311,7 @@ export const useCalcStore = defineStore('calc', () => {
         optimizationResult.value = null;
 
         try {
-            const requestData: OptimizationRequest = {
+            const requestData = {
                 target_values: targetValues,
                 water_values: waterValues,
                 fertilizers: fertilizers.map(f => ({
@@ -332,6 +375,7 @@ export const useCalcStore = defineStore('calc', () => {
                     optimizationHistory.value.pop();
                 }
                 
+                // ذخیره خودکار
                 const reportStore = useReportStore();
                 if (reportStore.currentReportId) {
                     await reportStore.saveCurrentReport();
@@ -386,8 +430,7 @@ export const useCalcStore = defineStore('calc', () => {
                 ion_balance: {
                     cation: item.ion_balance?.cation || 0,
                     anion: item.ion_balance?.anion || 0,
-                    isBalanced: item.ion_balance?.isBalanced || false,
-                    message: item.ion_balance?.message || ''
+                    isBalanced: item.ion_balance?.isBalanced || false
                 },
                 target_achievement: {},
                 warnings: item.warnings || [],
@@ -430,9 +473,6 @@ export const useCalcStore = defineStore('calc', () => {
         lastOptimizationError.value = null;
     }
 
-    // ============================================================
-    // ✅ اصلاح: تابع resetCalculation کامل
-    // ============================================================
     function resetCalculation() {
         calculationRows.value = [];
         errorMessages.value = [];
@@ -447,10 +487,6 @@ export const useCalcStore = defineStore('calc', () => {
         optimizationResult.value = null;
         lastOptimizationError.value = null;
         optimizationHistory.value = [];
-        
-        // ✅ ریست کردن targetStore نیز
-        const targetStore = useTargetStore();
-        targetStore.resetTargets();
         
         console.log('🔄 calcStore reset complete');
     }
@@ -485,7 +521,6 @@ export const useCalcStore = defineStore('calc', () => {
         currentReportId,
         reservoirData,
         totalCost,
-        
         optimizationResult,
         optimizationHistory,
         lastOptimizationError,
@@ -517,7 +552,13 @@ export const useCalcStore = defineStore('calc', () => {
         optimizeFertilizers,
         saveOptimizationToReport,
         loadOptimizationHistory,
-        clearOptimizationResult
+        clearOptimizationResult,
+        
+        // 🆕 متدهای جدید
+        calculateTotals,
+        getFinalConcentrations,
+        setCalculationRows,
+        setReservoirData
     };
 });
 

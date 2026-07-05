@@ -544,8 +544,7 @@ const loadSelectedReport = async (reportId: number) => {
   if (success) {
     showToast('گزارش با موفقیت بارگذاری شد', 'success');
     closeOpenModal();
-    window.dispatchEvent(new CustomEvent('report-changed'));
-    window.dispatchEvent(new CustomEvent('report-reset'));
+    // reportStore.loadReport خودش رویدادهای report-changed و report-reset را ارسال می‌کند
   } else {
     showToast(reportStore.error || 'خطا در بارگذاری گزارش', 'error');
   }
