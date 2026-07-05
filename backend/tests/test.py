@@ -1,51 +1,42 @@
 #!/usr/bin/env python3
 """
-🧪 تست کامل جریان FarmTech - ProFertilizer
-===========================================
-
-این فایل تمام جریان برنامه را از ابتدا تا انتها تست می‌کند:
-1. ایجاد کاربر
-2. ایجاد گزارش
-3. ذخیره آنالیز آب
-4. ذخیره عناصر هدف
-5. بهینه‌سازی خودکار
-6. ذخیره نتیجه بهینه‌سازی
-7. بارگذاری مجدد گزارش
-8. بررسی صحت داده‌ها
-9. بررسی تب خانه
-10. ایجاد گزارش جدید و ریست شدن
+تست مخازن FarmTech - بررسی ساختار reservoir_data از بک‌اند
 
 نحوه اجرا:
     cd backend
-    python tests/test_full_flow.py
+    python tests/test_reservoir.py
+
+پیش‌نیاز:
+    - بک‌اند در حال اجرا باشد (http://localhost:8000)
 """
 
-import os
-import sys
+import requests
 import json
+import sys
 import sqlite3
-import time
 import hashlib
 import secrets
 from pathlib import Path
-from datetime import datetime
-from typing import Dict, Any, List, Optional
+from typing import Dict, List, Any, Optional
 
 # ============================================================
 # تنظیمات
 # ============================================================
+BASE_URL = "http://localhost:8000"
+API_URL = f"{BASE_URL}/api/v1"
+DB_PATH = Path(__file__).parent.parent / "farmtech.db"
 
-BASE_DIR = Path(__file__).parent.parent
-DB_PATH = BASE_DIR / "farmtech.db"
-BACKEND_DIR = BASE_DIR
-
-# اضافه کردن مسیر backend به sys.path
-sys.path.insert(0, str(BACKEND_DIR))
+# اطلاعات کاربر تست
+TEST_USER = {
+    "phone_number": "09121234567",
+    "password": "Test@123456",
+    "first_name": "تست",
+    "last_name": "سیستم"
+}
 
 # ============================================================
-# کلاس رنگ‌ها (اصلاح شده)
+# رنگ‌ها برای خروجی زیبا
 # ============================================================
-
 class Colors:
     GREEN = '\033[92m'
     RED = '\033[91m'
@@ -55,748 +46,370 @@ class Colors:
     CYAN = '\033[96m'
     BOLD = '\033[1m'
     RESET = '\033[0m'
-    # ✅ اضافه کردن WHITE
-    WHITE = '\033[97m'
 
-def print_success(msg): 
-    print(f"{Colors.GREEN}✅ {msg}{Colors.RESET}")
 
-def print_error(msg): 
-    print(f"{Colors.RED}❌ {msg}{Colors.RESET}")
+def print_success(msg): print(f"{Colors.GREEN}✅ {msg}{Colors.RESET}")
+def print_error(msg): print(f"{Colors.RED}❌ {msg}{Colors.RESET}")
+def print_warning(msg): print(f"{Colors.YELLOW}⚠️ {msg}{Colors.RESET}")
+def print_info(msg): print(f"{Colors.BLUE}ℹ️ {msg}{Colors.RESET}")
+def print_header(msg): print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*70}{Colors.RESET}\n{Colors.BOLD}{msg}{Colors.RESET}\n{Colors.BOLD}{Colors.CYAN}{'='*70}{Colors.RESET}")
 
-def print_info(msg): 
-    print(f"{Colors.BLUE}ℹ️ {msg}{Colors.RESET}")
-
-def print_warning(msg): 
-    print(f"{Colors.YELLOW}⚠️ {msg}{Colors.RESET}")
-
-def print_header(msg):
-    print(f"\n{Colors.BOLD}{Colors.CYAN}{'='*70}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.WHITE}  {msg}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.CYAN}{'='*70}{Colors.RESET}")
-
-def print_subheader(msg):
-    print(f"\n{Colors.BOLD}{Colors.PURPLE}--- {msg} ---{Colors.RESET}")
 
 # ============================================================
-# کلاس تستر
+# توابع دیتابیس
 # ============================================================
+def create_test_user():
+    """ایجاد کاربر تست در دیتابیس اگر وجود نداشته باشد"""
+    if not DB_PATH.exists():
+        print_warning(f"دیتابیس در مسیر {DB_PATH} وجود ندارد")
+        return False
 
-class FullFlowTester:
-    """تستر کامل جریان برنامه"""
-    
-    def __init__(self):
-        self.db_path = DB_PATH
-        self.conn = None
-        self.test_user_id = None
-        self.test_report_id = None
-        self.test_calculation_id = None
-        self.test_water_analysis_id = None
-        
-        # داده‌های تست
-        self.test_phone = "09121234567"
-        self.test_password = "Test@123456"
-        self.test_first_name = "تست"
-        self.test_last_name = "سیستم"
-        
-        # داده‌های گزارش
-        self.report_data = {
-            "report_name": "گزارش تست کامل",
-            "plant_name": "گوجه فرنگی",
-            "season": "تابستان",
-            "growth_stage": "گلدهی",
-            "report_date": "۱۴۰۵/۰۴/۱۳"
-        }
-        
-        # داده‌های عناصر هدف
-        self.target_values = {
-            "N-NO3": 207.0,
-            "P": 55.0,
-            "K": 289.0,
-            "Mg": 38.0,
-            "Ca": 155.0,
-            "S": 51.0,
-            "Fe": 6.8,
-            "Mn": 1.97,
-            "Zn": 0.25,
-            "B": 0.7,
-            "Cu": 0.07,
-            "Mo": 0.05,
-            "Cl": 200.0
-        }
-        
-        # داده‌های آب
-        self.water_data = {
-            "water_percentage": 100.0,
-            "wastewater_percentage": 0.0,
-            "water_salinity": 0.8,
-            "water_values": {"K": 35.0, "Ca": 50.0},
-            "wastewater_values": {}
-        }
-        
-        # نتیجه تست‌ها
-        self.results = []
-        self.passed = 0
-        self.failed = 0
-        
-    # ============================================================
-    # توابع کمکی دیتابیس
-    # ============================================================
-    
-    def connect_db(self) -> bool:
-        """اتصال به دیتابیس"""
-        try:
-            self.conn = sqlite3.connect(str(self.db_path))
-            self.conn.row_factory = sqlite3.Row
-            print_success(f"اتصال به دیتابیس: {self.db_path}")
-            return True
-        except Exception as e:
-            print_error(f"خطا در اتصال به دیتابیس: {e}")
-            return False
-    
-    def close_db(self):
-        """بستن اتصال دیتابیس"""
-        if self.conn:
-            self.conn.close()
-    
-    def execute_query(self, query: str, params: tuple = ()) -> List[Dict[str, Any]]:
-        """اجرای کوئری و برگرداندن نتایج"""
-        if not self.conn:
-            return []
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            return [dict(row) for row in rows]
-        except Exception as e:
-            print_error(f"خطا در اجرای کوئری: {e}")
-            return []
-    
-    def execute_insert(self, query: str, params: tuple = ()) -> Optional[int]:
-        """اجرای کوئری INSERT و برگرداندن ID"""
-        if not self.conn:
-            return None
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query, params)
-            self.conn.commit()
-            return cursor.lastrowid
-        except Exception as e:
-            print_error(f"خطا در INSERT: {e}")
-            self.conn.rollback()
-            return None
-    
-    def execute_update(self, query: str, params: tuple = ()) -> bool:
-        """اجرای کوئری UPDATE"""
-        if not self.conn:
-            return False
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute(query, params)
-            self.conn.commit()
-            return True
-        except Exception as e:
-            print_error(f"خطا در UPDATE: {e}")
-            self.conn.rollback()
-            return False
-    
-    def get_table_data(self, table: str, condition: str = "") -> List[Dict[str, Any]]:
-        """دریافت داده‌های یک جدول"""
-        query = f"SELECT * FROM {table}"
-        if condition:
-            query += f" WHERE {condition}"
-        return self.execute_query(query)
-    
-    # ============================================================
-    # تست 1: بررسی دیتابیس
-    # ============================================================
-    
-    def test_database_exists(self) -> bool:
-        """تست 1: بررسی وجود دیتابیس و جداول"""
-        print_subheader("1. بررسی دیتابیس و جداول")
-        
-        if not self.db_path.exists():
-            print_error(f"فایل دیتابیس وجود ندارد: {self.db_path}")
-            return False
-        
-        print_success(f"فایل دیتابیس وجود دارد: {self.db_path}")
-        
-        # بررسی جداول
-        tables = self.execute_query("SELECT name FROM sqlite_master WHERE type='table'")
-        table_names = [t['name'] for t in tables]
-        
-        expected_tables = ['users', 'reports', 'fertilizers', 'water_analyses', 
-                          'calculations', 'recipes', 'optimization_logs']
-        
-        all_exist = True
-        for table in expected_tables:
-            if table in table_names:
-                print_success(f"  جدول {table} وجود دارد")
-            else:
-                print_error(f"  جدول {table} وجود ندارد")
-                all_exist = False
-        
-        return all_exist
-    
-    # ============================================================
-    # تست 2: ایجاد کاربر تست
-    # ============================================================
-    
-    def test_create_user(self) -> bool:
-        """تست 2: ایجاد کاربر تست"""
-        print_subheader("2. ایجاد کاربر تست")
-        
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        cursor = conn.cursor()
+
         # بررسی وجود کاربر
-        existing = self.execute_query(
+        cursor.execute(
             "SELECT id FROM users WHERE phone_number = ?",
-            (self.test_phone,)
+            (TEST_USER["phone_number"],)
         )
-        
+        existing = cursor.fetchone()
+
         if existing:
-            self.test_user_id = existing[0]['id']
-            print_success(f"کاربر تست قبلاً وجود دارد (ID: {self.test_user_id})")
+            print_success(f"کاربر تست قبلاً وجود دارد (ID: {existing[0]})")
+            conn.close()
             return True
-        
+
         # ایجاد کاربر جدید
         salt = secrets.token_hex(16)
-        hash_obj = hashlib.sha256((salt + self.test_password).encode('utf-8'))
+        hash_obj = hashlib.sha256((salt + TEST_USER["password"]).encode('utf-8'))
         password_hash = f"{salt}:{hash_obj.hexdigest()}"
-        
-        user_id = self.execute_insert(
-            """INSERT INTO users (first_name, last_name, phone_number, password_hash, is_active)
-               VALUES (?, ?, ?, ?, ?)""",
-            (self.test_first_name, self.test_last_name, self.test_phone, password_hash, 1)
-        )
-        
-        if user_id:
-            self.test_user_id = user_id
-            print_success(f"کاربر تست ایجاد شد (ID: {self.test_user_id})")
-            return True
-        else:
-            print_error("خطا در ایجاد کاربر تست")
-            return False
-    
-    # ============================================================
-    # تست 3: ایجاد گزارش
-    # ============================================================
-    
-    def test_create_report(self) -> bool:
-        """تست 3: ایجاد گزارش"""
-        print_subheader("3. ایجاد گزارش")
-        
-        if not self.test_user_id:
-            print_error("کاربر تست وجود ندارد")
-            return False
-        
-        report_id = self.execute_insert(
-            """INSERT INTO reports (user_id, report_name, plant_name, season, growth_stage, report_date)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (
-                self.test_user_id,
-                self.report_data["report_name"],
-                self.report_data["plant_name"],
-                self.report_data["season"],
-                self.report_data["growth_stage"],
-                self.report_data["report_date"]
+
+        cursor.execute("""
+            INSERT INTO users (first_name, last_name, phone_number, password_hash, is_active)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            TEST_USER["first_name"],
+            TEST_USER["last_name"],
+            TEST_USER["phone_number"],
+            password_hash,
+            1
+        ))
+
+        conn.commit()
+        user_id = cursor.lastrowid
+        conn.close()
+
+        print_success(f"کاربر تست ایجاد شد (ID: {user_id})")
+        return True
+
+    except Exception as e:
+        print_error(f"خطا در ایجاد کاربر: {e}")
+        return False
+
+
+# ============================================================
+# کلاس تست
+# ============================================================
+class ReservoirTester:
+    def __init__(self):
+        self.token: Optional[str] = None
+        self.session = requests.Session()
+
+    def login(self) -> bool:
+        """ورود به سیستم"""
+        print_info("🔐 ورود به سیستم...")
+
+        # ابتدا کاربر را ایجاد کن
+        if not create_test_user():
+            print_warning("نمی‌توان کاربر تست را ایجاد کرد، ادامه می‌دهیم...")
+
+        try:
+            response = self.session.post(
+                f"{API_URL}/auth/login",
+                json={
+                    "phone_number": TEST_USER["phone_number"],
+                    "password": TEST_USER["password"]
+                },
+                timeout=10
             )
-        )
-        
-        if report_id:
-            self.test_report_id = report_id
-            print_success(f"گزارش ایجاد شد (ID: {self.test_report_id})")
-            print_info(f"  نام: {self.report_data['report_name']}")
-            print_info(f"  گیاه: {self.report_data['plant_name']}")
-            return True
-        else:
-            print_error("خطا در ایجاد گزارش")
-            return False
-    
-    # ============================================================
-    # تست 4: ذخیره آنالیز آب
-    # ============================================================
-    
-    def test_save_water_analysis(self) -> bool:
-        """تست 4: ذخیره آنالیز آب"""
-        print_subheader("4. ذخیره آنالیز آب")
-        
-        if not self.test_report_id:
-            print_error("گزارش وجود ندارد")
-            return False
-        
-        water_id = self.execute_insert(
-            """INSERT INTO water_analyses 
-               (report_id, water_percentage, wastewater_percentage, water_salinity, water_values, wastewater_values)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (
-                self.test_report_id,
-                self.water_data["water_percentage"],
-                self.water_data["wastewater_percentage"],
-                self.water_data["water_salinity"],
-                json.dumps(self.water_data["water_values"]),
-                json.dumps(self.water_data["wastewater_values"])
-            )
-        )
-        
-        if water_id:
-            self.test_water_analysis_id = water_id
-            print_success(f"آنالیز آب ذخیره شد (ID: {self.test_water_analysis_id})")
-            print_info(f"  درصد آب: {self.water_data['water_percentage']}%")
-            print_info(f"  شوری: {self.water_data['water_salinity']}")
-            return True
-        else:
-            print_error("خطا در ذخیره آنالیز آب")
-            return False
-    
-    # ============================================================
-    # تست 5: ذخیره عناصر هدف و محاسبات
-    # ============================================================
-    
-    def test_save_calculation(self) -> bool:
-        """تست 5: ذخیره عناصر هدف و محاسبات"""
-        print_subheader("5. ذخیره عناصر هدف و محاسبات")
-        
-        if not self.test_report_id:
-            print_error("گزارش وجود ندارد")
-            return False
-        
-        calc_id = self.execute_insert(
-            """INSERT INTO calculations 
-               (report_id, target_values, final_values, reservoir_data, calc_rows)
-               VALUES (?, ?, ?, ?, ?)""",
-            (
-                self.test_report_id,
-                json.dumps(self.target_values),
-                json.dumps({}),  # final_values خالی
-                json.dumps({"A": [], "B": [], "C": []}),
-                json.dumps([])   # calc_rows خالی
-            )
-        )
-        
-        if calc_id:
-            self.test_calculation_id = calc_id
-            print_success(f"محاسبات ذخیره شد (ID: {self.test_calculation_id})")
-            print_info(f"  تعداد عناصر هدف: {len(self.target_values)}")
-            return True
-        else:
-            print_error("خطا در ذخیره محاسبات")
-            return False
-    
-    # ============================================================
-    # تست 6: شبیه‌سازی بهینه‌سازی و ذخیره نتیجه
-    # ============================================================
-    
-    def test_save_optimization_result(self) -> bool:
-        """تست 6: شبیه‌سازی بهینه‌سازی و ذخیره نتیجه"""
-        print_subheader("6. شبیه‌سازی بهینه‌سازی و ذخیره نتیجه")
-        
-        if not self.test_calculation_id:
-            print_error("محاسبات وجود ندارد")
-            return False
-        
-        # شبیه‌سازی نتیجه بهینه‌سازی
-        optimization_result = {
-            "weights": {
-                "39": 97.87,
-                "42": 467.20,
-                "44": 4.02,
-                "45": 267.57,
-                "50": 0.27,
-                "52": 636.52,
-                "56": 34.54,
-                "57": 134.51,
-                "60": 136.81,
-                "64": 286.27,
-                "71": 0.13,
-                "73": 149.80,
-                "76": 1.12
-            },
-            "concentrations": {
-                "N-NH4": 106.44,
-                "Cl": 200.0,
-                "N-NO3": 207.0,
-                "B": 0.70,
-                "Ca": 155.0,
-                "Cu": 0.07,
-                "P": 55.0,
-                "K": 289.0,
-                "Fe": 6.80,
-                "S": 51.0,
-                "Mg": 38.0,
-                "Mn": 1.97,
-                "Mo": 0.05,
-                "Na": 0.02,
-                "Zn": 0.25
-            },
-            "residual_error": 0.001,
-            "cost_total": 1743124.0,
-            "is_converged": True,
-            "iterations": 10,
-            "convergence_time_ms": 150.5
-        }
-        
-        # به‌روزرسانی calculation با final_values و calc_rows
-        calc_rows = []
-        for fert_id, weight in optimization_result["weights"].items():
-            calc_rows.append({
-                "materialName": f"کود {fert_id}",
-                "weight": weight,
-                "purity": 99.0,
-                "cost": weight * 10000,
-                "elements": {},
-                "isAcid": False,
-                "fertilizerId": fert_id,
-                "isFixedRow": False
-            })
-        
-        # ✅ ذخیره final_values در دیتابیس
-        success = self.execute_update(
-            """UPDATE calculations 
-               SET final_values = ?, calc_rows = ?, reservoir_data = ?
-               WHERE id = ?""",
-            (
-                json.dumps(optimization_result["concentrations"]),
-                json.dumps(calc_rows),
-                json.dumps({"A": [], "B": [], "C": []}),
-                self.test_calculation_id
-            )
-        )
-        
-        if success:
-            print_success("نتیجه بهینه‌سازی در دیتابیس ذخیره شد")
-            print_info(f"  تعداد کودها: {len(optimization_result['weights'])}")
-            print_info(f"  هزینه کل: {optimization_result['cost_total']:,.0f} تومان")
-            return True
-        else:
-            print_error("خطا در ذخیره نتیجه بهینه‌سازی")
-            return False
-    
-    # ============================================================
-    # تست 7: بارگذاری مجدد گزارش و بررسی داده‌ها
-    # ============================================================
-    
-    def test_reload_report(self) -> bool:
-        """تست 7: بارگذاری مجدد گزارش و بررسی داده‌ها"""
-        print_subheader("7. بارگذاری مجدد گزارش و بررسی داده‌ها")
-        
-        if not self.test_report_id:
-            print_error("گزارش وجود ندارد")
-            return False
-        
-        # 1. دریافت گزارش
-        report = self.execute_query(
-            "SELECT * FROM reports WHERE id = ?",
-            (self.test_report_id,)
-        )
-        
-        if not report:
-            print_error("گزارش پیدا نشد")
-            return False
-        
-        print_success(f"گزارش بارگذاری شد: {report[0]['report_name']}")
-        print_info(f"  گیاه: {report[0]['plant_name']}")
-        print_info(f"  فصل: {report[0]['season']}")
-        print_info(f"  مرحله: {report[0]['growth_stage']}")
-        
-        # 2. دریافت آنالیز آب
-        water = self.execute_query(
-            "SELECT * FROM water_analyses WHERE report_id = ?",
-            (self.test_report_id,)
-        )
-        
-        if water:
-            print_success(f"آنالیز آب بارگذاری شد")
-            water_values = json.loads(water[0]['water_values']) if water[0]['water_values'] else {}
-            print_info(f"  عناصر آب: {len(water_values)}")
-        else:
-            print_warning("آنالیز آب پیدا نشد")
-        
-        # 3. دریافت محاسبات
-        calc = self.execute_query(
-            "SELECT * FROM calculations WHERE report_id = ?",
-            (self.test_report_id,)
-        )
-        
-        if calc:
-            print_success(f"محاسبات بارگذاری شد")
-            target_values = json.loads(calc[0]['target_values']) if calc[0]['target_values'] else {}
-            final_values = json.loads(calc[0]['final_values']) if calc[0]['final_values'] else {}
-            calc_rows = json.loads(calc[0]['calc_rows']) if calc[0]['calc_rows'] else []
-            
-            print_info(f"  عناصر هدف: {len(target_values)}")
-            print_info(f"  عناصر نهایی: {len(final_values)}")
-            print_info(f"  ردیف‌های محاسبه: {len(calc_rows)}")
-            
-            # ✅ بررسی: آیا final_values ذخیره شده؟
-            if final_values:
-                print_success("✅ final_values در دیتابیس ذخیره شده است")
-                # نمایش چند عنصر
-                for element, value in list(final_values.items())[:5]:
-                    print_info(f"    {element}: {value:.2f}")
-            else:
-                print_error("❌ final_values در دیتابیس ذخیره نشده است!")
-                return False
-            
-            # ✅ بررسی: آیا calc_rows ذخیره شده؟
-            if calc_rows:
-                print_success("✅ calc_rows در دیتابیس ذخیره شده است")
-                print_info(f"  تعداد ردیف‌ها: {len(calc_rows)}")
-            else:
-                print_error("❌ calc_rows در دیتابیس ذخیره نشده است!")
-                return False
-            
-            return True
-        else:
-            print_error("محاسبات پیدا نشد")
-            return False
-    
-    # ============================================================
-    # تست 8: بررسی داده‌های تب خانه (HomeTab)
-    # ============================================================
-    
-    def test_home_tab_data(self) -> bool:
-        """تست 8: بررسی داده‌های تب خانه"""
-        print_subheader("8. بررسی داده‌های تب خانه")
-        
-        if not self.test_report_id:
-            print_error("گزارش وجود ندارد")
-            return False
-        
-        # دریافت محاسبات
-        calc = self.execute_query(
-            "SELECT * FROM calculations WHERE report_id = ?",
-            (self.test_report_id,)
-        )
-        
-        if not calc:
-            print_error("محاسبات پیدا نشد")
-            return False
-        
-        target_values = json.loads(calc[0]['target_values']) if calc[0]['target_values'] else {}
-        final_values = json.loads(calc[0]['final_values']) if calc[0]['final_values'] else {}
-        
-        # ✅ بررسی: آیا final_values با target_values مطابقت دارد؟
-        print_info("مقایسه عناصر هدف و نهایی:")
-        
-        missing_elements = []
-        for element, target in target_values.items():
-            actual = final_values.get(element, 0)
-            if target > 0:
-                percent = (actual / target) * 100 if target > 0 else 0
-                status = "✅" if 90 <= percent <= 110 else "⚠️"
-                print_info(f"  {status} {element}: هدف={target:.2f}, تامین={actual:.2f}, درصد={percent:.1f}%")
-                
-                if percent < 50:
-                    missing_elements.append(element)
-        
-        if missing_elements:
-            print_warning(f"عناصر با درصد پایین: {missing_elements}")
-        
-        # ✅ بررسی: آیا عناصر نهایی وجود دارند؟
-        if final_values:
-            print_success(f"✅ تب خانه داده‌های نهایی را دارد ({len(final_values)} عنصر)")
-            return True
-        else:
-            print_error("❌ تب خانه داده‌های نهایی را ندارد!")
-            return False
-    
-    # ============================================================
-    # تست 9: ایجاد گزارش جدید و بررسی ریست شدن
-    # ============================================================
-    
-    def test_new_report_reset(self) -> bool:
-        """تست 9: ایجاد گزارش جدید و بررسی ریست شدن"""
-        print_subheader("9. ایجاد گزارش جدید و بررسی ریست شدن")
-        
-        if not self.test_user_id:
-            print_error("کاربر تست وجود ندارد")
-            return False
-        
-        # ایجاد گزارش جدید
-        new_report_id = self.execute_insert(
-            """INSERT INTO reports (user_id, report_name, plant_name, season, growth_stage, report_date)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (
-                self.test_user_id,
-                "گزارش جدید تست",
-                "خیار",
-                "بهار",
-                "رشد رویشی",
-                "۱۴۰۵/۰۴/۱۴"
-            )
-        )
-        
-        if not new_report_id:
-            print_error("خطا در ایجاد گزارش جدید")
-            return False
-        
-        print_success(f"گزارش جدید ایجاد شد (ID: {new_report_id})")
-        
-        # بررسی اینکه محاسبات برای گزارش جدید خالی است
-        calc = self.execute_query(
-            "SELECT * FROM calculations WHERE report_id = ?",
-            (new_report_id,)
-        )
-        
-        if calc:
-            print_warning(f"⚠️ گزارش جدید محاسبات دارد (ID: {calc[0]['id']})")
-            target_values = json.loads(calc[0]['target_values']) if calc[0]['target_values'] else {}
-            final_values = json.loads(calc[0]['final_values']) if calc[0]['final_values'] else {}
-            
-            if target_values:
-                print_warning(f"  عناصر هدف وجود دارند: {len(target_values)}")
-                # این یعنی ریست نشده!
-                return False
-            else:
-                print_success("✅ عناصر هدف خالی هستند (ریست شده)")
+
+            if response.status_code == 200:
+                data = response.json()
+                self.token = data.get('access_token')
+                self.session.headers.update({
+                    'Authorization': f'Bearer {self.token}'
+                })
+                print_success("ورود با موفقیت انجام شد")
                 return True
-        else:
-            print_success("✅ گزارش جدید محاسبات ندارد (ریست شده)")
-            return True
-    
-    # ============================================================
-    # تست 10: بررسی یکپارچگی دیتابیس
-    # ============================================================
-    
-    def test_database_integrity(self) -> bool:
-        """تست 10: بررسی یکپارچگی دیتابیس"""
-        print_subheader("10. بررسی یکپارچگی دیتابیس")
-        
-        # بررسی روابط
-        reports = self.execute_query("SELECT id, user_id FROM reports")
-        print_info(f"تعداد گزارش‌ها: {len(reports)}")
-        
-        water_analyses = self.execute_query("SELECT id, report_id FROM water_analyses")
-        print_info(f"تعداد آنالیز آب: {len(water_analyses)}")
-        
-        calculations = self.execute_query("SELECT id, report_id FROM calculations")
-        print_info(f"تعداد محاسبات: {len(calculations)}")
-        
-        # بررسی اینکه هر report_id در reports وجود دارد
-        report_ids = [r['id'] for r in reports]
-        
-        missing_reports = []
-        for w in water_analyses:
-            if w['report_id'] not in report_ids:
-                missing_reports.append(f"water_analysis {w['id']} -> report {w['report_id']}")
-        
-        for c in calculations:
-            if c['report_id'] not in report_ids:
-                missing_reports.append(f"calculation {c['id']} -> report {c['report_id']}")
-        
-        if missing_reports:
-            print_warning(f"ارتباطات شکسته: {missing_reports}")
+            else:
+                print_error(f"خطا در ورود: {response.status_code} - {response.text}")
+                return False
+
+        except requests.exceptions.ConnectionError:
+            print_error("❌ اتصال به سرور برقرار نیست! لطفاً بک‌اند را اجرا کنید.")
+            print_info("دستور: cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000")
             return False
-        else:
-            print_success("✅ همه ارتباطات سالم هستند")
-            return True
-    
-    # ============================================================
-    # اجرای همه تست‌ها
-    # ============================================================
-    
-    def run_all_tests(self) -> bool:
-        """اجرای همه تست‌ها"""
-        print_header("🧪 شروع تست کامل جریان FarmTech")
-        print_info(f"📁 دیتابیس: {self.db_path}")
-        print_info(f"📱 شماره تلفن تست: {self.test_phone}")
-        print_info(f"🔑 رمز عبور: {self.test_password}")
-        
-        # اتصال به دیتابیس
-        if not self.connect_db():
+        except Exception as e:
+            print_error(f"خطا در ورود: {e}")
             return False
-        
-        tests = [
-            ("بررسی دیتابیس", self.test_database_exists),
-            ("ایجاد کاربر تست", self.test_create_user),
-            ("ایجاد گزارش", self.test_create_report),
-            ("ذخیره آنالیز آب", self.test_save_water_analysis),
-            ("ذخیره عناصر هدف", self.test_save_calculation),
-            ("ذخیره نتیجه بهینه‌سازی", self.test_save_optimization_result),
-            ("بارگذاری مجدد گزارش", self.test_reload_report),
-            ("بررسی داده‌های تب خانه", self.test_home_tab_data),
-            ("ایجاد گزارش جدید و ریست", self.test_new_report_reset),
-            ("بررسی یکپارچگی دیتابیس", self.test_database_integrity),
-        ]
-        
+
+    def get_fertilizers(self) -> List[Dict]:
+        """دریافت لیست کودها"""
+        print_info("📥 دریافت لیست کودها...")
+        try:
+            response = self.session.get(f"{API_URL}/fertilizers?include_system=true", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                print_success(f"{len(data)} کود دریافت شد")
+                return data
+            else:
+                print_error(f"خطا در دریافت کودها: {response.status_code}")
+                return []
+        except Exception as e:
+            print_error(f"خطا: {e}")
+            return []
+
+    def run_optimization(self, fertilizers: List[Dict]) -> Optional[Dict]:
+        """اجرای بهینه‌سازی"""
+        print_info("🚀 اجرای بهینه‌سازی...")
+
+        if not fertilizers:
+            print_error("هیچ کودی برای بهینه‌سازی وجود ندارد")
+            return None
+
+        # انتخاب حداکثر 15 کود
+        selected = []
+        for f in fertilizers[:15]:
+            selected.append({
+                'id': str(f.get('id')),
+                'name': f.get('name', 'نامشخص'),
+                'elements': f.get('elements', {}),
+                'price_per_kg': f.get('pricePerKg', f.get('price_per_kg', 0)),
+                'purity': f.get('concentration', 100),
+                'is_acid': f.get('isAcid', f.get('is_acid', False)),
+                'is_system_default': f.get('isSystemDefault', f.get('is_system_default', False))
+            })
+
+        print_info(f"📦 {len(selected)} کود انتخاب شد")
+
+        # عناصر هدف
+        target_values = {
+            'N-NO3': 210,
+            'P': 31,
+            'K': 235,
+            'Ca': 200,
+            'Mg': 49,
+            'S': 64,
+            'Fe': 2.9,
+            'Mn': 0.5,
+            'Zn': 0.05,
+            'B': 0.5,
+            'Cu': 0.02,
+            'Mo': 0.05
+        }
+
+        request_body = {
+            'target_values': target_values,
+            'water_values': {},
+            'fertilizers': selected,
+            'options': {
+                'method': 'nnls',
+                'use_precipitation_check': True,
+                'use_ion_balance_check': True,
+                'auto_balance': True,
+                'reservoir_mode': 'auto'
+            },
+            'tank_volume': 5000,
+            'stock_volume': 100,
+            'injection_ratio': 100
+        }
+
+        try:
+            response = self.session.post(
+                f"{API_URL}/calculations/optimize",
+                json=request_body,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                print_success("بهینه‌سازی با موفقیت انجام شد")
+                return result
+            else:
+                print_error(f"خطا در بهینه‌سازی: {response.status_code}")
+                try:
+                    error_data = response.json()
+                    print_error(f"پیام: {error_data.get('detail', response.text)}")
+                except:
+                    print_error(f"پیام: {response.text}")
+                return None
+        except Exception as e:
+            print_error(f"خطا: {e}")
+            return None
+
+    def analyze_reservoir_data(self, result: Dict, fertilizers: List[Dict]):
+        """تحلیل و نمایش reservoir_data"""
+        print_header("📊 تحلیل reservoir_data")
+
+        reservoir_data = result.get('reservoir_data', {'A': [], 'B': [], 'C': []})
+
+        # 1. نمایش خام
+        print_info("📄 داده‌های خام reservoir_data:")
+        print(json.dumps(reservoir_data, indent=2, ensure_ascii=False))
         print()
-        for test_name, test_func in tests:
-            try:
-                result = test_func()
-                if result:
-                    self.passed += 1
+
+        # 2. بررسی هر مخزن
+        print_header("🗄️ بررسی مخازن")
+
+        tank_names = {
+            'A': 'مخزن کلسیم',
+            'B': 'مخزن اصلی',
+            'C': 'مخزن اسید'
+        }
+
+        all_have_id = True
+        total_items = 0
+        items_with_id = 0
+
+        for key in ['A', 'B', 'C']:
+            items = reservoir_data.get(key, [])
+            total_items += len(items)
+            print(f"\n{Colors.BOLD}مخزن {key} - {tank_names.get(key, '')}{Colors.RESET}")
+            print(f"تعداد: {len(items)} مورد")
+
+            if items:
+                for item in items:
+                    has_id = item.get('fertilizer_id')
+                    items_with_id += 1 if has_id else 0
+                    status = "✅" if has_id else "❌"
+                    color = Colors.GREEN if has_id else Colors.RED
+                    print(f"  {status} name: {color}\"{item.get('name', 'نامشخص')}\"{Colors.RESET}, "
+                          f"amount: {item.get('amount', 0)}, "
+                          f"fertilizer_id: {color}\"{has_id or 'وجود ندارد'}\"{Colors.RESET}")
+                    if not has_id:
+                        all_have_id = False
+            else:
+                print(f"  {Colors.YELLOW}(خالی){Colors.RESET}")
+
+        # 3. بررسی تطابق
+        print_header("🔗 تطابق کودها با مخزن")
+
+        # ساخت Map مخزن
+        tank_map = {}
+        for tank_key, items in reservoir_data.items():
+            if items:
+                for item in items:
+                    fert_id = item.get('fertilizer_id')
+                    if fert_id:
+                        tank_map[str(fert_id)] = tank_key
+
+        weights = result.get('weights', {})
+        print(f"\nتعداد وزن‌های بهینه: {len(weights)}")
+
+        matched = 0
+        unmatched = 0
+        zero_weights = 0
+
+        for fert_id, weight in weights.items():
+            if weight > 0:
+                tank = tank_map.get(str(fert_id))
+                fert = next((f for f in fertilizers if str(f.get('id')) == str(fert_id)), None)
+                name = fert.get('name', fert_id) if fert else fert_id
+
+                if tank:
+                    color = Colors.GREEN
+                    status = "✅"
+                    matched += 1
                 else:
-                    self.failed += 1
-                self.results.append((test_name, result))
-            except Exception as e:
-                print_error(f"خطا در تست {test_name}: {e}")
-                self.failed += 1
-                self.results.append((test_name, False))
-        
-        # نمایش گزارش نهایی
-        self.print_final_report()
-        
-        # بستن اتصال
-        self.close_db()
-        
-        return self.failed == 0
-    
-    # ============================================================
-    # گزارش نهایی
-    # ============================================================
-    
-    def print_final_report(self):
-        """چاپ گزارش نهایی"""
-        print_header("📊 گزارش نهایی تست")
-        
-        total = self.passed + self.failed
-        print(f"\n{Colors.BOLD}آمار کلی:{Colors.RESET}")
-        print(f"  {Colors.GREEN}✅ موفق: {self.passed}{Colors.RESET}")
-        print(f"  {Colors.RED}❌ ناموفق: {self.failed}{Colors.RESET}")
-        print(f"  📊 مجموع: {total}")
-        
-        if total > 0:
-            success_rate = (self.passed / total) * 100
-            print(f"  📈 نرخ موفقیت: {success_rate:.1f}%")
-        
-        print(f"\n{Colors.BOLD}جزئیات تست‌ها:{Colors.RESET}")
-        for test_name, result in self.results:
-            status = f"{Colors.GREEN}✅ PASS{Colors.RESET}" if result else f"{Colors.RED}❌ FAIL{Colors.RESET}"
-            print(f"  {status} - {test_name}")
-        
-        print("\n" + "="*70)
-        
-        if self.failed == 0:
-            print(f"{Colors.GREEN}{Colors.BOLD}🎉 همه تست‌ها با موفقیت انجام شدند!{Colors.RESET}")
-            print(f"{Colors.GREEN}✅ سیستم به درستی کار می‌کند.{Colors.RESET}")
+                    color = Colors.RED
+                    status = "❌"
+                    unmatched += 1
+
+                print(f"  {status} {color}{name}{Colors.RESET}: {weight:.3f}g → مخزن {tank or '❌ پیدا نشد'}")
+            else:
+                zero_weights += 1
+
+        print(f"\n{Colors.BOLD}آمار تطابق:{Colors.RESET}")
+        print(f"  {Colors.GREEN}✅ تطابق یافت شد: {matched}{Colors.RESET}")
+        print(f"  {Colors.RED}❌ تطابق یافت نشد: {unmatched}{Colors.RESET}")
+        print(f"  {Colors.YELLOW}⚠️ وزن صفر: {zero_weights}{Colors.RESET}")
+
+        # 4. نتیجه نهایی
+        print_header("📋 نتیجه نهایی")
+
+        print(f"\nآمار مخازن:")
+        print(f"  کل آیتم‌ها در مخازن: {total_items}")
+        print(f"  آیتم‌های دارای fertilizer_id: {items_with_id}/{total_items}")
+
+        if total_items == 0:
+            print_warning("⚠️ هیچ آیتمی در مخازن وجود ندارد!")
+            print_warning("   - ممکن است وزن همه کودها صفر باشد")
+            print_warning("   - یا بهینه‌سازی به درستی انجام نشده باشد")
+            return False
+
+        if all_have_id and matched > 0:
+            print_success("✅ همه موارد دارای fertilizer_id هستند و تطابق برقرار است!")
+            print_success("✅ مخزن‌ها به درستی نمایش داده می‌شوند.")
+            return True
+        elif not all_have_id:
+            print_error("❌ برخی موارد fertilizer_id ندارند!")
+            print_warning("⚠️ لطفاً فایل distributor.py را بررسی کنید:")
+            print_warning("   - مطمئن شوید fertilizer_id به آیتم‌های مخزن اضافه شده است")
+            print_warning("   - سرور بک‌اند را ری‌استارت کنید")
+            return False
         else:
-            print(f"{Colors.RED}{Colors.BOLD}⚠️ برخی تست‌ها ناموفق بودند.{Colors.RESET}")
-            # تحلیل دقیق خطاها
-            failed_tests = [name for name, result in self.results if not result]
-            print(f"{Colors.YELLOW}💡 تست‌های ناموفق: {', '.join(failed_tests)}{Colors.RESET}")
-            
-            if "بارگذاری مجدد گزارش" in failed_tests or "بررسی داده‌های تب خانه" in failed_tests:
-                print(f"{Colors.YELLOW}🔧 مشکل اصلی: final_values در دیتابیس ذخیره نمی‌شود.{Colors.RESET}")
-                print(f"{Colors.YELLOW}🔧 راه حل: در optimizeFertilizers بعد از دریافت نتیجه، saveCurrentReport صدا زده شود.{Colors.RESET}")
-        
-        print("="*70)
+            print_warning("⚠️ برخی از کودها در مخزن پیدا نشدند!")
+            print_warning("   - ممکن است نام کودها با هم مطابقت نداشته باشد")
+            print_warning("   - بررسی کنید که fertilizer_id به درستی ست شده باشد")
+            return False
+
+    def run(self):
+        """اجرای کامل تست"""
+        print_header("🧪 تست مخازن FarmTech")
+
+        # 1. ورود
+        if not self.login():
+            print_error("ورود ناموفق، تست متوقف شد")
+            return False
+
+        # 2. دریافت کودها
+        fertilizers = self.get_fertilizers()
+        if not fertilizers:
+            print_error("کودی دریافت نشد، تست متوقف شد")
+            return False
+
+        # 3. اجرای بهینه‌سازی
+        result = self.run_optimization(fertilizers)
+        if not result:
+            print_error("بهینه‌سازی ناموفق، تست متوقف شد")
+            return False
+
+        # 4. تحلیل نتایج
+        return self.analyze_reservoir_data(result, fertilizers)
+
 
 # ============================================================
 # اجرای اصلی
 # ============================================================
-
 def main():
-    try:
-        tester = FullFlowTester()
-        success = tester.run_all_tests()
-        sys.exit(0 if success else 1)
-    except KeyboardInterrupt:
-        print(f"\n\n{Colors.YELLOW}⏹️ تست توسط کاربر متوقف شد.{Colors.RESET}")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n{Colors.RED}❌ خطای غیرمنتظره: {e}{Colors.RESET}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    tester = ReservoirTester()
+    success = tester.run()
+
+    print()
+    if success:
+        print_success("🎉 همه تست‌ها با موفقیت انجام شد!")
+        print_info("💡 مخزن‌ها به درستی نمایش داده می‌شوند.")
+    else:
+        print_error("❌ برخی تست‌ها ناموفق بودند.")
+        print_info("🔧 برای رفع مشکل:")
+        print_info("   1. فایل backend/app/core/reservoir/distributor.py را بررسی کنید")
+        print_info("   2. مطمئن شوید fertilizer_id به آیتم‌های مخزن اضافه شده است")
+        print_info("   3. سرور بک‌اند را ری‌استارت کنید")
+        print_info("   4. دوباره تست را اجرا کنید")
+
+    return 0 if success else 1
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

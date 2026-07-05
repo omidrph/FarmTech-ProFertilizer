@@ -14,7 +14,9 @@
         ></div>
 
         <!-- Modal Container -->
-        <div class="flex min-h-full items-center justify-center p-0 sm:p-4">
+        <div
+          class="flex min-h-full items-center justify-center p-0 sm:p-4"
+        >
           <div
             class="relative w-full h-full sm:h-auto sm:max-w-3xl sm:my-8 bg-white dark:bg-gray-800 sm:rounded-2xl shadow-2xl overflow-hidden"
           >
@@ -346,17 +348,25 @@
 
                 <!-- Reports Tab -->
                 <div v-if="activeTab === 'reports'" class="p-6">
-                  <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <!-- Header -->
+                  <div class="flex items-center gap-3 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                    <div class="w-9 h-9 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
                       <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
-                      نسخه‌های ذخیره شده
-                    </h3>
+                    </div>
+                    <div>
+                      <h3 class="text-base font-bold text-gray-900 dark:text-white">
+                        گزارش‌های ذخیره شده
+                      </h3>
+                      <p class="text-xs text-gray-500 dark:text-gray-400">
+                        لیست تمام گزارش‌های ذخیره شده شما
+                      </p>
+                    </div>
                     <button
                       @click="loadReports"
                       :disabled="isLoadingReports"
-                      class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      class="mr-auto p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title="بروزرسانی"
                     >
                       <svg v-if="!isLoadingReports" class="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,12 +379,12 @@
                     </button>
                   </div>
 
-                  <!-- Reports List -->
+                  <!-- لیست گزارش‌ها -->
                   <div v-if="reports.length > 0" class="space-y-2">
                     <div
                       v-for="report in reports"
                       :key="report.id"
-                      class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors group"
                     >
                       <div class="flex-1 min-w-0">
                         <p class="font-medium text-gray-900 dark:text-white truncate">{{ report.report_name || 'بدون نام' }}</p>
@@ -391,6 +401,12 @@
                             </svg>
                             {{ report.season }}
                           </span>
+                          <span v-if="report.growth_stage" class="flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                            {{ report.growth_stage }}
+                          </span>
                           <span class="flex items-center gap-1">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -399,19 +415,25 @@
                           </span>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-2 flex-shrink-0">
                         <button
                           @click="loadReport(report.id)"
-                          class="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs flex items-center gap-1"
+                          :disabled="isLoadingReport"
+                          class="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-xs flex items-center gap-1 shadow-sm hover:shadow-md disabled:opacity-50"
                         >
-                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4 4m0 0l-4-4m4 4V4"/>
+                          <svg v-if="isLoadingReport && loadingReportId === report.id" class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                           </svg>
-                          بارگذاری
+                          <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                          </svg>
+                          <span>بارگذاری</span>
                         </button>
+                        <!-- ✅ فقط اینجا confirm دارد -->
                         <button
                           @click="deleteReport(report.id)"
-                          class="p-1.5 rounded-lg text-danger-600 hover:text-danger-800 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors"
+                          class="p-1.5 rounded-lg text-danger-600 hover:text-danger-800 hover:bg-danger-50 dark:hover:bg-danger-900/30 transition-colors opacity-0 group-hover:opacity-100 sm:opacity-100"
                           title="حذف"
                         >
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -422,16 +444,16 @@
                     </div>
                   </div>
 
-                  <!-- Empty State -->
+                  <!-- حالت خالی -->
                   <div v-else class="text-center py-12">
                     <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                       <svg class="w-8 h-8 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                       </svg>
                     </div>
-                    <p class="text-gray-500 dark:text-gray-400 mb-2">هنوز نسخه‌ای ذخیره نشده است</p>
+                    <p class="text-gray-500 dark:text-gray-400 mb-2">هنوز گزارشی ذخیره نشده است</p>
                     <p class="text-xs text-gray-400 dark:text-gray-500">
-                      برای ذخیره نسخه فعلی، از منوی "فایل" در هدر برنامه استفاده کنید
+                      برای ذخیره گزارش فعلی، از منوی <span class="font-medium text-primary-600 dark:text-primary-400">فایل → ذخیره</span> استفاده کنید
                     </p>
                   </div>
                 </div>
@@ -488,6 +510,10 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { apiService } from '@/services/apiService';
+import { useReportStore } from '@/store/modules/reportStore';
+import { useWaterStore } from '@/store/modules/waterStore';
+import { useTargetStore } from '@/store/modules/targetStore';
+import { useCalcStore } from '@/store/modules/calcStore';
 
 // ===== Props & Emits =====
 interface Props {
@@ -500,6 +526,12 @@ const emit = defineEmits<{
   (e: 'update:isOpen', value: boolean): void;
 }>();
 
+// ===== Stores =====
+const reportStore = useReportStore();
+const waterStore = useWaterStore();
+const targetStore = useTargetStore();
+const calcStore = useCalcStore();
+
 // ===== State =====
 const { user, checkAuth } = useAuth();
 
@@ -509,6 +541,8 @@ const activeTab = ref<'profile' | 'security' | 'stats' | 'reports'>('profile');
 const isSaving = ref(false);
 const isChangingPassword = ref(false);
 const isLoadingReports = ref(false);
+const isLoadingReport = ref(false);
+const loadingReportId = ref<number | null>(null);
 const successMessage = ref<string | null>(null);
 const errorMessage = ref<string | null>(null);
 
@@ -554,7 +588,7 @@ const tabs = [
   },
   {
     id: 'reports' as const,
-    label: 'نسخه‌ها',
+    label: 'گزارش‌ها',
     icon: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`
   }
 ];
@@ -612,18 +646,13 @@ const showError = (message: string) => {
   errorMessage.value = message;
 };
 
-/**
- * 🆕 بارگذاری اطلاعات کاربر
- */
 const loadUserData = async () => {
   isLoadingUser.value = true;
   errorMessage.value = null;
   
   try {
-    // فراخوانی checkAuth برای به‌روزرسانی user
     await checkAuth();
     
-    // استفاده از user.value
     if (user.value) {
       currentUser.value = user.value;
       resetProfileForm();
@@ -741,32 +770,67 @@ const handleChangePassword = async () => {
   }
 };
 
+// ============================================================
+// ✅ loadReport - بدون confirm (الگو گرفته از AppHeader)
+// ============================================================
 const loadReport = async (reportId: number) => {
-  if (confirm('آیا می‌خواهید این نسخه را بارگذاری کنید؟ اطلاعات فعلی جایگزین خواهد شد.')) {
-    try {
-      const report = await apiService.getReport(String(reportId));
-      if (report) {
-        showSuccess('نسخه با موفقیت بارگذاری شد');
-        setTimeout(() => {
-          closeModal();
-        }, 1000);
-      }
-    } catch (err: any) {
-      showError(err.response?.data?.detail || 'خطا در بارگذاری نسخه');
+  // ❌ حذف کامل confirm
+  // if (reportStore.hasActiveReport && reportStore.currentReportId !== reportId) {
+  //   if (!confirm('آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
+  //     return;
+  //   }
+  // }
+  
+  isLoadingReport.value = true;
+  loadingReportId.value = reportId;
+  
+  try {
+    const success = await reportStore.loadReport(reportId);
+    if (success) {
+      showSuccess('گزارش با موفقیت بارگذاری شد');
+      setTimeout(() => {
+        closeModal();
+      }, 1000);
+    } else {
+      showError(reportStore.error || 'خطا در بارگذاری گزارش');
     }
+  } catch (err: any) {
+    showError(err.response?.data?.detail || 'خطا در بارگذاری گزارش');
+    console.error('Error loading report:', err);
+  } finally {
+    isLoadingReport.value = false;
+    loadingReportId.value = null;
   }
 };
 
+// ============================================================
+// ✅ deleteReport - فقط اینجا confirm دارد
+// ============================================================
 const deleteReport = async (reportId: number) => {
-  if (confirm('آیا از حذف این نسخه اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')) {
-    try {
-      await apiService.deleteReport(String(reportId));
+  if (!confirm('آیا از حذف این گزارش اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')) {
+    return;
+  }
+  
+  try {
+    const success = await reportStore.deleteReport(reportId);
+    if (success) {
       reports.value = reports.value.filter(r => r.id !== reportId);
       stats.reports = reports.value.length;
-      showSuccess('نسخه با موفقیت حذف شد');
-    } catch (err: any) {
-      showError(err.response?.data?.detail || 'خطا در حذف نسخه');
+      showSuccess('گزارش با موفقیت حذف شد');
+      
+      if (reportStore.currentReportId === reportId) {
+        waterStore.resetWaterData();
+        targetStore.resetTargets();
+        calcStore.resetCalculation();
+        window.dispatchEvent(new CustomEvent('report-changed'));
+        window.dispatchEvent(new CustomEvent('report-reset'));
+      }
+    } else {
+      showError(reportStore.error || 'خطا در حذف گزارش');
     }
+  } catch (err: any) {
+    showError(err.response?.data?.detail || 'خطا در حذف گزارش');
+    console.error('Error deleting report:', err);
   }
 };
 

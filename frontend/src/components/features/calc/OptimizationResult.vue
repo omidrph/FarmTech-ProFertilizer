@@ -1,4 +1,3 @@
-<!-- frontend/src/components/features/calc/OptimizationResult.vue -->
 <template>
   <div v-if="result" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
     
@@ -58,7 +57,6 @@
         </h4>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <!-- EC -->
           <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
             <div class="flex items-center justify-between">
               <div>
@@ -82,7 +80,6 @@
             </div>
           </div>
           
-          <!-- pH -->
           <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
             <div class="flex items-center justify-between">
               <div>
@@ -107,7 +104,6 @@
           </div>
         </div>
         
-        <!-- وضعیت ترکیبی -->
         <div 
           v-if="result.ec_ph_status && result.ec_ph_status.message"
           class="mt-2 p-2 rounded-lg text-sm"
@@ -235,7 +231,6 @@
           </table>
         </div>
         
-        <!-- نمایش تعداد کودهای استفاده نشده -->
         <div v-if="unusedFertilizersCount > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
           <svg class="w-4 h-4 text-warning-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -245,7 +240,7 @@
       </div>
 
       <!-- ============================================================ -->
-      <!-- بخش 2: مقایسه عناصر هدف و تامین شده (طراحی جدید با نمایش خطا) -->
+      <!-- بخش 2: مقایسه عناصر هدف و تامین شده -->
       <!-- ============================================================ -->
       <div>
         <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
@@ -258,14 +253,12 @@
           </span>
         </h4>
 
-        <!-- گرید نمایش عناصر با طراحی جدید -->
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           <div
             v-for="(error, element) in elementErrors"
             :key="element"
             class="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-3 border border-gray-200 dark:border-gray-600 hover:shadow-md transition-shadow"
           >
-            <!-- سطر اول: نام عنصر و درصد خطا -->
             <div class="flex items-center justify-between mb-1">
               <span class="text-sm font-bold text-gray-800 dark:text-gray-200">{{ element }}</span>
               <span 
@@ -277,18 +270,15 @@
               </span>
             </div>
 
-            <!-- نوار پیشرفت نمایش خطا (با جهت‌دار بودن) -->
             <div class="relative w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
               <div
                 class="absolute top-0 h-full rounded-full transition-all duration-700 ease-out"
                 :class="getErrorBarClass(error)"
                 :style="getErrorBarStyle(error)"
               ></div>
-              <!-- خط وسط برای نشان دادن مرز صفر -->
               <div class="absolute top-0 left-1/2 w-0.5 h-full bg-gray-400/50 dark:bg-gray-500/50 z-10"></div>
             </div>
 
-            <!-- مقادیر عددی هدف و تامین -->
             <div class="flex justify-between mt-1.5 text-[10px]">
               <span class="text-blue-600 dark:text-blue-400 font-medium">
                 هدف: {{ getTargetValue(element) }}
@@ -471,6 +461,74 @@ const elementErrors = computed(() => {
   return errors;
 });
 
+// ============================================================
+// ساخت Map برای مخزن هر کود از result.reservoir_data
+// ============================================================
+const fertilizerTankMap = computed(() => {
+  const map: Record<string, string> = {};
+  
+  if (!result.value?.reservoir_data) {
+    console.warn('⚠️ No reservoir_data in result');
+    return map;
+  }
+  
+  const reservoirData = result.value.reservoir_data;
+  
+  // 🔍 لاگ برای دیباگ
+  console.log('🔍 Reservoir Data:', reservoirData);
+  
+  // مخزن A
+  if (reservoirData.A && Array.isArray(reservoirData.A)) {
+    for (const item of reservoirData.A) {
+      if (item.fertilizer_id) {
+        map[item.fertilizer_id] = 'A';
+        console.log(`✅ Mapped ${item.fertilizer_id} -> A`);
+      } else if (item.name) {
+        const fert = props.fertilizers.find(f => f.name === item.name);
+        if (fert) {
+          map[fert.id] = 'A';
+          console.log(`✅ Mapped by name ${fert.id} -> A`);
+        }
+      }
+    }
+  }
+  
+  // مخزن B
+  if (reservoirData.B && Array.isArray(reservoirData.B)) {
+    for (const item of reservoirData.B) {
+      if (item.fertilizer_id) {
+        map[item.fertilizer_id] = 'B';
+        console.log(`✅ Mapped ${item.fertilizer_id} -> B`);
+      } else if (item.name) {
+        const fert = props.fertilizers.find(f => f.name === item.name);
+        if (fert) {
+          map[fert.id] = 'B';
+          console.log(`✅ Mapped by name ${fert.id} -> B`);
+        }
+      }
+    }
+  }
+  
+  // مخزن C
+  if (reservoirData.C && Array.isArray(reservoirData.C)) {
+    for (const item of reservoirData.C) {
+      if (item.fertilizer_id) {
+        map[item.fertilizer_id] = 'C';
+        console.log(`✅ Mapped ${item.fertilizer_id} -> C`);
+      } else if (item.name) {
+        const fert = props.fertilizers.find(f => f.name === item.name);
+        if (fert) {
+          map[fert.id] = 'C';
+          console.log(`✅ Mapped by name ${fert.id} -> C`);
+        }
+      }
+    }
+  }
+  
+  console.log('✅ Final Tank Map:', map);
+  return map;
+});
+
 // ===== Methods =====
 
 // توابع مربوط به کودها
@@ -491,20 +549,25 @@ const getFertilizerCost = (fertilizerId: string, weight: number): number => {
 };
 
 const getFertilizerTankName = (fertilizerId: string): string => {
-  const fert = props.fertilizers.find(f => f.id === fertilizerId);
-  return fert?.tankName || 'مخزن A';
+  const tank = fertilizerTankMap.value[fertilizerId];
+  if (!tank) return 'نامشخص';
+  return `مخزن ${tank}`;
 };
 
 const getFertilizerTankClass = (fertilizerId: string): string => {
-  const fert = props.fertilizers.find(f => f.id === fertilizerId);
-  const tank = fert?.tankName || 'مخزن A';
+  const tank = fertilizerTankMap.value[fertilizerId];
+  
   const classes: Record<string, string> = {
-    'مخزن A': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    'مخزن B': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-    'مخزن C': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    'مخزن D': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+    'A': 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    'B': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+    'C': 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
   };
-  return classes[tank] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+  
+  if (tank && classes[tank]) {
+    return classes[tank];
+  }
+  
+  return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
 };
 
 // توابع مربوط به عناصر
@@ -523,17 +586,15 @@ const getActualValue = (element: string): string => {
 };
 
 // ============================================================
-// توابع جدید برای نمایش زیبای خطا
+// توابع نمایش خطا
 // ============================================================
 
-// ۱. نمایش عدد خطا با علامت مثبت/منفی
 const getErrorDisplay = (error: number): string => {
   if (Math.abs(error) < 0.01) return '۰%';
   if (error > 0) return `+${error.toFixed(1)}%`;
   return `${error.toFixed(1)}%`;
 };
 
-// ۲. رنگ متن خطا بر اساس شدت
 const getErrorTextClass = (error: number): string => {
   const absError = Math.abs(error);
   if (absError <= 0.5) return 'text-emerald-600 dark:text-emerald-400';
@@ -543,7 +604,6 @@ const getErrorTextClass = (error: number): string => {
   return 'text-rose-600 dark:text-rose-400';
 };
 
-// ۳. کلاس نوار بر اساس نوع خطا (مثبت/منفی/صفر)
 const getErrorBarClass = (error: number): string => {
   const absError = Math.abs(error);
   if (absError <= 0.5) return 'bg-emerald-500';
@@ -551,7 +611,6 @@ const getErrorBarClass = (error: number): string => {
   return 'bg-amber-500';
 };
 
-// ۴. استایل نوار (موقعیت و اندازه)
 const getErrorBarStyle = (error: number): Record<string, string> => {
   const absError = Math.min(Math.abs(error), 20);
   const percentage = (absError / 20) * 50;
@@ -575,7 +634,6 @@ const getErrorBarStyle = (error: number): Record<string, string> => {
   }
 };
 
-// ۵. رنگ متن مقدار تامین شده (سبز اگر دقیق، نارنجی اگر خطا دارد)
 const getActualValueClass = (element: string): string => {
   const error = elementErrors.value[element] || 0;
   if (Math.abs(error) <= 0.5) return 'text-emerald-600 dark:text-emerald-400';

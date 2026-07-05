@@ -8,6 +8,7 @@
 - تولید خلاصه متنی
 - اعتبارسنجی نتایج
 - 🆕 تعادل یونی خودکار
+- 🆕 محاسبه مخازن
 """
 
 import numpy as np
@@ -19,9 +20,9 @@ from ..ion_balance import (
     get_ion_balance_status,
     check_precipitation,
     ALL_ELEMENTS,
-    # 🆕 تابع تعادل یونی خودکار
     auto_balance_ion
 )
+from ..reservoir import calculate_reservoir_data  # 🆕 اضافه شد
 
 logger = logging.getLogger(__name__)
 
@@ -32,18 +33,7 @@ def calculate_final_concentrations(
     water_values: Dict[str, float],
     active_elements: List[str]
 ) -> Dict[str, float]:
-    """
-    محاسبه غلظت نهایی عناصر
-    
-    Args:
-        weights: وزن‌های بهینه هر کود
-        A: ماتریس ضرایب
-        water_values: عناصر موجود در آب
-        active_elements: لیست عناصر فعال
-    
-    Returns:
-        Dict[str, float]: غلظت نهایی هر عنصر (ppm)
-    """
+    """محاسبه غلظت نهایی عناصر"""
     final_concentrations = {}
     
     for i, element in enumerate(active_elements):
@@ -58,16 +48,7 @@ def calculate_target_achievement(
     target_values: Dict[str, float],
     final_concentrations: Dict[str, float]
 ) -> Dict[str, float]:
-    """
-    محاسبه درصد تحقق هر عنصر
-    
-    Args:
-        target_values: مقادیر هدف
-        final_concentrations: مقادیر نهایی
-    
-    Returns:
-        Dict[str, float]: درصد تحقق هر عنصر (۰ تا ۱۰۰)
-    """
+    """محاسبه درصد تحقق هر عنصر"""
     achievement = {}
     
     for element, target in target_values.items():
@@ -218,7 +199,7 @@ def _get_validation_suggestions(errors: List[str], warnings: List[str]) -> List[
 
 
 # ============================================================
-# 🆕 تابع پردازش نتیجه با قابلیت تعادل یونی خودکار
+# 🆕 تابع پردازش نتیجه با قابلیت تعادل یونی خودکار و مخازن
 # ============================================================
 
 def process_optimization_result(
@@ -260,10 +241,9 @@ def process_optimization_result(
     # ============================================================
     # 🆕 تعادل یونی خودکار (اگر فعال باشد)
     # ============================================================
-    auto_balance = options.get('auto_balance', True)  # پیش‌فرض فعال
+    auto_balance = options.get('auto_balance', True)
     
     if auto_balance:
-        # بررسی تعادل فعلی
         cation, anion, is_balanced, _ = calculate_ion_balance(
             final_concentrations, unit="ppm"
         )
@@ -271,14 +251,12 @@ def process_optimization_result(
         if not is_balanced:
             logger.info(f"🔄 تعادل یونی خودکار فعال شد. اختلاف فعلی: {abs(cation - anion):.2f} meq/L")
             
-            # اعمال تعادل یونی خودکار
             balance_result = auto_balance_ion(final_concentrations, unit="ppm")
             
             if balance_result['is_balanced']:
                 final_concentrations = balance_result['concentrations']
                 logger.info(f"✅ تعادل یونی با اضافه کردن {balance_result['added_element']} برقرار شد.")
                 
-                # اضافه کردن به هشدارها و پیشنهادات
                 if 'warnings' not in options:
                     options['warnings'] = []
                 if 'suggestions' not in options:
@@ -309,6 +287,14 @@ def process_optimization_result(
     for i, fert in enumerate(fertilizers):
         fert_id = fert.get('id', f'fert_{i}')
         weights_dict[fert_id] = float(weights[i])
+    
+    # ============================================================
+    # 🆕 محاسبه مخازن
+    # ============================================================
+    reservoir_data = calculate_reservoir_data(fertilizers, weights_dict)
+    logger.info(f"🗄️ Reservoir data calculated: A={len(reservoir_data.get('A', []))}, "
+                f"B={len(reservoir_data.get('B', []))}, "
+                f"C={len(reservoir_data.get('C', []))}")
     
     # جمع‌آوری هشدارها و پیشنهادات
     warnings = options.get('warnings', [])
@@ -378,10 +364,11 @@ def process_optimization_result(
         'warnings': warnings,
         'suggestions': suggestions,
         'precipitation': precipitation_result,
+        'reservoir_data': reservoir_data,  # 🆕 اضافه شد
         'iterations': solver_result.get('iterations', 0),
         'convergence_time_ms': solver_result.get('convergence_time_ms', 0),
         'is_converged': solver_result.get('is_converged', True),
         'method': solver_result.get('method', 'nnls'),
         'summary': summary,
-        'auto_balanced': auto_balance and is_balanced  # نشان‌دهنده اینکه تعادل خودکار انجام شده است
+        'auto_balanced': auto_balance and is_balanced
     }

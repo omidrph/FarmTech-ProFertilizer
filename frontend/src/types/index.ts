@@ -128,6 +128,9 @@ export interface ReservoirItem {
     name: string;
     amount: number;
     purity?: number;
+    fertilizer_id?: string;  // ✅ اضافه شد - شناسه کود برای تطابق با مخزن
+    has_calcium?: boolean;
+    is_acid?: boolean;
 }
 
 export interface ReservoirData {
@@ -262,7 +265,6 @@ export interface OptimizationOptions {
     use_precipitation_check?: boolean;
     use_ion_balance_check?: boolean;
     reservoir_mode?: 'auto' | 'manual';
-    // 🆕 تعادل یونی خودکار
     auto_balance?: boolean;
 }
 
@@ -318,7 +320,6 @@ export interface OptimizationResponse {
     convergence_time_ms: number;
     is_converged: boolean;
     summary: string;
-    // 🆕 فیلدهای EC و pH
     ec: number;
     ph: number;
     ec_status: string;

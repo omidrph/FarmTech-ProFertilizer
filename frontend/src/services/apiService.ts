@@ -43,11 +43,28 @@ export interface ReservoirRequest {
     }>;
 }
 
+// ✅ اصلاح شده: اضافه کردن fertilizer_id به آیتم‌های مخزن
 export interface ReservoirResponse {
     reservoir_data: {
-        A: Array<{ name: string; amount: number }>;
-        B: Array<{ name: string; amount: number }>;
-        C: Array<{ name: string; amount: number }>;
+        A: Array<{ 
+            name: string; 
+            amount: number; 
+            fertilizer_id?: string;
+            has_calcium?: boolean;
+        }>;
+        B: Array<{ 
+            name: string; 
+            amount: number; 
+            fertilizer_id?: string;
+            has_calcium?: boolean;
+            is_acid?: boolean;
+        }>;
+        C: Array<{ 
+            name: string; 
+            amount: number; 
+            fertilizer_id?: string;
+            is_acid?: boolean;
+        }>;
     };
     totals: { A: number; B: number; C: number };
 }
@@ -174,7 +191,6 @@ class ApiService {
             timeout: 15000,
         });
 
-        // Interceptor برای اضافه کردن توکن
         this.api.interceptors.request.use((config) => {
             const token = localStorage.getItem('access_token');
             if (token) {
@@ -183,7 +199,6 @@ class ApiService {
             return config;
         });
 
-        // Interceptor برای مدیریت خطاهای 401
         this.api.interceptors.response.use(
             (response) => response,
             (error) => {
@@ -199,7 +214,7 @@ class ApiService {
     }
 
     // ============================================================
-    // متدهای عمومی HTTP (برای انعطاف‌پذیری)
+    // متدهای عمومی HTTP
     // ============================================================
     async get<T = any>(url: string, config?: any): Promise<T> {
         const response: AxiosResponse<T> = await this.api.get(url, config);
@@ -222,15 +237,9 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 APIهای بهینه‌سازی
+    // APIهای بهینه‌سازی
     // ============================================================
 
-    /**
-     * 🚀 بهینه‌سازی خودکار فرمول کود
-     * 
-     * این تابع قلب تپنده جدید FarmTech است.
-     * با استفاده از الگوریتم NNLS، بهترین ترکیب کودها را محاسبه می‌کند.
-     */
     async optimizeFertilizers(data: OptimizationRequest): Promise<OptimizationResponse> {
         try {
             const response: AxiosResponse<OptimizationResponse> = await this.api.post(
@@ -244,9 +253,6 @@ class ApiService {
         }
     }
 
-    /**
-     * بررسی رسوب احتمالی در ترکیب عناصر
-     */
     async checkPrecipitation(concentrations: Record<string, number>, temperature: number = 25): Promise<PrecipitationCheckResponse> {
         try {
             const response: AxiosResponse<PrecipitationCheckResponse> = await this.api.post(
@@ -260,9 +266,6 @@ class ApiService {
         }
     }
 
-    /**
-     * دریافت تاریخچه بهینه‌سازی‌ها
-     */
     async getOptimizationHistory(skip: number = 0, limit: number = 50, report_id?: number): Promise<OptimizationLogResponse[]> {
         try {
             let url = `/calculations/optimization-history?skip=${skip}&limit=${limit}`;
