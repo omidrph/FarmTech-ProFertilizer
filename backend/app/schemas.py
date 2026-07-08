@@ -1,21 +1,56 @@
 # backend/app/schemas.py
-"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه نهایی با مدل‌های بهینه‌سازی و EC/pH"""
+"""همه طرح‌های Pydantic برای اعتبارسنجی داده‌ها - نسخه امنیتی کامل"""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import re
 
 
 # ============================================================
-# طرح‌های مربوط به User (کاربر)
+# 🔐 طرح‌های امنیتی - تغییر رمز عبور
 # ============================================================
-class UserCreate(BaseModel):
-    first_name: str = Field(..., min_length=1, max_length=50, description="نام")
-    last_name: str = Field(..., min_length=1, max_length=50, description="نام خانوادگی")
-    phone_number: str = Field(..., min_length=11, max_length=15, description="شماره تلفن")
-    password: str = Field(..., min_length=6, max_length=100, description="رمز عبور")
 
+class ChangePasswordRequest(BaseModel):
+    """درخواست تغییر رمز عبور"""
+    current_password: str = Field(..., min_length=8, description="رمز عبور فعلی")
+    new_password: str = Field(..., min_length=8, description="رمز عبور جدید")
+    
+    @validator('new_password')
+    def validate_new_password(cls, v):
+        """اعتبارسنجی قدرت رمز عبور جدید"""
+        if len(v) < 8:
+            raise ValueError('رمز عبور جدید باید حداقل ۸ کاراکتر باشد')
+        
+        if not any(c.isupper() for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک حرف بزرگ داشته باشد')
+        
+        if not any(c.islower() for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک حرف کوچک داشته باشد')
+        
+        if not any(c.isdigit() for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک عدد داشته باشد')
+        
+        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?/" for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک کاراکتر خاص داشته باشد')
+        
+        return v
+
+
+class ChangePasswordResponse(BaseModel):
+    """پاسخ تغییر رمز عبور"""
+    message: str
+    success: bool
+
+
+# ============================================================
+# 🔐 طرح‌های فراموشی رمز عبور (با پیامک)
+# ============================================================
+
+class ForgotPasswordRequest(BaseModel):
+    """درخواست فراموشی رمز عبور"""
+    phone_number: str = Field(..., description="شماره تلفن")
+    
     @validator('phone_number')
     def validate_phone(cls, v):
         if not re.match(r'^09[0-9]{9}$', v):
@@ -23,9 +58,190 @@ class UserCreate(BaseModel):
         return v
 
 
+class ForgotPasswordResponse(BaseModel):
+    """پاسخ فراموشی رمز عبور"""
+    message: str
+    success: bool
+    reset_id: Optional[str] = None  # برای ردیابی
+
+
+class ResetPasswordRequest(BaseModel):
+    """درخواست بازنشانی رمز عبور"""
+    phone_number: str = Field(..., description="شماره تلفن")
+    code: str = Field(..., min_length=6, max_length=6, description="کد تأیید ۶ رقمی")
+    new_password: str = Field(..., min_length=8, description="رمز عبور جدید")
+    
+    @validator('phone_number')
+    def validate_phone(cls, v):
+        if not re.match(r'^09[0-9]{9}$', v):
+            raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
+        return v
+    
+    @validator('code')
+    def validate_code(cls, v):
+        if not v.isdigit():
+            raise ValueError('کد تأیید باید عددی باشد')
+        return v
+    
+    @validator('new_password')
+    def validate_new_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('رمز عبور جدید باید حداقل ۸ کاراکتر باشد')
+        
+        if not any(c.isupper() for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک حرف بزرگ داشته باشد')
+        
+        if not any(c.islower() for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک حرف کوچک داشته باشد')
+        
+        if not any(c.isdigit() for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک عدد داشته باشد')
+        
+        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?/" for c in v):
+            raise ValueError('رمز عبور جدید باید حداقل یک کاراکتر خاص داشته باشد')
+        
+        return v
+
+
+class ResetPasswordResponse(BaseModel):
+    """پاسخ بازنشانی رمز عبور"""
+    message: str
+    success: bool
+
+
+# ============================================================
+# 🔐 طرح‌های 2FA (تأیید دو مرحله‌ای)
+# ============================================================
+
+class Enable2FARequest(BaseModel):
+    """درخواست فعال‌سازی 2FA"""
+    phone_number: str = Field(..., description="شماره تلفن")
+    
+    @validator('phone_number')
+    def validate_phone(cls, v):
+        if not re.match(r'^09[0-9]{9}$', v):
+            raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
+        return v
+
+
+class Enable2FAResponse(BaseModel):
+    """پاسخ فعال‌سازی 2FA"""
+    secret: str
+    backup_codes: List[str]
+    qr_code_url: Optional[str] = None
+    message: str
+    success: bool
+
+
+class Verify2FARequest(BaseModel):
+    """درخواست تأیید 2FA"""
+    code: str = Field(..., min_length=6, max_length=6, description="کد ۶ رقمی")
+    
+    @validator('code')
+    def validate_code(cls, v):
+        if not v.isdigit():
+            raise ValueError('کد باید عددی باشد')
+        return v
+
+
+class Verify2FAResponse(BaseModel):
+    """پاسخ تأیید 2FA"""
+    message: str
+    success: bool
+
+
+class Disable2FARequest(BaseModel):
+    """درخواست غیرفعال‌سازی 2FA"""
+    code: str = Field(..., min_length=6, max_length=6, description="کد ۶ رقمی")
+    
+    @validator('code')
+    def validate_code(cls, v):
+        if not v.isdigit():
+            raise ValueError('کد باید عددی باشد')
+        return v
+
+
+class Disable2FAResponse(BaseModel):
+    """پاسخ غیرفعال‌سازی 2FA"""
+    message: str
+    success: bool
+
+
+# ============================================================
+# 🔐 طرح‌های با اعتبارسنجی امنیتی - جلوگیری از XSS و SQL Injection
+# ============================================================
+
+class SecureString(str):
+    """کلاس کمکی برای اعتبارسنجی رشته‌های امن"""
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+    
+    @classmethod
+    def validate(cls, v):
+        if not isinstance(v, str):
+            return v
+        
+        # حذف کاراکترهای خطرناک
+        dangerous_chars = ['<', '>', '"', "'", ';', '--', '/*', '*/', '\\x00']
+        for char in dangerous_chars:
+            if char in v:
+                raise ValueError(f'رشته حاوی کاراکترهای غیرمجاز است: {char}')
+        
+        return v.strip()
+
+
+# ============================================================
+# طرح‌های مربوط به User (کاربر) - امنیتی
+# ============================================================
+class UserCreate(BaseModel):
+    first_name: str = Field(..., min_length=1, max_length=50, description="نام")
+    last_name: str = Field(..., min_length=1, max_length=50, description="نام خانوادگی")
+    phone_number: str = Field(..., min_length=11, max_length=15, description="شماره تلفن")
+    password: str = Field(..., min_length=8, max_length=100, description="رمز عبور")
+
+    @validator('phone_number')
+    def validate_phone(cls, v):
+        if not re.match(r'^09[0-9]{9}$', v):
+            raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
+        return v
+    
+    @validator('password')
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError('رمز عبور باید حداقل ۸ کاراکتر باشد')
+        
+        if not any(c.isupper() for c in v):
+            raise ValueError('رمز عبور باید حداقل یک حرف بزرگ داشته باشد')
+        
+        if not any(c.islower() for c in v):
+            raise ValueError('رمز عبور باید حداقل یک حرف کوچک داشته باشد')
+        
+        if not any(c.isdigit() for c in v):
+            raise ValueError('رمز عبور باید حداقل یک عدد داشته باشد')
+        
+        if not any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?/" for c in v):
+            raise ValueError('رمز عبور باید حداقل یک کاراکتر خاص داشته باشد')
+        
+        return v
+    
+    @validator('first_name', 'last_name')
+    def validate_name(cls, v):
+        # جلوگیری از XSS در نام
+        if any(char in v for char in ['<', '>', '"', "'", ';', '--']):
+            raise ValueError('نام حاوی کاراکترهای غیرمجاز است')
+        return v.strip()
+
+
 class UserLogin(BaseModel):
     phone_number: str = Field(..., description="شماره تلفن")
     password: str = Field(..., description="رمز عبور")
+
+    @validator('phone_number')
+    def validate_phone(cls, v):
+        if not re.match(r'^09[0-9]{9}$', v):
+            raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
+        return v
 
 
 class UserResponse(BaseModel):
@@ -36,6 +252,7 @@ class UserResponse(BaseModel):
     is_active: bool
     full_name: str
     created_at: datetime
+    is_2fa_enabled: bool = False
 
     class Config:
         from_attributes = True
@@ -45,6 +262,18 @@ class UserUpdate(BaseModel):
     first_name: Optional[str] = Field(None, min_length=1, max_length=50)
     last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     phone_number: Optional[str] = Field(None, min_length=11, max_length=15)
+
+    @validator('phone_number')
+    def validate_phone(cls, v):
+        if v and not re.match(r'^09[0-9]{9}$', v):
+            raise ValueError('شماره تلفن باید با 09 شروع شده و 11 رقم باشد')
+        return v
+    
+    @validator('first_name', 'last_name')
+    def validate_name(cls, v):
+        if v and any(char in v for char in ['<', '>', '"', "'", ';', '--']):
+            raise ValueError('نام حاوی کاراکترهای غیرمجاز است')
+        return v.strip() if v else v
 
 
 # ============================================================
@@ -59,6 +288,87 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     user_id: Optional[int] = None
     phone_number: Optional[str] = None
+
+
+# ============================================================
+# طرح‌های مربوط به Fertilizer (کود) - با اعتبارسنجی امنیتی
+# ============================================================
+class FertilizerCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="نام کود (اجباری)")
+    brand: Optional[str] = Field(None, max_length=100, description="برند/شرکت")
+    category: Optional[str] = Field(None, max_length=50, description="دسته‌بندی")
+    form: Optional[str] = Field(None, max_length=20, description="فرم فیزیکی")
+    concentration: Optional[float] = Field(100.0, ge=0, le=100, description="درصد خلوص/غلظت")
+    elements: Optional[Dict[str, float]] = Field(default_factory=dict, description="درصد عناصر")
+    price_per_kg: Optional[float] = Field(0.0, ge=0, description="قیمت هر کیلوگرم")
+    is_acid: bool = Field(False, description="آیا اسید است؟")
+    acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید")
+    ph_level: Optional[float] = Field(None, ge=0, le=14, description="pH محلول")
+    description: Optional[str] = Field(None, description="توضیحات")
+    is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
+    source_system_id: Optional[int] = Field(None, description="ID کود سیستمی مبدا")
+    
+    @validator('name')
+    def validate_name(cls, v):
+        # جلوگیری از XSS و SQL Injection
+        if any(char in v for char in ['<', '>', '"', "'", ';', '--', '/*', '*/']):
+            raise ValueError('نام کود حاوی کاراکترهای غیرمجاز است')
+        return v.strip()
+    
+    @validator('elements')
+    def validate_elements(cls, v):
+        if v:
+            for key, value in v.items():
+                if not re.match(r'^[A-Za-z0-9\-]+$', key):
+                    raise ValueError(f'نام عنصر {key} نامعتبر است')
+                if not (0 <= value <= 100):
+                    raise ValueError(f'مقدار عنصر {key} باید بین 0 تا 100 باشد')
+        return v
+
+
+class FertilizerUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    brand: Optional[str] = Field(None, max_length=100)
+    category: Optional[str] = Field(None, max_length=50)
+    form: Optional[str] = Field(None, max_length=20)
+    concentration: Optional[float] = Field(None, ge=0, le=100)
+    elements: Optional[Dict[str, float]] = None
+    price_per_kg: Optional[float] = Field(None, ge=0)
+    is_acid: Optional[bool] = None
+    acid_type: Optional[str] = Field(None, max_length=10)
+    ph_level: Optional[float] = Field(None, ge=0, le=14)
+    description: Optional[str] = None
+    is_system_default: Optional[bool] = None
+    source_system_id: Optional[int] = None
+    
+    @validator('name')
+    def validate_name(cls, v):
+        if v and any(char in v for char in ['<', '>', '"', "'", ';', '--', '/*', '*/']):
+            raise ValueError('نام کود حاوی کاراکترهای غیرمجاز است')
+        return v.strip() if v else v
+
+
+class FertilizerResponse(BaseModel):
+    id: int
+    user_id: Optional[int]
+    name: str
+    brand: Optional[str] = None
+    category: Optional[str] = None
+    form: Optional[str] = None
+    concentration: Optional[float] = 100.0
+    elements: Optional[Dict[str, float]] = None
+    price_per_kg: Optional[float] = 0.0
+    is_acid: bool = False
+    acid_type: Optional[str] = None
+    ph_level: Optional[float] = None
+    description: Optional[str] = None
+    is_system_default: bool = False
+    source_system_id: Optional[int] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 
 # ============================================================
@@ -90,93 +400,6 @@ class ReportResponse(BaseModel):
     report_date: Optional[str]
     created_at: datetime
     updated_at: Optional[datetime]
-
-    class Config:
-        from_attributes = True
-
-
-# ============================================================
-# طرح‌های مربوط به Fertilizer (کود) - نسخه نهایی
-# ============================================================
-class FertilizerCreate(BaseModel):
-    """طرح ایجاد کود جدید - فقط name اجباری است"""
-    
-    # ===== فیلد اجباری =====
-    name: str = Field(..., min_length=1, max_length=100, description="نام کود (اجباری)")
-    
-    # ===== فیلدهای اطلاعاتی =====
-    brand: Optional[str] = Field(None, max_length=100, description="برند/شرکت")
-    category: Optional[str] = Field(None, max_length=50, description="دسته‌بندی")
-    form: Optional[str] = Field(None, max_length=20, description="فرم فیزیکی: liquid, powder, crystal, granular")
-    
-    # ===== فیلدهای محاسباتی =====
-    concentration: Optional[float] = Field(100.0, ge=0, le=100, description="درصد خلوص/غلظت")
-    elements: Optional[Dict[str, float]] = Field(default_factory=dict, description="درصد عناصر")
-    price_per_kg: Optional[float] = Field(0.0, ge=0, description="قیمت هر کیلوگرم")
-    
-    # ===== فیلدهای اسید و pH =====
-    is_acid: bool = Field(False, description="آیا اسید است؟")
-    acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید: H3PO4, HNO3, H2SO4")
-    ph_level: Optional[float] = Field(None, ge=0, le=14, description="pH محلول")
-    
-    # ===== توضیحات =====
-    description: Optional[str] = Field(None, description="توضیحات")
-    
-    # ===== فیلدهای سیستمی (کاربر نباید تنظیم کند) =====
-    is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
-    source_system_id: Optional[int] = Field(None, description="ID کود سیستمی مبدا")
-
-
-class FertilizerUpdate(BaseModel):
-    """طرح به‌روزرسانی کود - همه فیلدها اختیاری"""
-    
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    brand: Optional[str] = Field(None, max_length=100)
-    category: Optional[str] = Field(None, max_length=50)
-    form: Optional[str] = Field(None, max_length=20)
-    concentration: Optional[float] = Field(None, ge=0, le=100)
-    elements: Optional[Dict[str, float]] = None
-    price_per_kg: Optional[float] = Field(None, ge=0)
-    is_acid: Optional[bool] = None
-    acid_type: Optional[str] = Field(None, max_length=10)
-    ph_level: Optional[float] = Field(None, ge=0, le=14)
-    description: Optional[str] = None
-    is_system_default: Optional[bool] = None
-    source_system_id: Optional[int] = None
-
-
-class FertilizerResponse(BaseModel):
-    """طرح پاسخ کود - شامل همه فیلدها"""
-    
-    id: int
-    user_id: Optional[int]
-    name: str
-    
-    # فیلدهای اطلاعاتی
-    brand: Optional[str] = None
-    category: Optional[str] = None
-    form: Optional[str] = None
-    
-    # فیلدهای محاسباتی
-    concentration: Optional[float] = 100.0
-    elements: Optional[Dict[str, float]] = None
-    price_per_kg: Optional[float] = 0.0
-    
-    # فیلدهای اسید و pH
-    is_acid: bool = False
-    acid_type: Optional[str] = None
-    ph_level: Optional[float] = None
-    
-    # توضیحات
-    description: Optional[str] = None
-    
-    # فیلدهای سیستمی
-    is_system_default: bool = False
-    source_system_id: Optional[int] = None
-    
-    # تاریخ‌ها
-    created_at: datetime
-    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -244,6 +467,97 @@ class CalculationResponse(BaseModel):
     interpretation: Optional[str] = None
     created_at: datetime
 
+    class Config:
+        from_attributes = True
+
+
+# ============================================================
+# طرح‌های مربوط به Recipe (رسپی)
+# ============================================================
+class RecipeBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="نام رسپی")
+    description: Optional[str] = Field(None, description="توضیحات")
+    target_values: Dict[str, float] = Field(..., description="مقادیر هدف عناصر")
+    category: Optional[str] = Field(None, max_length=50, description="دسته‌بندی")
+    stage: Optional[str] = Field(None, max_length=50, description="مرحله رشد")
+    is_system: bool = Field(False, description="آیا رسپی سیستمی است؟")
+
+
+class RecipeCreate(RecipeBase):
+    pass
+
+
+class RecipeUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    target_values: Optional[Dict[str, float]] = None
+    category: Optional[str] = Field(None, max_length=50)
+    stage: Optional[str] = Field(None, max_length=50)
+
+
+class RecipeResponse(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+    target_values: Dict[str, float]
+    category: Optional[str]
+    stage: Optional[str]
+    is_system: bool
+    user_id: Optional[int]
+    created_at: datetime
+    updated_at: Optional[datetime]
+    
+    class Config:
+        from_attributes = True
+
+
+class RecipeListResponse(BaseModel):
+    system_recipes: List[RecipeResponse]
+    user_recipes: List[RecipeResponse]
+
+
+# ============================================================
+# طرح‌های مربوط به WaterAnalysisTemplate
+# ============================================================
+class WaterAnalysisTemplateCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100, description="نام قالب")
+    description: Optional[str] = Field(None, description="توضیحات")
+    water_percentage: float = Field(100.0, ge=0, le=100)
+    wastewater_percentage: float = Field(0.0, ge=0, le=100)
+    water_salinity: float = Field(0.8, ge=0)
+    water_salinity_unit: str = Field('dS/m', description="واحد EC")
+    water_ph: Optional[float] = Field(None, ge=0, le=14)
+    water_values: Optional[Dict[str, float]] = Field(default_factory=dict)
+    wastewater_values: Optional[Dict[str, float]] = Field(default_factory=dict)
+
+
+class WaterAnalysisTemplateUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    water_percentage: Optional[float] = Field(None, ge=0, le=100)
+    wastewater_percentage: Optional[float] = Field(None, ge=0, le=100)
+    water_salinity: Optional[float] = Field(None, ge=0)
+    water_salinity_unit: Optional[str] = None
+    water_ph: Optional[float] = Field(None, ge=0, le=14)
+    water_values: Optional[Dict[str, float]] = None
+    wastewater_values: Optional[Dict[str, float]] = None
+
+
+class WaterAnalysisTemplateResponse(BaseModel):
+    id: int
+    user_id: int
+    name: str
+    description: Optional[str]
+    water_percentage: float
+    wastewater_percentage: float
+    water_salinity: float
+    water_salinity_unit: str
+    water_ph: Optional[float]
+    water_values: Optional[Dict[str, float]]
+    wastewater_values: Optional[Dict[str, float]]
+    created_at: datetime
+    updated_at: Optional[datetime]
+    
     class Config:
         from_attributes = True
 
@@ -331,7 +645,7 @@ class HomeSummaryResponse(BaseModel):
 
 
 # ============================================================
-# طرح‌های مربوط به تفسیر داده‌ها (Interpretation)
+# طرح‌های مربوط به Interpretation
 # ============================================================
 class ElementStatusResponse(BaseModel):
     element: str
@@ -379,141 +693,23 @@ class PaginatedResponse(BaseModel):
 
 
 # ============================================================
-# طرح‌های مربوط به Recipe (رسپی)
+# طرح‌های Optimization با EC و pH و auto_balance
 # ============================================================
-class RecipeBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100, description="نام رسپی")
-    description: Optional[str] = Field(None, description="توضیحات")
-    target_values: Dict[str, float] = Field(..., description="مقادیر هدف عناصر")
-    category: Optional[str] = Field(None, max_length=50, description="دسته‌بندی")
-    stage: Optional[str] = Field(None, max_length=50, description="مرحله رشد")
-    is_system: bool = Field(False, description="آیا رسپی سیستمی است؟")
-
-
-class RecipeCreate(RecipeBase):
-    pass
-
-
-class RecipeUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = None
-    target_values: Optional[Dict[str, float]] = None
-    category: Optional[str] = Field(None, max_length=50)
-    stage: Optional[str] = Field(None, max_length=50)
-
-
-class RecipeResponse(BaseModel):
-    id: int
-    name: str
-    description: Optional[str]
-    target_values: Dict[str, float]
-    category: Optional[str]
-    stage: Optional[str]
-    is_system: bool
-    user_id: Optional[int]
-    created_at: datetime
-    updated_at: Optional[datetime]
-    
-    class Config:
-        from_attributes = True
-
-
-class RecipeListResponse(BaseModel):
-    system_recipes: List[RecipeResponse]
-    user_recipes: List[RecipeResponse]
-
-
-# ============================================================
-# طرح‌های مربوط به WaterAnalysisTemplate
-# ============================================================
-class WaterAnalysisTemplateCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100, description="نام قالب")
-    description: Optional[str] = Field(None, description="توضیحات")
-    water_percentage: float = Field(100.0, ge=0, le=100)
-    wastewater_percentage: float = Field(0.0, ge=0, le=100)
-    water_salinity: float = Field(0.8, ge=0)
-    water_salinity_unit: str = Field('dS/m', description="واحد EC: dS/m, mS/cm, μS/cm")
-    water_ph: Optional[float] = Field(None, ge=0, le=14)
-    water_values: Optional[Dict[str, float]] = Field(default_factory=dict)
-    wastewater_values: Optional[Dict[str, float]] = Field(default_factory=dict)
-
-
-class WaterAnalysisTemplateUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
-    description: Optional[str] = None
-    water_percentage: Optional[float] = Field(None, ge=0, le=100)
-    wastewater_percentage: Optional[float] = Field(None, ge=0, le=100)
-    water_salinity: Optional[float] = Field(None, ge=0)
-    water_salinity_unit: Optional[str] = None
-    water_ph: Optional[float] = Field(None, ge=0, le=14)
-    water_values: Optional[Dict[str, float]] = None
-    wastewater_values: Optional[Dict[str, float]] = None
-
-
-class WaterAnalysisTemplateResponse(BaseModel):
-    id: int
-    user_id: int
-    name: str
-    description: Optional[str]
-    water_percentage: float
-    wastewater_percentage: float
-    water_salinity: float
-    water_salinity_unit: str
-    water_ph: Optional[float]
-    water_values: Optional[Dict[str, float]]
-    wastewater_values: Optional[Dict[str, float]]
-    created_at: datetime
-    updated_at: Optional[datetime]
-    
-    class Config:
-        from_attributes = True
-
-
-# ============================================================
-# 🆕 طرح‌های مربوط به بهینه‌سازی (Optimization) با EC و pH و auto_balance
-# ============================================================
-
 class OptimizationOptions(BaseModel):
-    """تنظیمات بهینه‌سازی"""
-    
-    # روش بهینه‌سازی
-    method: str = Field(
-        "nnls", 
-        description="روش بهینه‌سازی: nnls, lsq_linear, lsq_linear_with_cost"
-    )
-    
-    # وزن‌دهی به عناصر (اهمیت هر عنصر)
-    element_weights: Optional[Dict[str, float]] = Field(
-        None,
-        description="وزن اهمیت هر عنصر (پیش‌فرض: همه برابر)"
-    )
-    
-    # محدودیت‌ها
-    max_cost: Optional[float] = Field(None, ge=0, description="حداکثر هزینه مجاز (تومان)")
+    method: str = Field("nnls", description="روش بهینه‌سازی")
+    element_weights: Optional[Dict[str, float]] = Field(None, description="وزن اهمیت هر عنصر")
+    max_cost: Optional[float] = Field(None, ge=0, description="حداکثر هزینه مجاز")
     allow_zero_weights: bool = Field(True, description="آیا وزن صفر مجاز است؟")
-    
-    # پارامترهای الگوریتم
     max_iterations: int = Field(1000, ge=1, description="حداکثر تعداد تکرار")
     tolerance: float = Field(1e-6, ge=0, description="تلورانس همگرایی")
-    cost_weight: float = Field(0.01, ge=0, le=1, description="ضریب اهمیت هزینه در بهینه‌سازی")
-    
-    # تنظیمات پیشرفته
+    cost_weight: float = Field(0.01, ge=0, le=1, description="ضریب اهمیت هزینه")
     use_precipitation_check: bool = Field(True, description="بررسی رسوب")
     use_ion_balance_check: bool = Field(True, description="بررسی تعادل یونی")
-    
-    # 🆕 تعادل یونی خودکار (پیش‌فرض فعال)
-    auto_balance: bool = Field(True, description="تعادل یونی خودکار (اضافه کردن Na یا Cl)")
-    
-    # مخازن
-    reservoir_mode: str = Field(
-        "auto",
-        description="حالت مخازن: auto (خودکار), manual (دستی)"
-    )
+    auto_balance: bool = Field(True, description="تعادل یونی خودکار")
+    reservoir_mode: str = Field("auto", description="حالت مخازن")
 
 
 class OptimizationFertilizerInput(BaseModel):
-    """ورودی کود برای بهینه‌سازی"""
-    
     id: str = Field(..., description="شناسه کود")
     name: str = Field(..., description="نام کود")
     elements: Dict[str, float] = Field(..., description="درصد عناصر تشکیل‌دهنده")
@@ -521,41 +717,20 @@ class OptimizationFertilizerInput(BaseModel):
     purity: float = Field(100.0, ge=0, le=100, description="درصد خلوص")
     is_acid: bool = Field(False, description="آیا اسید است؟")
     is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
-    fixed_weight: Optional[float] = Field(None, ge=0, description="وزن ثابت (اگر کاربر تعیین کرده باشد)")
+    fixed_weight: Optional[float] = Field(None, ge=0, description="وزن ثابت")
 
 
 class OptimizationRequest(BaseModel):
-    """درخواست بهینه‌سازی فرمول کود"""
-    
-    # عناصر هدف (ضروری)
     target_values: Dict[str, float] = Field(..., description="مقادیر هدف عناصر (ppm)")
-    
-    # کیفیت آب (اختیاری)
-    water_values: Optional[Dict[str, float]] = Field(
-        default_factory=dict, 
-        description="عناصر موجود در آب (ppm) - شامل EC و pH"
-    )
-    
-    # کودهای موجود (ضروری)
-    fertilizers: List[OptimizationFertilizerInput] = Field(
-        ..., 
-        description="لیست کودهای موجود با عناصر و قیمت"
-    )
-    
-    # تنظیمات بهینه‌سازی (اختیاری)
-    options: Optional[OptimizationOptions] = Field(
-        default_factory=lambda: OptimizationOptions(),
-        description="تنظیمات بهینه‌سازی"
-    )
-    
-    # حجم مخزن (اختیاری)
+    water_values: Optional[Dict[str, float]] = Field(default_factory=dict, description="عناصر موجود در آب")
+    fertilizers: List[OptimizationFertilizerInput] = Field(..., description="لیست کودهای موجود")
+    options: Optional[OptimizationOptions] = Field(default_factory=lambda: OptimizationOptions(), description="تنظیمات بهینه‌سازی")
     tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن (لیتر)")
     stock_volume: float = Field(100.0, ge=1, description="حجم استوک (لیتر)")
     injection_ratio: float = Field(100.0, ge=1, description="نسبت تزریق (1:X)")
 
 
 class EcPhStatusResponse(BaseModel):
-    """وضعیت ترکیبی EC و pH"""
     status: str = Field(..., description="وضعیت کلی: optimal, warning, critical")
     status_label: str = Field(..., description="برچسب وضعیت")
     color: str = Field(..., description="رنگ: success, warning, danger")
@@ -573,70 +748,27 @@ class EcPhStatusResponse(BaseModel):
 
 
 class OptimizationResponse(BaseModel):
-    """پاسخ بهینه‌سازی"""
-    
-    # نتایج اصلی
     weights: Dict[str, float] = Field(..., description="وزن بهینه هر کود (گرم)")
     concentrations: Dict[str, float] = Field(..., description="غلظت نهایی عناصر (ppm)")
-    
-    # تحلیل
     residual_error: float = Field(..., description="خطای باقی‌مانده")
     cost_total: float = Field(..., description="هزینه کل (تومان)")
     ion_balance: IonBalanceResponse = Field(..., description="تعادل یونی")
-    
-    # وضعیت نزدیکی به هدف
-    target_achievement: Dict[str, float] = Field(
-        ..., 
-        description="درصد تحقق هر عنصر (۰ تا ۱۰۰)"
-    )
-    
-    # توصیه‌ها و هشدارها
+    target_achievement: Dict[str, float] = Field(..., description="درصد تحقق هر عنصر")
     warnings: List[str] = Field(default_factory=list, description="هشدارها")
     suggestions: List[str] = Field(default_factory=list, description="پیشنهادات")
-    
-    # اطلاعات مخازن (خودکار)
-    reservoir_data: Dict[str, List[Dict[str, Any]]] = Field(
-        default_factory=dict,
-        description="توزیع مواد در مخازن A, B, C"
-    )
-    
-    # آمار عملکرد
+    reservoir_data: Dict[str, List[Dict[str, Any]]] = Field(default_factory=dict, description="توزیع مواد در مخازن")
     iterations: int = Field(..., description="تعداد تکرارها")
     convergence_time_ms: float = Field(..., description="زمان محاسبه (میلی‌ثانیه)")
     is_converged: bool = Field(True, description="آیا الگوریتم به جواب رسید؟")
-    
-    # خلاصه
     summary: str = Field(..., description="خلاصه نتیجه به‌صورت متنی")
-    
-    # ============================================================
-    # 🆕 فیلدهای EC و pH
-    # ============================================================
     ec: float = Field(0.0, description="EC نهایی (dS/m)")
     ph: float = Field(7.0, description="pH نهایی")
-    ec_status: str = Field("", description="وضعیت EC (مطلوب, کم, بالا, بحرانی)")
-    ph_status: str = Field("", description="وضعیت pH (مطلوب, اسیدی, قلیایی, بحرانی)")
-    ec_ph_status: EcPhStatusResponse = Field(
-        default_factory=lambda: EcPhStatusResponse(
-            status="optimal",
-            status_label="مطلوب",
-            color="success",
-            message="EC و pH در محدوده مطلوب هستند.",
-            issues=[],
-            recommendations=[],
-            ec=0.0,
-            ph=7.0,
-            ec_status="",
-            ec_label="",
-            ph_status="",
-            ph_label=""
-        ),
-        description="وضعیت ترکیبی EC و pH"
-    )
+    ec_status: str = Field("", description="وضعیت EC")
+    ph_status: str = Field("", description="وضعیت pH")
+    ec_ph_status: EcPhStatusResponse = Field(..., description="وضعیت ترکیبی EC و pH")
 
 
 class OptimizationLogResponse(BaseModel):
-    """پاسخ تاریخچه بهینه‌سازی"""
-    
     id: int
     user_id: int
     report_id: Optional[int]
@@ -661,15 +793,11 @@ class OptimizationLogResponse(BaseModel):
 
 
 class PrecipitationCheckRequest(BaseModel):
-    """درخواست بررسی رسوب"""
-    
     concentrations: Dict[str, float] = Field(..., description="غلظت عناصر (ppm)")
     temperature: float = Field(25.0, ge=0, le=100, description="دما (درجه سانتی‌گراد)")
 
 
 class PrecipitationRiskItem(BaseModel):
-    """یک خطر رسوب"""
-    
     compound: str = Field(..., description="نام ترکیب رسوب‌کننده")
     ion_product: float = Field(..., description="حاصل‌ضرب یونی فعلی")
     ksp: float = Field(..., description="ثابت حلالیت")
@@ -678,8 +806,6 @@ class PrecipitationRiskItem(BaseModel):
 
 
 class PrecipitationCheckResponse(BaseModel):
-    """پاسخ بررسی رسوب"""
-    
     is_safe: bool = Field(..., description="آیا ترکیب ایمن است؟")
     risks: List[PrecipitationRiskItem] = Field(default_factory=list, description="خطرات احتمالی")
     suggestions: List[str] = Field(default_factory=list, description="پیشنهادات اصلاحی")

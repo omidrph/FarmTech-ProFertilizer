@@ -34,13 +34,13 @@
         <div class="mb-6">
           <div class="relative">
             <div class="absolute inset-0 bg-white/20 rounded-full blur-2xl"></div>
-            <img src="/Logo.webp" alt="FarmTech" class="relative h-28 w-28 object-contain drop-shadow-2xl" />
+            <img src="/Logo.webp" alt="سهند کود" class="relative h-28 w-28 object-contain drop-shadow-2xl" />
           </div>
         </div>
 
         <!-- عنوان اصلی -->
         <h1 class="text-4xl font-bold text-white text-center mb-2">
-          FarmTech
+          سهند کود
         </h1>
         <p class="text-primary-100 text-center text-base mb-10">
           سیستم هوشمند نسخه‌نویسی کود
@@ -111,7 +111,7 @@
         <div class="lg:hidden text-center mb-6">
           <div class="relative inline-block">
             <div class="absolute inset-0 bg-primary-500/20 rounded-full blur-xl"></div>
-            <img src="/Logo.webp" alt="FarmTech" class="relative h-20 w-20 object-contain" />
+            <img src="/Logo.webp" alt="سهند کود" class="relative h-20 w-20 object-contain" />
           </div>
         </div>
 
@@ -247,9 +247,9 @@
               <input
                 :type="showPassword ? 'text' : 'password'"
                 v-model="password"
-                placeholder="حداقل ۶ کاراکتر"
+                placeholder="رمز عبور خود را وارد کنید"
                 required
-                minlength="6"
+                minlength="8"
                 class="w-full pr-10 pl-12 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-500 dark:focus:border-primary-500 focus:ring-4 focus:ring-primary-500/20 transition-all duration-200"
               />
               <button
@@ -266,21 +266,25 @@
                 </svg>
               </button>
             </div>
+            <!-- فقط متن راهنمای رمز عبور یکپارچه -->
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              رمز عبور باید حداقل ۶ کاراکتر باشد
+              حداقل ۸ کاراکتر با حروف بزرگ، کوچک، عدد و کاراکتر خاص
             </p>
           </div>
 
-          <!-- دکمه ثبت‌نام -->
+          <!-- دکمه ثبت‌نام - همیشه فعال با اعتبارسنجی -->
           <button
             type="submit"
             :disabled="isLoading || connectionStatus === 'disconnected'"
-            class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+            class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6 shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 transition-shadow"
           >
             <span v-if="!isLoading" class="flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+              </svg>
               ثبت‌نام
             </span>
             <span v-else class="flex items-center justify-center gap-2">
@@ -291,6 +295,14 @@
               در حال ثبت‌نام...
             </span>
           </button>
+          
+          <!-- نمایش خطا اگر رمز عبور معتبر نباشد و کاربر تلاش کرده باشد -->
+          <p v-if="submitted && !isPasswordValid" class="text-danger-600 dark:text-danger-400 text-sm text-center">
+            <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            لطفاً رمز عبور معتبر وارد کنید (حداقل ۸ کاراکتر با حروف بزرگ، کوچک، عدد و کاراکتر خاص)
+          </p>
         </form>
 
         <!-- لینک ورود -->
@@ -309,7 +321,7 @@
         <!-- فوتر -->
         <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
           <p class="text-xs text-center text-gray-500 dark:text-gray-400">
-            © ۱۴۰۵ FarmTech - سیستم هوشمند نسخه‌نویسی کود
+            © ۱۴۰۵ سهند کود - سیستم هوشمند نسخه‌نویسی کود
           </p>
         </div>
       </div>
@@ -318,7 +330,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import axios from 'axios';
@@ -334,6 +346,7 @@ const showPassword = ref(false);
 const registerSuccess = ref(false);
 const isDarkMode = ref(false);
 const currentSlide = ref(0);
+const submitted = ref(false);
 
 const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checking');
 
@@ -396,12 +409,36 @@ const retryConnection = async () => {
   await checkConnection();
 };
 
+// ===== 🔐 اعتبارسنجی رمز عبور (منطق نگه داشته شده، نمایش حذف شده) =====
+const passwordRequirements = computed(() => {
+  const p = password.value || '';
+  return {
+    hasMinLength: p.length >= 8,
+    hasUpperCase: /[A-Z]/.test(p),
+    hasLowerCase: /[a-z]/.test(p),
+    hasNumber: /[0-9]/.test(p),
+    hasSpecialChar: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?/]/.test(p)
+  };
+});
+
+const isPasswordValid = computed(() => {
+  const req = passwordRequirements.value;
+  return req.hasMinLength && req.hasUpperCase && req.hasLowerCase && 
+         req.hasNumber && req.hasSpecialChar;
+});
+
 const handleRegister = async () => {
+  submitted.value = true;
+  
   if (connectionStatus.value !== 'connected') {
     const connected = await checkConnection();
     if (!connected) {
       return;
     }
+  }
+
+  if (!isPasswordValid.value) {
+    return;
   }
 
   const success = await register({

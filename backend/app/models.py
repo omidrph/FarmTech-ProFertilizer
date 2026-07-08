@@ -1,7 +1,7 @@
 # backend/app/models.py
-"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه نهایی با OptimizationLog"""
+"""همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -11,10 +11,10 @@ from app.database import Base
 
 
 # ============================================================
-# مدل User (کاربر)
+# مدل User (کاربر) - نسخه امنیتی
 # ============================================================
 class User(Base):
-    """مدل کاربران سیستم"""
+    """مدل کاربران سیستم - نسخه امنیتی با قفل حساب و 2FA"""
     
     __tablename__ = "users"
     
@@ -24,6 +24,22 @@ class User(Base):
     phone_number = Column(String(15), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+    
+    # ===== 🔐 فیلدهای امنیتی =====
+    # قفل حساب
+    failed_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    
+    # 2FA
+    is_2fa_enabled = Column(Boolean, default=False)
+    totp_secret = Column(String(255), nullable=True)
+    backup_codes = Column(JSON, nullable=True)  # لیست کدهای پشتیبان
+    
+    # تاریخچه
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    last_ip = Column(String(45), nullable=True)
+    last_user_agent = Column(String(255), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -32,36 +48,128 @@ class User(Base):
     fertilizers = relationship("Fertilizer", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     optimizations = relationship("OptimizationLog", back_populates="user", cascade="all, delete-orphan")
+    security_logs = relationship("SecurityLog", back_populates="user", cascade="all, delete-orphan")
+    password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
     
     @property
     def full_name(self) -> str:
         """نام کامل کاربر"""
         return f"{self.first_name} {self.last_name}"
     
+    @property
+    def is_locked(self) -> bool:
+        """بررسی آیا حساب قفل شده است"""
+        if self.locked_until is None:
+            return False
+        return datetime.utcnow() < self.locked_until
+    
     def __repr__(self):
         return f"<User {self.phone_number}>"
 
 
 # ============================================================
-# مدل UserSession (نشست کاربر - توکن تصادفی)
+# مدل UserSession (نشست کاربر) - نسخه امنیتی
 # ============================================================
 class UserSession(Base):
-    """مدل نشست‌های کاربر (توکن‌های تصادفی)"""
+    """مدل نشست‌های کاربر (توکن‌های تصادفی) - نسخه امنیتی"""
     
     __tablename__ = "user_sessions"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     token = Column(String(255), unique=True, nullable=False, index=True)
+    
+    # 🔐 اطلاعات نشست
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    last_activity = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    expires_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
     is_active = Column(Boolean, default=True)
     
     # ===== روابط =====
     user = relationship("User", back_populates="sessions")
     
+    @property
+    def is_expired(self) -> bool:
+        """بررسی آیا نشست منقضی شده است"""
+        if self.expires_at is None:
+            return False
+        return datetime.utcnow() > self.expires_at
+    
     def __repr__(self):
         return f"<UserSession {self.user_id} - {self.token[:10]}...>"
+
+
+# ============================================================
+# 🔐 مدل SecurityLog (لاگ امنیتی)
+# ============================================================
+class SecurityLog(Base):
+    """مدل ثبت رویدادهای امنیتی"""
+    
+    __tablename__ = "security_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    
+    # ===== اطلاعات رویداد =====
+    event_type = Column(String(50), nullable=False)  # LOGIN_SUCCESS, LOGIN_FAILED, LOGOUT, PASSWORD_CHANGE, etc.
+    severity = Column(String(20), default="INFO")  # INFO, WARNING, ERROR, CRITICAL
+    
+    # ===== اطلاعات درخواست =====
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    endpoint = Column(String(255), nullable=True)
+    method = Column(String(10), nullable=True)
+    
+    # ===== جزئیات =====
+    details = Column(JSON, nullable=True)
+    error_message = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # ===== روابط =====
+    user = relationship("User", back_populates="security_logs")
+    
+    def __repr__(self):
+        return f"<SecurityLog {self.event_type} - {self.created_at}>"
+
+
+# ============================================================
+# 🔐 مدل PasswordResetToken (فراموشی رمز عبور)
+# ============================================================
+class PasswordResetToken(Base):
+    """مدل توکن‌های یکبار مصرف برای فراموشی رمز عبور"""
+    
+    __tablename__ = "password_reset_tokens"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    
+    # ===== توکن =====
+    token = Column(String(255), unique=True, nullable=False, index=True)
+    is_used = Column(Boolean, default=False)
+    
+    # ===== اطلاعات =====
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(String(255), nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    
+    # ===== روابط =====
+    user = relationship("User", back_populates="password_reset_tokens")
+    
+    @property
+    def is_expired(self) -> bool:
+        """بررسی آیا توکن منقضی شده است"""
+        if self.expires_at is None:
+            return False
+        return datetime.utcnow() > self.expires_at
+    
+    def __repr__(self):
+        return f"<PasswordResetToken {self.user_id} - {self.token[:10]}...>"
 
 
 # ============================================================
@@ -93,48 +201,28 @@ class Report(Base):
 
 
 # ============================================================
-# مدل Fertilizer (کود) - نسخه نهایی با فیلدهای بهینه‌شده
+# مدل Fertilizer (کود)
 # ============================================================
 class Fertilizer(Base):
-    """
-    مدل کودها - نسخه نهایی با فیلدهای ضروری
-    
-    فیلدهای جدید:
-    - concentration: درصد خلوص/غلظت (برای محاسبات دقیق)
-    - source_system_id: برای ردیابی کپی از کودهای سیستمی
-    - ph_level: برای محاسبات تعادل یونی و pH
-    """
+    """مدل کودها"""
     
     __tablename__ = "fertilizers"
     
-    # ===== فیلدهای اصلی =====
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     name = Column(String(100), nullable=False, index=True)
-    
-    # ===== فیلدهای اطلاعاتی =====
-    brand = Column(String(100), nullable=True)          # برند (مثلاً: رازاک شیمی، اطلس)
-    category = Column(String(50), nullable=True)        # دسته‌بندی: NPK, کلات, سولفات, اسید, ریزمغذی, ...
-    form = Column(String(20), nullable=True)            # فرم فیزیکی: liquid, powder, crystal, granular
-    
-    # ===== فیلدهای محاسباتی (مهم) =====
-    concentration = Column(Float, default=100.0)        # درصد خلوص/غلظت (برای مایعات و جامدات)
-    elements = Column(JSON, nullable=True)              # {"N-NO3": 15.5, "P": 20, ...}
-    price_per_kg = Column(Float, default=0.0)           # قیمت هر کیلوگرم
-    
-    # ===== فیلدهای اسید و pH =====
+    brand = Column(String(100), nullable=True)
+    category = Column(String(50), nullable=True)
+    form = Column(String(20), nullable=True)
+    concentration = Column(Float, default=100.0)
+    elements = Column(JSON, nullable=True)
+    price_per_kg = Column(Float, default=0.0)
     is_acid = Column(Boolean, default=False)
-    acid_type = Column(String(10), nullable=True)       # H3PO4, HNO3, H2SO4
-    ph_level = Column(Float, nullable=True)             # pH محلول (برای محاسبات)
-    
-    # ===== توضیحات =====
-    description = Column(Text, nullable=True)           # توضیحات کوتاه و مفید
-    
-    # ===== سیستم =====
-    is_system_default = Column(Boolean, default=False)  # آیا کود سیستمی است؟
-    source_system_id = Column(Integer, nullable=True)   # اگر از کود سیستمی کپی شده باشد (ID منبع)
-    
-    # ===== تاریخ‌ها =====
+    acid_type = Column(String(10), nullable=True)
+    ph_level = Column(Float, nullable=True)
+    description = Column(Text, nullable=True)
+    is_system_default = Column(Boolean, default=False)
+    source_system_id = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -149,8 +237,6 @@ class Fertilizer(Base):
 # مدل WaterAnalysis (آنالیز آب)
 # ============================================================
 class WaterAnalysis(Base):
-    """مدل آنالیز آب و پساب"""
-    
     __tablename__ = "water_analyses"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -162,7 +248,6 @@ class WaterAnalysis(Base):
     water_values = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # ===== روابط =====
     report = relationship("Report", back_populates="water_analysis")
     
     def __repr__(self):
@@ -173,8 +258,6 @@ class WaterAnalysis(Base):
 # مدل Calculation (محاسبات)
 # ============================================================
 class Calculation(Base):
-    """مدل محاسبات و نتایج"""
-    
     __tablename__ = "calculations"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -186,78 +269,55 @@ class Calculation(Base):
     interpretation = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # ===== روابط =====
     report = relationship("Report", back_populates="calculation")
     
     def __repr__(self):
         return f"<Calculation {self.id}>"
-    
+
 
 # ============================================================
-# مدل Recipe (رسپی/فرمول غذایی)
+# مدل Recipe (رسپی)
 # ============================================================
 class Recipe(Base):
-    """مدل رسپی‌های غذایی (فرمول‌های از پیش تعیین شده)"""
-    
     __tablename__ = "recipes"
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, index=True)
     description = Column(Text, nullable=True)
-    
-    # ===== نوع رسپی =====
-    is_system = Column(Boolean, default=False)  # True: رسپی سیستمی، False: رسپی شخصی کاربر
-    
-    # ===== کاربر سازنده (فقط برای رسپی‌های شخصی) =====
+    is_system = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
-    
-    # ===== مقادیر هدف عناصر (JSON) =====
-    target_values = Column(JSON, nullable=False)  # {"N-NO3": 320, "P": 103, ...}
-    
-    # ===== دسته‌بندی =====
-    category = Column(String(50), nullable=True)  # مثلاً: "گوجه فرنگی", "خیار", "کاهو"
-    stage = Column(String(50), nullable=True)    # مرحله رشد: "گلدهی", "رویشی", "میوه‌دهی"
-    
-    # ===== تاریخ‌ها =====
+    target_values = Column(JSON, nullable=False)
+    category = Column(String(50), nullable=True)
+    stage = Column(String(50), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # ===== روابط =====
     user = relationship("User", backref="recipes")
     
     def __repr__(self):
         return f"<Recipe {self.name}>"
-    
+
 
 # ============================================================
-# مدل WaterAnalysisTemplate (قالب آنالیز آب کاربر)
+# مدل WaterAnalysisTemplate
 # ============================================================
 class WaterAnalysisTemplate(Base):
-    """مدل قالب‌های آنالیز آب کاربر (برای ذخیره و استفاده مجدد)"""
-    
     __tablename__ = "water_analysis_templates"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    name = Column(String(100), nullable=False)  # نام قالب (مثلاً: "آب چاه شماره ۱")
-    description = Column(Text, nullable=True)  # توضیحات
-    
-    # مقادیر آنالیز
+    name = Column(String(100), nullable=False)
+    description = Column(Text, nullable=True)
     water_percentage = Column(Float, default=100.0)
     wastewater_percentage = Column(Float, default=0.0)
-    water_salinity = Column(Float, default=0.8)  # EC
-    water_salinity_unit = Column(String(10), default='dS/m')  # واحد EC
-    water_ph = Column(Float, nullable=True)  # pH آب
-    
-    # مقادیر عناصر
-    water_values = Column(JSON, nullable=True)  # {"N-NO3": 10, "P": 2, ...}
-    wastewater_values = Column(JSON, nullable=True)  # {"N-NO3": 20, "P": 5, ...}
-    
-    # تاریخ‌ها
+    water_salinity = Column(Float, default=0.8)
+    water_salinity_unit = Column(String(10), default='dS/m')
+    water_ph = Column(Float, nullable=True)
+    water_values = Column(JSON, nullable=True)
+    wastewater_values = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # ===== روابط =====
     user = relationship("User", backref="water_templates")
     
     def __repr__(self):
@@ -265,48 +325,31 @@ class WaterAnalysisTemplate(Base):
 
 
 # ============================================================
-# 🆕 مدل OptimizationLog (برای ثبت تاریخچه بهینه‌سازی)
+# مدل OptimizationLog
 # ============================================================
 class OptimizationLog(Base):
-    """مدل ثبت تاریخچه بهینه‌سازی فرمول کود"""
-    
     __tablename__ = "optimization_logs"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=True)
-    
-    # ===== ورودی‌ها =====
-    target_values = Column(JSON, nullable=False)  # عناصر هدف
-    water_values = Column(JSON, nullable=True)    # کیفیت آب
-    fertilizers_selected = Column(JSON, nullable=True)  # لیست کودهای انتخاب شده
-    
-    # ===== تنظیمات بهینه‌سازی =====
-    optimization_options = Column(JSON, nullable=True)  # تنظیمات (وزن‌ها، روش، ...)
-    
-    # ===== خروجی‌ها =====
-    optimized_weights = Column(JSON, nullable=True)  # وزن‌های بهینه هر کود
-    final_concentrations = Column(JSON, nullable=True)  # غلظت نهایی عناصر
-    residual_error = Column(Float, nullable=True)  # خطای باقی‌مانده
-    cost_total = Column(Float, nullable=True)  # هزینه کل
-    
-    # ===== متریک‌های عملکرد =====
-    iterations = Column(Integer, nullable=True)  # تعداد تکرارها
-    convergence_time_ms = Column(Float, nullable=True)  # زمان همگرایی (میلی‌ثانیه)
-    
-    # ===== تحلیل =====
-    ion_balance = Column(JSON, nullable=True)  # {"cation": 12.3, "anion": 12.1, "is_balanced": True}
-    warnings = Column(JSON, nullable=True)  # لیست هشدارها
-    suggestions = Column(JSON, nullable=True)  # لیست پیشنهادات
-    
-    # ===== وضعیت =====
+    target_values = Column(JSON, nullable=False)
+    water_values = Column(JSON, nullable=True)
+    fertilizers_selected = Column(JSON, nullable=True)
+    optimization_options = Column(JSON, nullable=True)
+    optimized_weights = Column(JSON, nullable=True)
+    final_concentrations = Column(JSON, nullable=True)
+    residual_error = Column(Float, nullable=True)
+    cost_total = Column(Float, nullable=True)
+    iterations = Column(Integer, nullable=True)
+    convergence_time_ms = Column(Float, nullable=True)
+    ion_balance = Column(JSON, nullable=True)
+    warnings = Column(JSON, nullable=True)
+    suggestions = Column(JSON, nullable=True)
     is_successful = Column(Boolean, default=True)
     error_message = Column(Text, nullable=True)
-    
-    # ===== تاریخ‌ها =====
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # ===== روابط =====
     user = relationship("User", back_populates="optimizations")
     report = relationship("Report", back_populates="optimizations")
     

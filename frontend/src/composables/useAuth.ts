@@ -9,26 +9,60 @@ export function useAuth() {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const user = ref<User | null>(null);
-  const token = ref<string | null>(localStorage.getItem('access_token'));
+  const token = ref<string | null>(null);
 
   const isAuthenticated = computed(() => !!token.value);
 
+  // ===== تنظیم توکن از Cookie =====
+  const getTokenFromCookie = (): string | null => {
+    // تلاش برای دریافت توکن از Cookie
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'access_token') {
+        return value;
+      }
+    }
+    return null;
+  };
+
+  // ===== دریافت توکن =====
+  const getToken = (): string | null => {
+    if (token.value) return token.value;
+    
+    // تلاش از Cookie
+    const cookieToken = getTokenFromCookie();
+    if (cookieToken) {
+      token.value = cookieToken;
+      return cookieToken;
+    }
+    
+    // Fallback به localStorage (برای سازگاری با نسخه‌های قبلی)
+    const storedToken = localStorage.getItem('access_token');
+    if (storedToken) {
+      token.value = storedToken;
+      return storedToken;
+    }
+    
+    return null;
+  };
+
   const setToken = (newToken: string) => {
     token.value = newToken;
+    // برای سازگاری، در localStorage هم ذخیره کن (فعلاً)
     localStorage.setItem('access_token', newToken);
-    console.log('🔑 Token set:', newToken.substring(0, 20) + '...');
   };
 
   const clearToken = () => {
     token.value = null;
     localStorage.removeItem('access_token');
     user.value = null;
-    console.log('🔑 Token cleared');
   };
 
   // ===== دریافت اطلاعات کاربر =====
   const fetchUser = async (): Promise<boolean> => {
-    if (!token.value) {
+    const currentToken = getToken();
+    if (!currentToken) {
       console.warn('⚠️ No token available');
       return false;
     }
@@ -37,9 +71,10 @@ export function useAuth() {
       console.log('👤 Fetching user info...');
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: {
-          Authorization: `Bearer ${token.value}`
+          Authorization: `Bearer ${currentToken}`
         },
         timeout: 5000,
+        withCredentials: true // برای ارسال Cookie
       });
       
       if (response.data) {
@@ -68,14 +103,30 @@ export function useAuth() {
       console.log('📝 Registering user:', data.phone_number);
       const response = await axios.post(`${API_BASE_URL}/auth/register`, data, {
         timeout: 5000,
+        withCredentials: true
       });
       
       console.log('✅ Registration response:', response.status);
       
       if (response.status === 200 || response.status === 201) {
-        // بعد از ثبت‌نام، کاربر را وارد کن
-        const loginSuccess = await login(data.phone_number, data.password);
-        return loginSuccess;
+        // دریافت توکن از Cookie
+        const cookieToken = getTokenFromCookie();
+        if (cookieToken) {
+          setToken(cookieToken);
+          await fetchUser();
+          return true;
+        }
+        
+        // Fallback: از response
+        if (response.data?.access_token) {
+          setToken(response.data.access_token);
+          await fetchUser();
+          return true;
+        }
+        
+        // اگر توکنی نبود، با اطلاعات کاربر وارد شو
+        await login(data.phone_number, data.password);
+        return true;
       }
       return false;
     } catch (err: any) {
@@ -118,22 +169,33 @@ export function useAuth() {
         password
       }, {
         timeout: 5000,
+        withCredentials: true
       });
 
       console.log('✅ Login response:', response.status);
 
-      if (response.data.access_token) {
+      // دریافت توکن از Cookie
+      const cookieToken = getTokenFromCookie();
+      if (cookieToken) {
+        setToken(cookieToken);
+        const userFetched = await fetchUser();
+        if (userFetched) {
+          console.log('✅ Login successful for:', user.value?.full_name);
+          return true;
+        }
+      }
+
+      // Fallback: از response
+      if (response.data?.access_token) {
         const newToken = response.data.access_token;
         setToken(newToken);
         
-        // دریافت اطلاعات کاربر
         const userFetched = await fetchUser();
         if (userFetched) {
           console.log('✅ Login successful for:', user.value?.full_name);
           return true;
         }
         
-        // اگر اطلاعات کاربر دریافت نشد، توکن را پاک کن
         clearToken();
         error.value = 'خطا در دریافت اطلاعات کاربر';
         return false;
@@ -147,9 +209,11 @@ export function useAuth() {
       if (err.response?.status === 401) {
         error.value = 'شماره تلفن یا رمز عبور اشتباه است';
       } else if (err.response?.status === 403) {
-        error.value = 'حساب کاربری غیرفعال است';
+        error.value = err.response?.data?.detail || 'حساب کاربری غیرفعال یا قفل شده است';
       } else if (err.response?.status === 404) {
         error.value = 'کاربر با این شماره تلفن یافت نشد';
+      } else if (err.response?.status === 429) {
+        error.value = err.response?.data?.detail || 'تعداد درخواست‌های شما بیش از حد مجاز است';
       } else if (err.code === 'ECONNABORTED') {
         error.value = 'اتصال به سرور زمان‌بر است';
       } else if (err.message === 'Network Error') {
@@ -164,34 +228,142 @@ export function useAuth() {
   };
 
   // ===== خروج =====
-  const logout = () => {
-    const currentToken = token.value;
-    clearToken();
+  const logout = async () => {
+    const currentToken = getToken();
     
-    // ارسال درخواست خروج به سرور (اختیاری)
+    // ارسال درخواست خروج به سرور
     if (currentToken) {
       try {
-        axios.post(`${API_BASE_URL}/auth/logout`, {}, {
+        await axios.post(`${API_BASE_URL}/auth/logout`, {}, {
           headers: {
             Authorization: `Bearer ${currentToken}`
           },
-          timeout: 2000
-        }).catch(() => {});
+          timeout: 2000,
+          withCredentials: true
+        });
       } catch {
         // خطا را نادیده بگیر
       }
     }
+    
+    clearToken();
     console.log('👋 Logged out');
   };
 
   // ===== بررسی احراز هویت =====
   const checkAuth = async (): Promise<boolean> => {
-    if (!token.value) {
+    const currentToken = getToken();
+    if (!currentToken) {
       console.log('ℹ️ No token found');
       return false;
     }
     console.log('🔍 Checking auth...');
     return await fetchUser();
+  };
+
+  // ===== فراموشی رمز عبور =====
+  const forgotPassword = async (phone_number: string): Promise<{ success: boolean; message: string }> => {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/forgot-password`, {
+        phone_number
+      }, {
+        timeout: 10000,
+        withCredentials: true
+      });
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          message: response.data.message || 'کد تأیید به شماره تلفن شما ارسال شد'
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data?.message || 'خطا در ارسال کد تأیید'
+      };
+    } catch (err: any) {
+      console.error('❌ Forgot password error:', err);
+      const message = err.response?.data?.detail || 'خطا در درخواست فراموشی رمز عبور';
+      error.value = message;
+      return { success: false, message };
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  // ===== بازنشانی رمز عبور =====
+  const resetPassword = async (phone_number: string, code: string, new_password: string): Promise<{ success: boolean; message: string }> => {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/reset-password`, {
+        phone_number,
+        code,
+        new_password
+      }, {
+        timeout: 10000,
+        withCredentials: true
+      });
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          message: response.data.message || 'رمز عبور با موفقیت بازنشانی شد'
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data?.message || 'خطا در بازنشانی رمز عبور'
+      };
+    } catch (err: any) {
+      console.error('❌ Reset password error:', err);
+      const message = err.response?.data?.detail || 'خطا در بازنشانی رمز عبور';
+      error.value = message;
+      return { success: false, message };
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
+  // ===== تغییر رمز عبور =====
+  const changePassword = async (current_password: string, new_password: string): Promise<{ success: boolean; message: string }> => {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/auth/change-password`, {
+        current_password,
+        new_password
+      }, {
+        timeout: 10000,
+        withCredentials: true
+      });
+
+      if (response.data?.success) {
+        return {
+          success: true,
+          message: response.data.message || 'رمز عبور با موفقیت تغییر کرد'
+        };
+      }
+      
+      return {
+        success: false,
+        message: response.data?.message || 'خطا در تغییر رمز عبور'
+      };
+    } catch (err: any) {
+      console.error('❌ Change password error:', err);
+      const message = err.response?.data?.detail || 'خطا در تغییر رمز عبور';
+      error.value = message;
+      return { success: false, message };
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   // ===== بررسی اتصال به بک‌اند =====
@@ -221,6 +393,10 @@ export function useAuth() {
     checkAuth,
     checkConnection,
     setToken,
-    clearToken
+    clearToken,
+    getToken,
+    forgotPassword,
+    resetPassword,
+    changePassword
   };
 }

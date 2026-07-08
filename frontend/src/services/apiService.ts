@@ -43,7 +43,6 @@ export interface ReservoirRequest {
     }>;
 }
 
-// ✅ اصلاح شده: اضافه کردن fertilizer_id به آیتم‌های مخزن
 export interface ReservoirResponse {
     reservoir_data: {
         A: Array<{ 
@@ -143,6 +142,61 @@ export interface UpdateProfileRequest {
 }
 
 // ============================================================
+// 🔐 انواع جدید برای فراموشی رمز عبور و 2FA
+// ============================================================
+
+export interface ForgotPasswordRequest {
+    phone_number: string;
+}
+
+export interface ForgotPasswordResponse {
+    message: string;
+    success: boolean;
+    reset_id?: string;
+}
+
+export interface ResetPasswordRequest {
+    phone_number: string;
+    code: string;
+    new_password: string;
+}
+
+export interface ResetPasswordResponse {
+    message: string;
+    success: boolean;
+}
+
+export interface Enable2FARequest {
+    phone_number: string;
+}
+
+export interface Enable2FAResponse {
+    secret: string;
+    backup_codes: string[];
+    qr_code_url?: string;
+    message: string;
+    success: boolean;
+}
+
+export interface Verify2FARequest {
+    code: string;
+}
+
+export interface Verify2FAResponse {
+    message: string;
+    success: boolean;
+}
+
+export interface Disable2FARequest {
+    code: string;
+}
+
+export interface Disable2FAResponse {
+    message: string;
+    success: boolean;
+}
+
+// ============================================================
 // Recipe Types
 // ============================================================
 export interface Recipe {
@@ -189,28 +243,64 @@ class ApiService {
                 'Content-Type': 'application/json',
             },
             timeout: 15000,
+            withCredentials: true, // 🔐 برای ارسال Cookie
         });
 
+        // 🔐 Interceptor برای اضافه کردن توکن از Cookie
         this.api.interceptors.request.use((config) => {
-            const token = localStorage.getItem('access_token');
+            // تلاش برای دریافت توکن از Cookie
+            const token = this.getTokenFromCookie();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
+            } else {
+                // Fallback به localStorage برای سازگاری
+                const storedToken = localStorage.getItem('access_token');
+                if (storedToken) {
+                    config.headers.Authorization = `Bearer ${storedToken}`;
+                }
             }
             return config;
         });
 
+        // 🔐 Interceptor برای مدیریت خطاهای احراز هویت
         this.api.interceptors.response.use(
             (response) => response,
             (error) => {
                 if (error.response?.status === 401) {
-                    localStorage.removeItem('access_token');
-                    if (!window.location.pathname.includes('/login')) {
+                    this.clearToken();
+                    if (!window.location.pathname.includes('/login') && 
+                        !window.location.pathname.includes('/register') &&
+                        !window.location.pathname.includes('/forgot-password')) {
                         window.location.href = '/login';
                     }
                 }
                 return Promise.reject(error);
             }
         );
+    }
+
+    // ============================================================
+    // 🔐 توابع کمکی برای مدیریت توکن
+    // ============================================================
+
+    private getTokenFromCookie(): string | null {
+        try {
+            const cookies = document.cookie.split(';');
+            for (const cookie of cookies) {
+                const trimmed = cookie.trim();
+                if (trimmed.startsWith('access_token=')) {
+                    return trimmed.substring('access_token='.length);
+                }
+            }
+            return null;
+        } catch {
+            return null;
+        }
+    }
+
+    private clearToken(): void {
+        localStorage.removeItem('access_token');
+        // Cookie در سرور پاک می‌شود
     }
 
     // ============================================================
@@ -375,6 +465,113 @@ class ApiService {
             return response.data;
         } catch (error) {
             console.error('Error fetching current user:', error);
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🔐 Auth APIs جدید
+    // ============================================================
+
+    async login(phone_number: string, password: string): Promise<any> {
+        try {
+            const response: AxiosResponse = await this.api.post('/auth/login', {
+                phone_number,
+                password
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error during login:', error);
+            throw error;
+        }
+    }
+
+    async register(data: any): Promise<any> {
+        try {
+            const response: AxiosResponse = await this.api.post('/auth/register', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error during registration:', error);
+            throw error;
+        }
+    }
+
+    async logout(): Promise<any> {
+        try {
+            const response: AxiosResponse = await this.api.post('/auth/logout');
+            return response.data;
+        } catch (error) {
+            console.error('Error during logout:', error);
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🔐 فراموشی رمز عبور
+    // ============================================================
+
+    async forgotPassword(phone_number: string): Promise<ForgotPasswordResponse> {
+        try {
+            const response: AxiosResponse<ForgotPasswordResponse> = await this.api.post('/auth/forgot-password', {
+                phone_number
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error during forgot password:', error);
+            throw error;
+        }
+    }
+
+    async resetPassword(phone_number: string, code: string, new_password: string): Promise<ResetPasswordResponse> {
+        try {
+            const response: AxiosResponse<ResetPasswordResponse> = await this.api.post('/auth/reset-password', {
+                phone_number,
+                code,
+                new_password
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error during reset password:', error);
+            throw error;
+        }
+    }
+
+    // ============================================================
+    // 🔐 تأیید دو مرحله‌ای (2FA)
+    // ============================================================
+
+    async enable2FA(phone_number: string): Promise<Enable2FAResponse> {
+        try {
+            const response: AxiosResponse<Enable2FAResponse> = await this.api.post('/auth/enable-2fa', {
+                phone_number
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error enabling 2FA:', error);
+            throw error;
+        }
+    }
+
+    async verify2FA(code: string): Promise<Verify2FAResponse> {
+        try {
+            const response: AxiosResponse<Verify2FAResponse> = await this.api.post('/auth/verify-2fa', {
+                code
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error verifying 2FA:', error);
+            throw error;
+        }
+    }
+
+    async disable2FA(code: string): Promise<Disable2FAResponse> {
+        try {
+            const response: AxiosResponse<Disable2FAResponse> = await this.api.post('/auth/disable-2fa', {
+                code
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error disabling 2FA:', error);
             throw error;
         }
     }
@@ -547,42 +744,6 @@ class ApiService {
             return response.data;
         } catch (error) {
             console.error('Error calculating interpretation:', error);
-            throw error;
-        }
-    }
-
-    // ============================================================
-    // Auth APIs
-    // ============================================================
-    async login(phone_number: string, password: string): Promise<any> {
-        try {
-            const response: AxiosResponse = await this.api.post('/auth/login', {
-                phone_number,
-                password
-            });
-            return response.data;
-        } catch (error) {
-            console.error('Error during login:', error);
-            throw error;
-        }
-    }
-
-    async register(data: any): Promise<any> {
-        try {
-            const response: AxiosResponse = await this.api.post('/auth/register', data);
-            return response.data;
-        } catch (error) {
-            console.error('Error during registration:', error);
-            throw error;
-        }
-    }
-
-    async logout(): Promise<any> {
-        try {
-            const response: AxiosResponse = await this.api.post('/auth/logout');
-            return response.data;
-        } catch (error) {
-            console.error('Error during logout:', error);
             throw error;
         }
     }

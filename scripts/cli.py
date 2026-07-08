@@ -3,6 +3,7 @@
 """
 FarmTech-ProFertilizer - CLI Management Tool
 Complete version with Docker support and PostgreSQL integration
+Version: 2.0 - با قابلیت Migration خودکار
 """
 
 import os
@@ -41,6 +42,7 @@ BACKEND_DIR = BASE_DIR / "backend"
 FRONTEND_DIR = BASE_DIR / "frontend"
 LOGS_DIR = BASE_DIR / "logs"
 SCRIPTS_DIR = BASE_DIR / "scripts"
+MIGRATIONS_DIR = BASE_DIR / "migrations"
 
 DEFAULT_BACKEND_PORT = 8000
 DEFAULT_FRONTEND_PORT = 3000
@@ -163,6 +165,192 @@ def check_directory_exists(path: Path, name: str) -> bool:
         return False
     return True
 
+
+# ============================================================
+# 🔧 Database Migration Functions (جدید)
+# ============================================================
+
+def run_migrations():
+    """
+    اجرای migration‌ها برای به‌روزرسانی دیتابیس
+    این تابع فیلدهای جدید را به جدول‌های موجود اضافه می‌کند
+    """
+    print(f"\n{Colors.BLUE}🔄 Running database migrations...{Colors.RESET}")
+    
+    # SQL برای اضافه کردن فیلدهای جدید به جدول users
+    user_migrations = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER DEFAULT 0;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP DEFAULT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_2fa_enabled BOOLEAN DEFAULT FALSE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret VARCHAR(255) DEFAULT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS backup_codes JSON DEFAULT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP DEFAULT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(45) DEFAULT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_user_agent VARCHAR(255) DEFAULT NULL;",
+    ]
+    
+    # SQL برای اضافه کردن فیلدهای جدید به جدول user_sessions
+    session_migrations = [
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS ip_address VARCHAR(45) DEFAULT NULL;",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS user_agent VARCHAR(255) DEFAULT NULL;",
+        "ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP;",
+    ]
+    
+    # SQL برای ایجاد جدول‌های جدید
+    new_tables = [
+        """
+        CREATE TABLE IF NOT EXISTS security_logs (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            event_type VARCHAR(50) NOT NULL,
+            severity VARCHAR(20) DEFAULT 'INFO',
+            ip_address VARCHAR(45),
+            user_agent VARCHAR(255),
+            endpoint VARCHAR(255),
+            method VARCHAR(10),
+            details JSON,
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token VARCHAR(255) UNIQUE NOT NULL,
+            is_used BOOLEAN DEFAULT FALSE,
+            ip_address VARCHAR(45),
+            user_agent VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL
+        );
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS optimization_logs (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            report_id INTEGER REFERENCES reports(id) ON DELETE CASCADE,
+            target_values JSON NOT NULL,
+            water_values JSON,
+            fertilizers_selected JSON,
+            optimization_options JSON,
+            optimized_weights JSON,
+            final_concentrations JSON,
+            residual_error FLOAT,
+            cost_total FLOAT,
+            iterations INTEGER,
+            convergence_time_ms FLOAT,
+            ion_balance JSON,
+            warnings JSON,
+            suggestions JSON,
+            is_successful BOOLEAN DEFAULT TRUE,
+            error_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+    ]
+    
+    try:
+        # اجرای migration‌ها روی دیتابیس
+        for sql in user_migrations:
+            _execute_sql(sql)
+        
+        for sql in session_migrations:
+            _execute_sql(sql)
+        
+        for sql in new_tables:
+            _execute_sql(sql)
+        
+        print(f"{Colors.GREEN}✅ Database migrations completed successfully!{Colors.RESET}")
+        return True
+        
+    except Exception as e:
+        print(f"{Colors.RED}❌ Migration failed: {e}{Colors.RESET}")
+        return False
+
+
+def _execute_sql(sql: str):
+    """
+    اجرای یک دستور SQL روی دیتابیس
+    """
+    try:
+        cmd = [
+            "docker-compose", "exec", "-T", "db", 
+            "psql", "-U", "postgres", "-d", "farmtech_db",
+            "-c", sql
+        ]
+        result = subprocess.run(cmd, cwd=str(BASE_DIR), capture_output=True, text=True)
+        if result.returncode != 0 and "already exists" not in result.stderr:
+            print(f"{Colors.YELLOW}⚠️ SQL Warning: {result.stderr}{Colors.RESET}")
+        return True
+    except Exception as e:
+        print(f"{Colors.YELLOW}⚠️ Could not execute SQL: {e}{Colors.RESET}")
+        return False
+
+
+# ============================================================
+# 🔧 Database Reset Improved (بهبود یافته)
+# ============================================================
+
+def reset_database_improved():
+    """
+    ریست کامل دیتابیس با Migration خودکار
+    """
+    print(f"\n{Colors.BLUE}🗄️  Resetting PostgreSQL Database with Auto-Migration...{Colors.RESET}")
+    
+    # Check if docker is running
+    try:
+        subprocess.run(["docker", "ps"], capture_output=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"{Colors.RED}❌ Docker is not running or not installed{Colors.RESET}")
+        print(f"{Colors.YELLOW}💡 Please install Docker and start Docker Desktop{Colors.RESET}")
+        return
+    
+    # Check if db container exists
+    result = subprocess.run(
+        ["docker", "ps", "-a", "--format", "{{.Names}}"],
+        capture_output=True,
+        text=True
+    )
+    
+    if "farmtech-db" not in result.stdout:
+        print(f"{Colors.YELLOW}⚠️  Database container not found. Please run Docker first.{Colors.RESET}")
+        return
+    
+    # Confirm reset
+    confirm = input(f"{Colors.YELLOW}⚠️  This will DELETE ALL DATA. Are you sure? (yes/no): {Colors.RESET}").strip().lower()
+    if confirm != 'yes':
+        print(f"{Colors.GREEN}❌ Operation cancelled.{Colors.RESET}")
+        return
+    
+    # Stop and remove db container with volumes
+    print(f"{Colors.YELLOW}⏳ Stopping and removing database container...{Colors.RESET}")
+    subprocess.run(["docker-compose", "down", "-v"], cwd=str(BASE_DIR))
+    
+    # Start fresh
+    print(f"{Colors.YELLOW}⏳ Starting fresh database container...{Colors.RESET}")
+    subprocess.run(["docker-compose", "up", "-d", "db"], cwd=str(BASE_DIR))
+    
+    # Wait for db to be ready
+    print(f"{Colors.YELLOW}⏳ Waiting for database to be ready...{Colors.RESET}")
+    time.sleep(8)
+    
+    # Run migrations first (ایجاد جدول‌ها با فیلدهای جدید)
+    print(f"{Colors.YELLOW}⏳ Running migrations...{Colors.RESET}")
+    if not run_migrations():
+        print(f"{Colors.RED}❌ Migrations failed. Please check manually.{Colors.RESET}")
+        return
+    
+    # Initialize database with seed data
+    print(f"{Colors.YELLOW}⏳ Initializing database with seed data...{Colors.RESET}")
+    subprocess.run(
+        ["docker-compose", "exec", "backend", "python", "scripts/init_db.py"],
+        cwd=str(BASE_DIR)
+    )
+    
+    print(f"{Colors.GREEN}✅ Database reset and migration completed successfully!{Colors.RESET}")
+
+
 # ============================================================
 # Display Functions
 # ============================================================
@@ -170,7 +358,7 @@ def print_header():
     """Print application header"""
     os.system('cls' if platform.system() == 'Windows' else 'clear')
     print(f"{Colors.CYAN}{'='*70}{Colors.RESET}")
-    print(f"{Colors.BOLD}{Colors.MAGENTA}  🌱 FarmTech - ProFertilizer Management Tool{Colors.RESET}")
+    print(f"{Colors.BOLD}{Colors.MAGENTA}  🌱 FarmTech - ProFertilizer Management Tool v2.0{Colors.RESET}")
     print(f"{Colors.CYAN}{'='*70}{Colors.RESET}")
     print(f"{Colors.BLUE}  📍 Platform: {platform.system()} | Python {platform.python_version()}{Colors.RESET}")
     print(f"{Colors.BLUE}  📁 Project:  {BASE_DIR}{Colors.RESET}")
@@ -189,13 +377,15 @@ def print_menu():
     print(f"  {Colors.BOLD}{Colors.GREEN}7{Colors.RESET}  🧹 Clean Cache Files")
     print(f"  {Colors.BOLD}{Colors.YELLOW}8{Colors.RESET}  🔧 Free Occupied Ports")
     print(f"  {Colors.BOLD}{Colors.CYAN}9{Colors.RESET}  📊 View Logs")
-    print(f"  {Colors.BOLD}{Colors.MAGENTA}10{Colors.RESET} 🗄️  Reset Database (PostgreSQL)")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}10{Colors.RESET} 🗄️  Reset Database (با Migration خودکار)")
     print(f"  {Colors.BOLD}{Colors.MAGENTA}11{Colors.RESET} 🐳  Docker: Build and Run")
     print(f"  {Colors.BOLD}{Colors.MAGENTA}12{Colors.RESET} 🐳  Docker: Stop and Remove")
     print(f"  {Colors.BOLD}{Colors.MAGENTA}13{Colors.RESET} 🐳  Docker: View Logs")
     print(f"  {Colors.BOLD}{Colors.MAGENTA}14{Colors.RESET} 🐘  Docker: Start pgAdmin")
+    print(f"  {Colors.BOLD}{Colors.MAGENTA}15{Colors.RESET} 🔄  Run Migrations (به‌روزرسانی دیتابیس)")
     print(f"  {Colors.BOLD}{Colors.RED}0{Colors.RESET}  🚪 Exit")
     print()
+
 
 # ============================================================
 # Docker Management Functions
@@ -242,6 +432,11 @@ def docker_build_and_run():
         print(f"  docker-compose logs -f     # View logs")
         print(f"  docker-compose ps          # Check status")
         print(f"  docker-compose down        # Stop services")
+        
+        # Run migrations after startup
+        print(f"\n{Colors.YELLOW}⏳ Running migrations...{Colors.RESET}")
+        time.sleep(3)
+        run_migrations()
     else:
         print(f"{Colors.RED}❌ Docker build failed{Colors.RESET}")
 
@@ -318,52 +513,6 @@ def docker_pgadmin():
     print(f"  Username: postgres{Colors.RESET}")
     print(f"  Password: postgres{Colors.RESET}")
 
-# ============================================================
-# Database Reset Functions (PostgreSQL)
-# ============================================================
-def reset_database():
-    """Reset PostgreSQL database"""
-    print(f"\n{Colors.BLUE}🗄️  Resetting PostgreSQL Database...{Colors.RESET}")
-    
-    # Check if docker is running
-    try:
-        subprocess.run(["docker", "ps"], capture_output=True, check=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print(f"{Colors.RED}❌ Docker is not running or not installed{Colors.RESET}")
-        print(f"{Colors.YELLOW}💡 Please install Docker and start Docker Desktop{Colors.RESET}")
-        return
-    
-    # Check if db container exists
-    result = subprocess.run(
-        ["docker", "ps", "-a", "--format", "{{.Names}}"],
-        capture_output=True,
-        text=True
-    )
-    
-    if "farmtech-db" not in result.stdout:
-        print(f"{Colors.YELLOW}⚠️  Database container not found. Please run Docker first.{Colors.RESET}")
-        return
-    
-    # Stop and remove db container
-    print(f"{Colors.YELLOW}⏳ Stopping and removing database container...{Colors.RESET}")
-    subprocess.run(["docker-compose", "down", "-v"], cwd=str(BASE_DIR))
-    
-    # Start fresh
-    print(f"{Colors.YELLOW}⏳ Starting fresh database container...{Colors.RESET}")
-    subprocess.run(["docker-compose", "up", "-d", "db"], cwd=str(BASE_DIR))
-    
-    # Wait for db to be ready
-    print(f"{Colors.YELLOW}⏳ Waiting for database to be ready...{Colors.RESET}")
-    time.sleep(5)
-    
-    # Initialize database
-    print(f"{Colors.YELLOW}⏳ Initializing database...{Colors.RESET}")
-    subprocess.run(
-        ["docker-compose", "exec", "backend", "python", "scripts/init_db.py"],
-        cwd=str(BASE_DIR)
-    )
-    
-    print(f"{Colors.GREEN}✅ Database reset completed!{Colors.RESET}")
 
 # ============================================================
 # Backend Functions
@@ -441,6 +590,7 @@ def run_backend(port: Optional[int] = None, show_logs: bool = True) -> Tuple[Opt
             pass
         return process, port
 
+
 # ============================================================
 # Frontend Functions
 # ============================================================
@@ -490,6 +640,7 @@ def run_frontend(port: Optional[int] = None) -> Tuple[Optional[subprocess.Popen]
         print(f"{Colors.YELLOW}⚠️  Frontend may still be starting...{Colors.RESET}")
     
     return process, port
+
 
 # ============================================================
 # Dependency Installation
@@ -547,6 +698,7 @@ def install_dependencies():
     install_dependencies_frontend()
     print(f"\n{Colors.GREEN}✅ All dependencies installed successfully!{Colors.RESET}")
 
+
 # ============================================================
 # Test Functions
 # ============================================================
@@ -587,6 +739,7 @@ def run_tests():
         except subprocess.TimeoutExpired:
             backend_process.kill()
 
+
 # ============================================================
 # Build Functions
 # ============================================================
@@ -623,6 +776,7 @@ def build_production():
         print(f"{Colors.BLUE}📁 Location: {FRONTEND_DIR / 'dist'}{Colors.RESET}")
     else:
         print(f"{Colors.RED}❌ Error building Frontend{Colors.RESET}")
+
 
 # ============================================================
 # Cache Cleaning
@@ -674,6 +828,7 @@ def clean_cache():
     
     print(f"\n{Colors.GREEN}✅ Cache cleaned successfully{Colors.RESET}")
 
+
 # ============================================================
 # Port Management
 # ============================================================
@@ -694,6 +849,7 @@ def free_ports():
                     print(f"{Colors.RED}❌ Could not kill process{Colors.RESET}")
         else:
             print(f"{Colors.GREEN}✅ Port {port} is available{Colors.RESET}")
+
 
 # ============================================================
 # Log Viewing
@@ -726,6 +882,7 @@ def view_logs():
         
     except Exception as e:
         print(f"{Colors.RED}❌ Error reading log file: {e}{Colors.RESET}")
+
 
 # ============================================================
 # Full Application
@@ -782,6 +939,7 @@ def run_full():
         
         print(f"{Colors.GREEN}✅ Application stopped{Colors.RESET}")
 
+
 # ============================================================
 # Main Menu
 # ============================================================
@@ -836,7 +994,7 @@ def main():
             view_logs()
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '10':
-            reset_database()
+            reset_database_improved()
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '11':
             docker_build_and_run()
@@ -849,6 +1007,9 @@ def main():
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '14':
             docker_pgadmin()
+            input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
+        elif choice == '15':
+            run_migrations()
             input(f"\n{Colors.CYAN}Press Enter to continue...{Colors.RESET}")
         elif choice == '0':
             print(f"\n{Colors.GREEN}👋 Goodbye!{Colors.RESET}")

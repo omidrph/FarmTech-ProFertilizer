@@ -4,10 +4,75 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/webp" href="/favicon.webp" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FarmTech - سیستم هوشمند نسخه‌نویسی کود</title>
+    
+    <!-- ============================================================ -->
+    <!-- 🔐 SEO و توضیحات -->
+    <!-- ============================================================ -->
+    <meta name="description" content="سیستم هوشمند نسخه‌نویسی کود - سهند کود | مدیریت دقیق تغذیه گیاه در گلخانه‌ها و کشت‌های بدون خاک" />
+    <meta name="keywords" content="کود, تغذیه گیاه, گلخانه, هیدروپونیک, نسخه‌نویسی کود, سهند کود, FarmTech" />
+    <meta name="author" content="سهند کود" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- ============================================================ -->
+    <!-- 🔐 Open Graph / Social Media -->
+    <!-- ============================================================ -->
+    <meta property="og:title" content="سهند کود - سیستم هوشمند نسخه‌نویسی کود" />
+    <meta property="og:description" content="سیستم هوشمند نسخه‌نویسی کود برای گلخانه‌ها و کشت‌های بدون خاک" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://farmtech.ir" />
+    <meta property="og:image" content="/Logo.webp" />
+    
+    <!-- ============================================================ -->
+    <!-- 🔐 Theme Color -->
+    <!-- ============================================================ -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- ============================================================ -->
+    <!-- 🔐 Content Security Policy (بهبود یافته) -->
+    <!-- ============================================================ -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval';
+      style-src 'self' 'unsafe-inline';
+      img-src 'self' data: blob:;
+      font-src 'self' data:;
+      connect-src 'self' http://localhost:8000 http://localhost:3000 https://api.kavenegar.com https://api.sms.ir wss://localhost:8000;
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'self';
+      manifest-src 'self';
+      worker-src 'self' blob:;
+    ">
+    
+    <!-- ============================================================ -->
+    <!-- 🔐 Preconnect برای بهبود سرعت بارگذاری -->
+    <!-- ============================================================ -->
+    <link rel="preconnect" href="http://localhost:8000" />
+    <link rel="preconnect" href="https://api.kavenegar.com" crossorigin />
+    
+    <!-- ============================================================ -->
+    <!-- عنوان صفحه -->
+    <!-- ============================================================ -->
+    <title>سهند کود - سیستم هوشمند نسخه‌نویسی کود</title>
   </head>
   <body>
+    <!-- ============================================================ -->
+    <!-- برنامه اصلی -->
+    <!-- ============================================================ -->
     <div id="app"></div>
+    
+    <!-- ============================================================ -->
+    <!-- اسکریپت اصلی -->
+    <!-- ============================================================ -->
     <script type="module" src="/src/main.ts"></script>
+    
+    <!-- ============================================================ -->
+    <!-- پشتیبانی از مرورگرهای قدیمی -->
+    <!-- ============================================================ -->
+    <script nomodule>
+      console.log('⚠️ مرورگر شما از ماژول‌های ES پشتیبانی نمی‌کند. لطفاً از مرورگر جدیدتر استفاده کنید.');
+    </script>
   </body>
 </html>

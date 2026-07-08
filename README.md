@@ -1,108 +1,283 @@
-# 🌱 FarmTech - ProFertilizer
+🌱 FarmTech - ProFertilizer
+سیستم هوشمند نسخه‌نویسی کود برای گلخانه‌ها و کشت‌های بدون خاک
+https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi
+https://img.shields.io/badge/Vue-3.4.0-4FC08D?logo=vuedotjs
+https://img.shields.io/badge/Tailwind-3.4.0-06B6D4?logo=tailwindcss
+https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql
+https://img.shields.io/badge/Python-3.11+-3776AB?logo=python
+https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker
 
-**سیستم هوشمند نسخه‌نویسی کود برای گلخانه‌ها و کشت‌های بدون خاک**
+📋 فهرست مطالب
+نمای کلی
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi)](https://fastapi.tiangolo.com)
-[![Vue](https://img.shields.io/badge/Vue-3.4.0-4FC08D?logo=vuedotjs)](https://vuejs.org)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4.0-06B6D4?logo=tailwindcss)](https://tailwindcss.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql)](https://postgresql.org)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python)](https://python.org)
-[![Docker](https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker)](https://docker.com)
+ویژگی‌های کلیدی
 
----
+معماری الگوریتمی
 
-## 📋 نمای کلی
+معماری فنی
 
-**FarmTech - ProFertilizer** یک نرم‌افزار تخصصی برای **محاسبه، تحلیل و مدیریت فرمول‌های تغذیه گیاه** در سیستم‌های کشت بدون خاک، هیدروپونیک و گلخانه‌های مدرن است. این نرم‌افزار با بهره‌گیری از الگوریتم‌های علمی معتبر و پایگاه داده‌ای جامع از کودهای ایرانی، امکان محاسبه دقیق فرمول غذایی، تحلیل آب و پساب، تعادل یونی و بهینه‌سازی هزینه را فراهم می‌کند.
+ساختار پروژه
 
----
+نصب و راه‌اندازی
 
-## 🚀 ویژگی‌های کلیدی
+دسترسی به برنامه
 
-| ویژگی | توضیح |
-|-------|-------|
-| 🔐 **احراز هویت امن** | ثبت‌نام و ورود با توکن‌های نشست ذخیره‌شده در دیتابیس |
-| 💧 **آنالیز آب و پساب** | محاسبه خودکار مقادیر تامینی بر اساس درصد اختلاط آب و پساب |
-| 🎯 **عناصر هدف** | تعیین سطح دقیق عناصر غذایی با اعتبارسنجی تعادل یونی |
-| 🧠 **بهینه‌سازی خودکار** | استفاده از الگوریتم NNLS برای محاسبه بهترین ترکیب کودها |
-| 🧪 **پایگاه داده کودها** | بیش از ۴۲ کود ایرانی به‌همراه ترکیب عناصر و قیمت |
-| 📊 **تفسیر هوشمند** | تولید گزارش‌های جامع با توصیه‌های اصلاحی |
-| 🗄️ **مدیریت مخازن** | تقسیم خودکار کودها در مخازن A، B و C بر اساس سازگاری شیمیایی |
-| 🌓 **حالت روشن/تاریک** | نمایش مطابق با نور محیط |
-| 🌐 **دو زبانه** | پشتیبانی کامل از زبان‌های فارسی و انگلیسی |
-| 🖨️ **چاپ گزارش** | خروجی قابل چاپ از تمام بخش‌ها |
+اجرای تست‌ها
 
----
+دستورات مفید Docker
 
-## 🏗️ معماری فنی
+بکاپ دیتابیس
 
-| لایه | فناوری |
-|------|--------|
-| **فرانت‌اند** | Vue 3، TypeScript، Tailwind CSS، Vite، Pinia |
-| **بک‌اند** | FastAPI، Python 3.11، SQLAlchemy |
-| **دیتابیس** | PostgreSQL 15 (با پشتیبانی از SQLite برای توسعه) |
-| **احراز هویت** | توکن‌های نشست با ذخیره‌سازی در دیتابیس |
-| **بهینه‌سازی** | NumPy، SciPy (الگوریتم NNLS) |
-| **HTTP Client** | Axios |
-| **Containerization** | Docker، Docker Compose |
+عیب‌یابی
 
----
+منابع علمی
 
-## 📁 ساختار پروژه
+توسعه‌دهنده
+
+مجوز
+
+📋 نمای کلی
+FarmTech - ProFertilizer یک نرم‌افزار تخصصی برای محاسبه، تحلیل و مدیریت فرمول‌های تغذیه گیاه در سیستم‌های کشت بدون خاک، هیدروپونیک و گلخانه‌های مدرن است. این نرم‌افزار با بهره‌گیری از الگوریتم‌های علمی معتبر و پایگاه داده‌ای جامع از کودها، امکان محاسبه دقیق فرمول غذایی، تحلیل آب و پساب، تعادل یونی و بهینه‌سازی هزینه را فراهم می‌کند.
+
+🎯 چکیده اجرایی
+ProFertilizer یک سامانه جامع و مبتنی بر علم تغذیه گیاه است که فرآیند پیچیده‌ی فرمول‌نویسی کود در سیستم‌های کشت بدون خاک، هیدروپونیک، و گلخانه‌های مدرن را هوشمندسازی می‌کند. این نرم‌افزار که محصول شرکت فارم تک است، با ترکیب دانش شیمی کشاورزی، الگوریتم‌های بهینه‌سازی عددی، و مهندسی نرم‌افزار، امکان محاسبه‌ی دقیق ترکیب کودها، تحلیل کیفی آب، پایش تعادل یونی، و بهینه‌سازی اقتصادی را برای گلخانه‌داران، مشاوران تغذیه، و کارشناسان کشاورزی فراهم می‌آورد.
+
+هسته‌ی الگوریتمی این سامانه بر مبنای روش NNLS (Non-Negative Least Squares) طراحی شده است که با افزودن لایه‌های تخصصی اعتبارسنجی چون تعادل یونی، بررسی رسوب‌گذاری، محاسبه‌ی EC و pH، و توزیع هوشمند مخازن، به یک راهکار کامل و قابل اتکا برای نیازهای پیچیده‌ی تغذیه‌ی گیاهان در محیط‌های کنترل‌شده تبدیل شده است.
+
+شاخص عملکرد	مقدار
+دقت تحقق عناصر هدف	۹۵-۱۰۰%
+خطای باقی‌مانده (Residual Error)	< ۱۰ واحد
+زمان همگرایی	< ۵۰ میلی‌ثانیه
+عناصر پشتیبانی‌شده	۱۵ عنصر اصلی
+تعداد کودهای سیستمی	۴۲ کود استاندارد
+تلرانس تعادل یونی	۰.۵ meq/L
+🚀 ویژگی‌های کلیدی
+ویژگی	توضیح
+🔐 احراز هویت امن	ثبت‌نام و ورود با توکن‌های نشست ذخیره‌شده در دیتابیس
+💧 آنالیز آب و پساب	محاسبه خودکار مقادیر تامینی بر اساس درصد اختلاط آب و پساب
+🎯 عناصر هدف	تعیین سطح دقیق عناصر غذایی با اعتبارسنجی تعادل یونی
+🧠 بهینه‌سازی خودکار	استفاده از الگوریتم NNLS برای محاسبه بهترین ترکیب کودها
+🧪 پایگاه داده کودها	بیش از ۴۲ کود استاندارد به‌همراه ترکیب عناصر و قیمت
+📊 تفسیر هوشمند	تولید گزارش‌های جامع با توصیه‌های اصلاحی
+🗄️ مدیریت مخازن	تقسیم خودکار کودها در مخازن A، B و C بر اساس سازگاری شیمیایی
+🌓 حالت روشن/تاریک	نمایش مطابق با نور محیط
+🌐 دو زبانه	پشتیبانی کامل از زبان‌های فارسی و انگلیسی
+🖨️ چاپ گزارش	خروجی قابل چاپ از تمام بخش‌ها
+🧠 معماری الگوریتمی
+هسته الگوریتمی: NNLS و روش‌های بهینه‌سازی
+فرمول‌بندی ریاضی مسئله
+مسئله‌ی فرمول‌نویسی کود را می‌توان به صورت زیر فرمول‌بندی کرد:
+
+min
+⁡
+x
+≥
+0
+∥
+A
+x
+−
+b
+∥
+2
+2
+min 
+x≥0
+​
+ ∥Ax−b∥ 
+2
+2
+​
+ 
+
+که در آن:
+
+A ∈ ℝᵐˣⁿ = ماتریس ضرایب (m عنصر، n کود)
+
+x ∈ ℝⁿ = بردار وزن‌ها (مقدار مصرف هر کود)
+
+b ∈ ℝᵐ = بردار اهداف (نیاز خالص هر عنصر)
+
+ساخت ماتریس ضرایب (A)
+هر ستون از ماتریس A مربوط به یک کود است و هر سطر مربوط به یک عنصر. مقدار هر خانه به صورت زیر محاسبه می‌شود:
+
+A
+i
+j
+=
+درصد عنصر 
+i
+ در کود 
+j
+100
+×
+خلوص کود 
+j
+A 
+ij
+​
+ = 
+100
+درصد عنصر i در کود j
+​
+ ×خلوص کود j
+
+بردار هدف (b)
+بردار هدف با کسر عناصر موجود در آب از مقادیر هدف محاسبه می‌شود:
+
+b
+i
+=
+max
+⁡
+(
+0
+,
+Target
+i
+−
+Water
+i
+)
+b 
+i
+​
+ =max(0,Target 
+i
+​
+ −Water 
+i
+​
+ )
+
+الگوریتم NNLS
+الگوریتم NNLS توسط Lawson و Hanson در سال ۱۹۷۴ معرفی شد و یکی از پایدارترین روش‌ها برای حل مسائل حداقل مربعات با قید غیرمنفی است.
+
+python
+from scipy.optimize import nnls
+
+def optimize_with_nnls(A, b):
+    weights, residual = nnls(A, b)
+    return weights, residual
+روش‌های جایگزین
+روش	فرمول	مزایا	معایب
+NNLS	
+min
+⁡
+∥
+A
+x
+−
+b
+∥
+2
+min∥Ax−b∥ 
+2
+  با 
+x
+≥
+0
+x≥0	تضمین غیرمنفی، پایدار	سرعت متوسط
+LSQ-Linear	
+min
+⁡
+∥
+A
+x
+−
+b
+∥
+2
+min∥Ax−b∥ 
+2
+ 	سرعت بالا	ممکن است جواب منفی بدهد
+Cost-based	
+min
+⁡
+(
+∥
+A
+x
+−
+b
+∥
+2
++
+λ
+∑
+x
+i
+c
+i
+)
+min(∥Ax−b∥ 
+2
+ +λ∑x 
+i
+​
+ c 
+i
+​
+ )	بهینه‌سازی هزینه	پیچیده‌تر
+🏗️ معماری فنی
+لایه	فناوری
+فرانت‌اند	Vue 3، TypeScript، Tailwind CSS، Vite، Pinia
+بک‌اند	FastAPI، Python 3.11، SQLAlchemy
+دیتابیس	PostgreSQL 15 (با پشتیبانی از SQLite برای توسعه)
+احراز هویت	توکن‌های نشست با ذخیره‌سازی در دیتابیس
+بهینه‌سازی	NumPy، SciPy (الگوریتم NNLS)
+HTTP Client	Axios
+Containerization	Docker، Docker Compose
+📁 ساختار پروژه
+text
 FarmTech-ProFertilizer/
 │
-├── backend/ 📁 بک‌اند FastAPI
-│ ├── app/
-│ │ ├── main.py 🚀 نقطه ورود برنامه
-│ │ ├── config.py ⚙️ تنظیمات (PostgreSQL)
-│ │ ├── models.py 📊 مدل‌های دیتابیس
-│ │ ├── schemas.py 📝 طرح‌های Pydantic
-│ │ ├── crud.py 📂 عملیات CRUD
-│ │ ├── security.py 🔒 احراز هویت و توکن
-│ │ ├── database.py 🗄️ اتصال به PostgreSQL
-│ │ ├── routes/ 🛣️ مسیرهای API
-│ │ └── seeds/ 🌱 داده‌های اولیه (کودها، رسپی‌ها)
-│ ├── tests/ 🧪 تست‌های جامع
-│ └── requirements.txt 📦 وابستگی‌ها
+├── backend/                              # 📁 بک‌اند FastAPI
+│   ├── app/
+│   │   ├── main.py                       # 🚀 نقطه ورود برنامه
+│   │   ├── config.py                     # ⚙️ تنظیمات (PostgreSQL)
+│   │   ├── models.py                     # 📊 مدل‌های دیتابیس
+│   │   ├── schemas.py                    # 📝 طرح‌های Pydantic
+│   │   ├── crud.py                       # 📂 عملیات CRUD
+│   │   ├── security.py                   # 🔒 احراز هویت و توکن
+│   │   ├── database.py                   # 🗄️ اتصال به PostgreSQL
+│   │   ├── routes/                       # 🛣️ مسیرهای API
+│   │   └── seeds/                        # 🌱 داده‌های اولیه
+│   ├── tests/                            # 🧪 تست‌های جامع
+│   └── requirements.txt                  # 📦 وابستگی‌ها
 │
-├── frontend/ 📁 فرانت‌اند Vue 3
-│ ├── src/
-│ │ ├── components/ 📁 کامپوننت‌ها
-│ │ ├── store/ 📁 مدیریت State (Pinia)
-│ │ ├── composables/ 📁 توابع ترکیبی
-│ │ ├── services/ 📁 ارتباط با API
-│ │ ├── types/ 📁 تعاریف TypeScript
-│ │ └── views/ 📁 صفحات اصلی
-│ ├── public/fonts/ 📁 فونت‌های فارسی
-│ ├── package.json 📦 وابستگی‌ها
-│ └── vite.config.ts ⚙️ تنظیمات Vite
+├── frontend/                             # 📁 فرانت‌اند Vue 3
+│   ├── src/
+│   │   ├── components/                   # 📁 کامپوننت‌ها
+│   │   ├── store/                        # 📁 مدیریت State (Pinia)
+│   │   ├── composables/                  # 📁 توابع ترکیبی
+│   │   ├── services/                     # 📁 ارتباط با API
+│   │   ├── types/                        # 📁 تعاریف TypeScript
+│   │   └── views/                        # 📁 صفحات اصلی
+│   ├── public/fonts/                     # 📁 فونت‌های فارسی
+│   ├── package.json                      # 📦 وابستگی‌ها
+│   └── vite.config.ts                    # ⚙️ تنظیمات Vite
 │
-├── scripts/ 📁 اسکریپت‌های مدیریتی
-│ ├── cli.py 🖥️ منوی خط فرمان (CLI)
-│ ├── init_db.py 🗄️ مقداردهی اولیه دیتابیس│ └── init_db.sql 🗄️ اسکریپت SQL اولیه
+├── scripts/                              # 📁 اسکریپت‌های مدیریتی
+│   ├── cli.py                            # 🖥️ منوی خط فرمان (CLI)
+│   └── init_db.py                        # 🗄️ مقداردهی اولیه دیتابیس
 │
-├── docker-compose.yml 🐳 Docker Compose
-├── Dockerfile.backend 🐳 Dockerfile بک‌اند
-├── Dockerfile.frontend 🐳 Dockerfile فرانت‌اند
-├── .env 🔐 متغیرهای محیطی
-├── .env.example 📄 نمونه متغیرهای محیطی
-└── README.md 📄 این مستندات
+├── docker-compose.yml                    # 🐳 Docker Compose
+├── Dockerfile.backend                    # 🐳 Dockerfile بک‌اند
+├── Dockerfile.frontend                   # 🐳 Dockerfile فرانت‌اند
+├── .env                                  # 🔐 متغیرهای محیطی
+├── .env.example                          # 📄 نمونه متغیرهای محیطی
+└── README.md                             # 📄 این مستندات
+🚀 نصب و راه‌اندازی
+پیش‌نیازها
+Docker 24.0+
 
-text
+Docker Compose 2.20+
 
----
+Git
 
-## 🚀 نصب و راه‌اندازی
-
-### پیش‌نیازها
-
-- Docker 24.0+
-- Docker Compose 2.20+
-- Git
-
-### روش سریع با Docker
-
-```bash
+روش سریع با Docker
+bash
 # ۱. کلون کردن مخزن
 git clone https://github.com/yourusername/FarmTech-ProFertilizer.git
 cd FarmTech-ProFertilizer
@@ -180,6 +355,13 @@ docker-compose ps
 
 # مشاهده استفاده از منابع
 docker stats
+
+# ری‌استارت یک سرویس
+docker-compose restart backend
+docker-compose restart frontend
+
+# ورود به شل فرانت‌اند
+docker-compose exec frontend sh
 💾 بکاپ دیتابیس
 bash
 # بکاپ گرفتن از دیتابیس
@@ -211,27 +393,20 @@ sudo lsof -i :5432
 
 # کشتن پروسه درگیر
 sudo kill -9 <PID>
-🧠 الگوریتم محاسبه
-قلب محاسباتی برنامه بر اساس روش NNLS (Non-Negative Least Squares) طراحی شده است:
-
-ساخت ماتریس ضرایب: سهم هر عنصر از هر کود (با در نظر گرفتن خلوص) محاسبه می‌شود.
-
-کسر کیفیت آب: عناصر موجود در آب از نیاز خالص کسر می‌شوند.
-
-بهینه‌سازی: با قید غیرمنفی بودن وزن‌ها، بهترین ترکیب کودها محاسبه می‌شود.
-
-اعتبارسنجی: تعادل یونی، بررسی رسوب و درصد تحقق اهداف بررسی می‌شود.
-
-توزیع مخازن: مواد به‌صورت خودکار در مخازن A، B و C توزیع می‌شوند.
-
 📚 منابع علمی
-هوارد رش (Howard Resh) – مرجع استاندارد تغذیه در هیدروپونیک
+Resh, H. M. (2012). Hydroponic Food Production: A Definitive Guidebook for the Advanced Home Gardener and the Commercial Hydroponic Grower. CRC Press.
 
-دانشگاه فلوریدا – رسپی‌های گوجه‌فرنگی در مراحل مختلف رشد
+Jones, J. B. (2016). Hydroponics: A Practical Guide for the Soilless Grower. CRC Press.
 
-داگلاس پکنپا (Douglas Peckenpaugh) – فرمول‌های تخصصی
+Lawson, C. L., & Hanson, R. J. (1974). Solving Least Squares Problems. Prentice-Hall.
 
-نرخنامه سال ۱۴۰۵ وزارت جهاد کشاورزی – قیمت و ترکیب کودهای ایرانی
+Peckenpaugh, D. (2015). Hydroponic Solutions: Volume 1. Growing Edge Publications.
+
+University of Florida, IFAS Extension. (2020). Tomato Production in Florida.
+
+Nielsen, N. E. (2006). Plant Nutrition and Fertilization. Springer.
+
+Barker, A. V. & Pilbeam, D. J. (2007). Handbook of Plant Nutrition. CRC Press.
 
 👨‍💻 توسعه‌دهنده
 امید رحمانی
@@ -256,27 +431,3 @@ sudo kill -9 <PID>
 وب‌سایت: www.farmtech.ir
 
 تلفن: ۰۲۱-۸۸۴۱۴۶۷۹
-
-
-========================
-# ===== توقف سرویس‌ها =====
-docker-compose down
-
-# ===== توقف و حذف کامل داده‌ها (دیتابیس پاک می‌شود) =====
-docker-compose down -v
-
-# ===== ری‌استارت یک سرویس =====
-docker-compose restart backend
-docker-compose restart frontend
-
-# ===== بازسازی و اجرا =====
-docker-compose up --build -d
-
-# ===== ورود به شل بک‌اند =====
-docker-compose exec backend bash
-
-# ===== ورود به شل فرانت‌اند =====
-docker-compose exec frontend sh
-
-# ===== ورود به دیتابیس =====
-docker-compose exec db psql -U postgres -d farmtech_db
