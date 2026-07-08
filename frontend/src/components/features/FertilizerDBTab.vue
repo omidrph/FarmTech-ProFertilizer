@@ -29,10 +29,13 @@
       :user-fertilizers="userFertilizers"
       :system-fertilizers="systemFertilizers"
       :is-loading="isLoading"
+      :active-filter="activeFilter"
       @refresh="refreshFertilizers"
       @open-modal="openAddModal"
       @edit-fertilizer="editFertilizer"
       @delete-fertilizer="deleteFertilizer"
+      @filter-change="handleFilterChange"
+      @clear-table="handleClearTable"
     />
 
     <!-- ============================================================ -->
@@ -48,7 +51,7 @@
     />
 
     <!-- ============================================================ -->
-    <!-- پیام موفقیت/خطا (Toast) - داخلی -->
+    <!-- پیام موفقیت/خطا (Toast) -->
     <!-- ============================================================ -->
     <Teleport to="body">
       <Transition name="fade">
@@ -100,7 +103,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:fertilizers', value: any[]): void;
-  (e: 'show-add-modal'): void;
   (e: 'delete-fertilizer', id: string): void;
 }>();
 
@@ -119,6 +121,7 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
+const activeFilter = ref<string | null>(null);
 
 // Copy Status
 const copyStatus = ref({
@@ -149,7 +152,10 @@ const initialFormData = {
   ph_level: null as number | null,
   description: '',
   is_system_default: false,
-  source_system_id: null as number | null
+  source_system_id: null as number | null,
+  liquid_volume: undefined as number | undefined,
+  specific_gravity: undefined as number | undefined,
+  active_concentration: undefined as number | undefined
 };
 
 const formData = reactive({ ...initialFormData });
@@ -166,9 +172,8 @@ const systemFertilizers = computed(() => {
 });
 
 // ============================================================
-// Methods
+// Methods - Toast
 // ============================================================
-
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   toastMessage.value = message;
   toastType.value = type;
@@ -177,6 +182,9 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   }, 3000);
 };
 
+// ============================================================
+// Methods - Form
+// ============================================================
 const resetForm = () => {
   Object.assign(formData, { ...initialFormData, elements: {} });
   isEditing.value = false;
@@ -185,7 +193,6 @@ const resetForm = () => {
 const openAddModal = () => {
   resetForm();
   showModal.value = true;
-  emit('show-add-modal');
 };
 
 const closeModal = () => {
@@ -209,7 +216,10 @@ const editFertilizer = (fertilizer: any) => {
     ph_level: fertilizer.phLevel || fertilizer.ph_level || null,
     description: fertilizer.description || '',
     is_system_default: fertilizer.isSystemDefault || fertilizer.is_system_default || false,
-    source_system_id: fertilizer.sourceSystemId || fertilizer.source_system_id || null
+    source_system_id: fertilizer.sourceSystemId || fertilizer.source_system_id || null,
+    liquid_volume: fertilizer.liquidVolume || fertilizer.liquid_volume || undefined,
+    specific_gravity: fertilizer.specificGravity || fertilizer.specific_gravity || undefined,
+    active_concentration: fertilizer.activeConcentration || fertilizer.active_concentration || undefined
   });
   showModal.value = true;
 };
@@ -252,7 +262,10 @@ const saveFertilizer = async () => {
       isAcid: formData.is_acid,
       acidType: formData.acid_type || undefined,
       phLevel: formData.ph_level || undefined,
-      description: formData.description || undefined
+      description: formData.description || undefined,
+      liquidVolume: formData.liquid_volume || undefined,
+      specificGravity: formData.specific_gravity || undefined,
+      activeConcentration: formData.active_concentration || undefined
     };
 
     let success = false;
@@ -280,6 +293,9 @@ const saveFertilizer = async () => {
   }
 };
 
+// ============================================================
+// Methods - Delete (فقط اینجا confirm دارد)
+// ============================================================
 const deleteFertilizer = async (id: string) => {
   if (!confirm('آیا از حذف این کود اطمینان دارید؟ این عملیات غیرقابل بازگشت است.')) {
     return;
@@ -298,9 +314,42 @@ const deleteFertilizer = async (id: string) => {
 };
 
 // ============================================================
-// توابع مربوط به کودهای سیستمی
+// Methods - Clear Table
 // ============================================================
+const handleClearTable = async () => {
+  // حذف همه کودهای شخصی
+  const userFerts = userFertilizers.value;
+  if (userFerts.length === 0) return;
+  
+  let deletedCount = 0;
+  let errorCount = 0;
+  
+  for (const fert of userFerts) {
+    try {
+      const success = await fertilizerStore.deleteFertilizer(fert.id);
+      if (success) {
+        deletedCount++;
+      } else {
+        errorCount++;
+      }
+    } catch {
+      errorCount++;
+    }
+  }
+  
+  if (errorCount === 0) {
+    showToast(`${deletedCount} کود با موفقیت حذف شدند`, 'success');
+  } else {
+    showToast(`${deletedCount} کود حذف شدند و ${errorCount} مورد خطا داشت`, 'error');
+  }
+  
+  await refreshFertilizers();
+  await loadSystemFertilizers();
+};
 
+// ============================================================
+// Methods - System Fertilizers
+// ============================================================
 const loadSystemFertilizers = async () => {
   await fertilizerStore.loadSystemFertilizers();
   copyStatus.value = await fertilizerStore.checkSystemCopyStatus();
@@ -344,9 +393,15 @@ const handleCopySingleSystemFertilizer = async (systemFertilizerId: string) => {
 };
 
 // ============================================================
-// توابع عمومی
+// Methods - Filter
 // ============================================================
+const handleFilterChange = (filter: string | null) => {
+  activeFilter.value = filter;
+};
 
+// ============================================================
+// Methods - General
+// ============================================================
 const refreshFertilizers = async () => {
   isLoading.value = true;
   try {
