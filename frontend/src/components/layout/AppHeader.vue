@@ -3,9 +3,9 @@
   <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-50 transition-colors duration-200">
     <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
       <div class="flex items-center justify-between h-14 sm:h-16 lg:h-18">
-        <!-- Logo -->
+        <!-- Logo - فقط عکس بزرگ‌تر، متن‌ها به اندازه قبلی -->
         <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <img src="/Logo.webp" alt="سهند کود" class="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 object-contain rounded-lg" />
+          <img src="/Logo.webp" alt="سهند کود" class="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 object-contain rounded-lg" />
           <div class="flex flex-col leading-tight">
             <h1 class="text-lg sm:text-xl lg:text-2xl font-bold text-gray-800 dark:text-white tracking-tight" style="font-family: 'Vazirmatn', 'IRANSans', sans-serif;">سهند کود</h1>
             <p class="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 hidden sm:block">سیستم هوشمند نسخه‌نویسی کود</p>
@@ -76,10 +76,18 @@
             </div>
           </div>
 
-          <!-- Navigation Buttons -->
-          <button v-for="tab in navTabs" :key="tab.id" @click="setActiveTab(tab.id)" class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group">
-            <span class="relative z-10 flex items-center gap-1.5" :class="currentActiveTab === tab.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'">
-              <span v-html="tab.icon"></span>
+          <!-- Navigation Buttons - با انیمیشن hover یکپارچه و نمایش روی حالت انتخاب شده -->
+          <button 
+            v-for="tab in navTabs" 
+            :key="tab.id" 
+            @click="setActiveTab(tab.id)" 
+            class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group"
+            :class="currentActiveTab === tab.id 
+              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' 
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'"
+          >
+            <span class="relative z-10 flex items-center gap-1.5">
+              <span v-html="tab.icon" class="w-4 h-4 flex-shrink-0"></span>
               <span class="hidden xl:inline">{{ tab.label }}</span>
             </span>
             <span v-if="currentActiveTab === tab.id" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300"></span>
@@ -371,28 +379,28 @@ const navTabs = [
   {
     id: 'home',
     label: 'صفحه اصلی',
-    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
     </svg>`
   },
   {
     id: 'education',
     label: 'آموزش',
-    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
     </svg>`
   },
   {
     id: 'contact',
     label: 'ارتباط با ما',
-    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
     </svg>`
   },
   {
     id: 'about',
     label: 'درباره',
-    icon: `<svg class="w-4 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
     </svg>`
   }
@@ -549,13 +557,6 @@ const closeOpenModal = () => {
 // ✅ loadSelectedReport - بدون confirm
 // ============================================================
 const loadSelectedReport = async (reportId: number) => {
-  // ❌ حذف کامل شرط confirm
-  // if (reportStore.hasActiveReport && reportStore.currentReportId !== reportId) {
-  //   if (!confirm('آیا می‌خواهید گزارش دیگری را بارگذاری کنید؟')) {
-  //     return;
-  //   }
-  // }
-  
   isLoadingReport.value = true;
   loadingReportId.value = reportId;
   

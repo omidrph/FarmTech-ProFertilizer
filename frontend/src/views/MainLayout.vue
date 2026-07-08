@@ -8,41 +8,47 @@
       @new-report="handleNewReport"
     />
 
-    <!-- Sub Navigation (تب‌های صفحه اصلی) -->
-    <nav v-if="activeTab === 'home'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky z-40 shadow-sm" :style="{ top: headerHeight + 'px' }">
+    <!-- Sub Navigation (تب‌های صفحه اصلی) - استایل کاملاً یکسان با هدر -->
+    <nav v-if="activeTab === 'home'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky z-40" :style="{ top: headerHeight + 'px' }">
       <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-        <div class="flex gap-1 overflow-x-auto py-2 scrollbar-hide snap-x snap-mandatory">
+        <div class="flex items-center gap-1 overflow-x-auto py-1 scrollbar-hide snap-x snap-mandatory">
           <button
             v-for="subTab in subTabs"
             :key="subTab.id"
             @click="activeSubTab = subTab.id"
-            class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 snap-start flex-shrink-0"
+            class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group whitespace-nowrap snap-start flex-shrink-0"
             :class="activeSubTab === subTab.id
-              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'"
+              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' 
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'"
           >
-            <span v-html="subTab.icon" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"></span>
-            <span class="text-xs sm:text-sm">{{ subTab.label }}</span>
+            <span class="relative z-10 flex items-center gap-1.5">
+              <span v-html="subTab.icon" class="w-4 h-4 flex-shrink-0"></span>
+              <span class="text-sm">{{ subTab.label }}</span>
+            </span>
+            <span v-if="activeSubTab === subTab.id" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300"></span>
           </button>
         </div>
       </div>
     </nav>
 
-    <!-- Sub Navigation برای تب Education -->
-    <nav v-if="activeTab === 'education'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky z-40 shadow-sm" :style="{ top: headerHeight + 'px' }">
+    <!-- Sub Navigation برای تب Education - استایل کاملاً یکسان با هدر -->
+    <nav v-if="activeTab === 'education'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky z-40" :style="{ top: headerHeight + 'px' }">
       <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-        <div class="flex gap-1 overflow-x-auto py-2 scrollbar-hide snap-x snap-mandatory">
+        <div class="flex items-center gap-1 overflow-x-auto py-1 scrollbar-hide snap-x snap-mandatory">
           <button
             v-for="subTab in educationSubTabs"
             :key="subTab.id"
             @click="activeEducationSubTab = subTab.id"
-            class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all duration-200 snap-start flex-shrink-0"
+            class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group whitespace-nowrap snap-start flex-shrink-0"
             :class="activeEducationSubTab === subTab.id
-              ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border-b-2 border-primary-500'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'"
+              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' 
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'"
           >
-            <span v-html="subTab.icon" class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"></span>
-            <span class="text-xs sm:text-sm">{{ subTab.label }}</span>
+            <span class="relative z-10 flex items-center gap-1.5">
+              <span v-html="subTab.icon" class="w-4 h-4 flex-shrink-0"></span>
+              <span class="text-sm">{{ subTab.label }}</span>
+            </span>
+            <span v-if="activeEducationSubTab === subTab.id" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300"></span>
           </button>
         </div>
       </div>
@@ -77,12 +83,12 @@
           v-model:reportDate="reportStore.reportData.date"
         />
 
-        <!-- Home Sub Tab با کلید برای رندر مجدد اجباری -->
+        <!-- Home Sub Tab -->
         <div v-if="activeSubTab === 'home'" :key="homeTabKey">
           <HomeTab :target-unit="targetStore.targetUnit" />
         </div>
 
-        <!-- Water Analysis Sub Tab با کلید برای رندر مجدد اجباری -->
+        <!-- Water Analysis Sub Tab -->
         <div v-else-if="activeSubTab === 'water-analysis'" :key="waterTabKey">
           <WaterAnalysisTab
             v-model:waterPercentage="waterStore.waterMixData.waterPercentage"
@@ -94,7 +100,7 @@
           />
         </div>
 
-        <!-- Target Elements Sub Tab با کلید برای رندر مجدد اجباری -->
+        <!-- Target Elements Sub Tab -->
         <div v-else-if="activeSubTab === 'target-elements'" :key="targetTabKey">
           <TargetElementsTab
             v-model:targetUnit="targetStore.targetUnit"
@@ -126,7 +132,6 @@
         <div v-else-if="activeSubTab === 'fertilizer-db'">
           <FertilizerDBTab
             v-model:fertilizers="fertilizerStore.fertilizers"
-            @show-add-modal="showAddFertilizerModal = true"
             @delete-fertilizer="handleDeleteFertilizer"
           />
         </div>
@@ -165,62 +170,6 @@
       @update:is-open="isProfileModalOpen = $event"
     />
 
-    <!-- Modal Add Fertilizer -->
-    <div v-if="showAddFertilizerModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="showAddFertilizerModal = false">
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6 animate-slide-up">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">افزودن کود جدید</h3>
-          <button @click="showAddFertilizerModal = false" class="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام کود</label>
-            <input type="text" v-model="newFertilizer.name" placeholder="مثال: نیترات پتاسیم" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">قیمت هر کیلوگرم (تومان)</label>
-            <input type="number" v-model="newFertilizer.pricePerKg" placeholder="مثال: ۲۵۰۰۰" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">درصد عناصر</label>
-            <div class="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-              <div v-for="el in elements" :key="el" class="flex items-center gap-2">
-                <label class="text-xs font-medium text-gray-600 dark:text-gray-400 w-12">{{ el }}</label>
-                <input type="number" v-model="newFertilizer.elements[el]" step="0.01" placeholder="۰" class="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
-              </div>
-            </div>
-          </div>
-          <div>
-            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <input type="checkbox" v-model="newFertilizer.isAcid" class="rounded border-gray-300 dark:border-gray-600" />
-              کود اسیدی است
-            </label>
-          </div>
-          <div v-if="newFertilizer.isAcid">
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع اسید</label>
-            <select v-model="newFertilizer.acidType" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
-              <option value="">انتخاب کنید...</option>
-              <option value="H3PO4">H3PO4</option>
-              <option value="HNO3">HNO3</option>
-              <option value="H2SO4">H2SO4</option>
-            </select>
-          </div>
-        </div>
-        <div class="flex gap-3 mt-6">
-          <button @click="handleAddFertilizer" :disabled="fertilizerStore.isLoading" class="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50">
-            {{ fertilizerStore.isLoading ? 'در حال ذخیره...' : 'ذخیره' }}
-          </button>
-          <button @click="showAddFertilizerModal = false" class="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
-            انصراف
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- ============================================================ -->
     <!-- پیام موفقیت/خطا (Toast) -->
     <!-- ============================================================ -->
@@ -247,7 +196,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, reactive, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
@@ -290,7 +239,6 @@ const { generateInterpretation: generateInterpretationFromAPI } = useCalculation
 const activeTab = ref('home');
 const activeSubTab = ref('home');
 const activeEducationSubTab = ref('quick-start');
-const showAddFertilizerModal = ref(false);
 const isProfileModalOpen = ref(false);
 const headerHeight = ref(56);
 const analysisUnit = ref('ppm');
@@ -303,49 +251,39 @@ const homeTabKey = ref(0);
 const waterTabKey = ref(0);
 const targetTabKey = ref(0);
 
-const elements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
-
-const newFertilizer = reactive({
-  name: '',
-  pricePerKg: 0,
-  elements: {} as Record<string, number>,
-  isAcid: false,
-  acidType: '' as string
-});
-
 // ============================================================
-// Navigation Tabs
+// Navigation Tabs - کاملاً هماهنگ با هدر اصلی (استایل یکسان)
 // ============================================================
 const subTabs = [
   {
     id: 'home',
     label: 'خانه',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`
   },
   {
     id: 'water-analysis',
     label: 'آنالیز آب',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>`
   },
   {
     id: 'target-elements',
     label: 'عناصر هدف',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`
   },
   {
     id: 'fertilizer-calc',
     label: 'محاسبه کود',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/></svg>`
   },
   {
     id: 'interpretation',
     label: 'تفسیر داده‌ها',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`
   },
   {
     id: 'fertilizer-db',
     label: 'پایگاه داده کودها',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
   }
 ];
 
@@ -353,17 +291,17 @@ const educationSubTabs = [
   {
     id: 'quick-start',
     label: 'شروع سریع',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
   },
   {
     id: 'videos',
     label: 'فیلم‌های آموزشی',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`
   },
   {
     id: 'faq',
     label: 'سوالات متداول',
-    icon: `<svg class="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
   }
 ];
 
@@ -390,52 +328,23 @@ const loadData = async () => {
   await fertilizerStore.loadFertilizers();
 };
 
-const handleAddFertilizer = async () => {
-  if (!newFertilizer.name || !newFertilizer.pricePerKg) {
-    alert('لطفاً نام و قیمت کود را وارد کنید');
-    return;
-  }
-  const success = await fertilizerStore.addFertilizer(newFertilizer);
-  if (success) {
-    showAddFertilizerModal.value = false;
-    newFertilizer.name = '';
-    newFertilizer.pricePerKg = 0;
-    newFertilizer.elements = {};
-    newFertilizer.isAcid = false;
-    newFertilizer.acidType = '';
-    showToast('کود با موفقیت افزوده شد', 'success');
-  } else {
-    alert(fertilizerStore.error || 'خطا در افزودن کود');
-  }
-};
-
 const handleDeleteFertilizer = async (id: string) => {
   if (confirm('آیا از حذف این کود اطمینان دارید؟')) {
     await fertilizerStore.deleteFertilizer(id);
   }
 };
 
-// ============================================================
-// ✅ اصلاح شده: handleNewReport
-// ============================================================
 const handleNewReport = async () => {
   console.log('📄 Creating new report...');
   
-  // استفاده از createNewReport در reportStore
   reportStore.createNewReport();
-  
-  // تنظیم تب‌ها به حالت پیش‌فرض
   activeSubTab.value = 'home';
   
-  // افزایش کلیدهای رندر مجدد
   homeTabKey.value++;
   waterTabKey.value++;
   targetTabKey.value++;
   
-  // منتظر ماندن برای انجام تغییرات DOM
   await nextTick();
-  
-  // نمایش پیام موفقیت
   showToast('گزارش جدید ایجاد شد', 'success');
 };
 
