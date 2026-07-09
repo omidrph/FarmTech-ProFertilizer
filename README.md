@@ -1,433 +1,299 @@
-🌱 FarmTech - ProFertilizer
-سیستم هوشمند نسخه‌نویسی کود برای گلخانه‌ها و کشت‌های بدون خاک
-https://img.shields.io/badge/FastAPI-0.115.0-009688?logo=fastapi
-https://img.shields.io/badge/Vue-3.4.0-4FC08D?logo=vuedotjs
-https://img.shields.io/badge/Tailwind-3.4.0-06B6D4?logo=tailwindcss
-https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql
-https://img.shields.io/badge/Python-3.11+-3776AB?logo=python
-https://img.shields.io/badge/Docker-24.0+-2496ED?logo=docker
+# 🌱 FarmTech - ProFertilizer
 
-📋 فهرست مطالب
-نمای کلی
+> Intelligent Fertilizer Formulation Platform for Hydroponics, Greenhouses and Soilless Cultivation
 
-ویژگی‌های کلیدی
 
-معماری الگوریتمی
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
+![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql)
+![Docker](https://img.shields.io/badge/Docker-24-2496ED?logo=docker)
 
-معماری فنی
+---
 
-ساختار پروژه
+# Table of Contents
 
-نصب و راه‌اندازی
+1. Overview
+2. Executive Summary
+3. Features
+4. Scientific Background
+5. Optimization Engine
+6. Architecture
+7. Technology Stack
+8. Folder Structure
+9. Installation
+10. Docker
+11. Manual Installation
+12. Configuration
+13. API
+14. Database
+15. Authentication
+16. Testing
+17. Deployment
+18. Performance
+19. Troubleshooting
+20. Roadmap
+21. References
+22. License
 
-دسترسی به برنامه
+---
 
-اجرای تست‌ها
+## Overview
 
-دستورات مفید Docker
+FarmTech ProFertilizer is a scientific fertilizer recommendation system designed to automate fertilizer formulation using water analysis, nutrient targets, optimization algorithms, ionic balance validation, and greenhouse-oriented workflows. The application integrates FastAPI, Vue, PostgreSQL, Docker and SciPy into a single production-ready platform.
 
-بکاپ دیتابیس
+## Executive Summary
 
-عیب‌یابی
+The project aims to reduce manual fertilizer calculations by transforming laboratory analyses into optimized fertilizer recipes. It supports hydroponics, substrate culture and greenhouse production with emphasis on precision, repeatability and scientific validation.
 
-منابع علمی
+## Features
 
-توسعه‌دهنده
+- Feature 1: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 2: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 3: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 4: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 5: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 6: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 7: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 8: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 9: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 10: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 11: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 12: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 13: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 14: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 15: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 16: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 17: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 18: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 19: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 20: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 21: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 22: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 23: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 24: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 25: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 26: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 27: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 28: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 29: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 30: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 31: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 32: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 33: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 34: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 35: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 36: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 37: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 38: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 39: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+- Feature 40: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
 
-مجوز
+## Scientific Algorithm
 
-📋 نمای کلی
-FarmTech - ProFertilizer یک نرم‌افزار تخصصی برای محاسبه، تحلیل و مدیریت فرمول‌های تغذیه گیاه در سیستم‌های کشت بدون خاک، هیدروپونیک و گلخانه‌های مدرن است. این نرم‌افزار با بهره‌گیری از الگوریتم‌های علمی معتبر و پایگاه داده‌ای جامع از کودها، امکان محاسبه دقیق فرمول غذایی، تحلیل آب و پساب، تعادل یونی و بهینه‌سازی هزینه را فراهم می‌کند.
+The optimization problem is formulated as:
 
-🎯 چکیده اجرایی
-ProFertilizer یک سامانه جامع و مبتنی بر علم تغذیه گیاه است که فرآیند پیچیده‌ی فرمول‌نویسی کود در سیستم‌های کشت بدون خاک، هیدروپونیک، و گلخانه‌های مدرن را هوشمندسازی می‌کند. این نرم‌افزار که محصول شرکت فارم تک است، با ترکیب دانش شیمی کشاورزی، الگوریتم‌های بهینه‌سازی عددی، و مهندسی نرم‌افزار، امکان محاسبه‌ی دقیق ترکیب کودها، تحلیل کیفی آب، پایش تعادل یونی، و بهینه‌سازی اقتصادی را برای گلخانه‌داران، مشاوران تغذیه، و کارشناسان کشاورزی فراهم می‌آورد.
+```
+min ||Ax-b||²
+subject to x >= 0
+```
 
-هسته‌ی الگوریتمی این سامانه بر مبنای روش NNLS (Non-Negative Least Squares) طراحی شده است که با افزودن لایه‌های تخصصی اعتبارسنجی چون تعادل یونی، بررسی رسوب‌گذاری، محاسبه‌ی EC و pH، و توزیع هوشمند مخازن، به یک راهکار کامل و قابل اتکا برای نیازهای پیچیده‌ی تغذیه‌ی گیاهان در محیط‌های کنترل‌شده تبدیل شده است.
+The system uses Non-Negative Least Squares (NNLS) to calculate fertilizer quantities while preventing negative solutions.
 
-شاخص عملکرد	مقدار
-دقت تحقق عناصر هدف	۹۵-۱۰۰%
-خطای باقی‌مانده (Residual Error)	< ۱۰ واحد
-زمان همگرایی	< ۵۰ میلی‌ثانیه
-عناصر پشتیبانی‌شده	۱۵ عنصر اصلی
-تعداد کودهای سیستمی	۴۲ کود استاندارد
-تلرانس تعادل یونی	۰.۵ meq/L
-🚀 ویژگی‌های کلیدی
-ویژگی	توضیح
-🔐 احراز هویت امن	ثبت‌نام و ورود با توکن‌های نشست ذخیره‌شده در دیتابیس
-💧 آنالیز آب و پساب	محاسبه خودکار مقادیر تامینی بر اساس درصد اختلاط آب و پساب
-🎯 عناصر هدف	تعیین سطح دقیق عناصر غذایی با اعتبارسنجی تعادل یونی
-🧠 بهینه‌سازی خودکار	استفاده از الگوریتم NNLS برای محاسبه بهترین ترکیب کودها
-🧪 پایگاه داده کودها	بیش از ۴۲ کود استاندارد به‌همراه ترکیب عناصر و قیمت
-📊 تفسیر هوشمند	تولید گزارش‌های جامع با توصیه‌های اصلاحی
-🗄️ مدیریت مخازن	تقسیم خودکار کودها در مخازن A، B و C بر اساس سازگاری شیمیایی
-🌓 حالت روشن/تاریک	نمایش مطابق با نور محیط
-🌐 دو زبانه	پشتیبانی کامل از زبان‌های فارسی و انگلیسی
-🖨️ چاپ گزارش	خروجی قابل چاپ از تمام بخش‌ها
-🧠 معماری الگوریتمی
-هسته الگوریتمی: NNLS و روش‌های بهینه‌سازی
-فرمول‌بندی ریاضی مسئله
-مسئله‌ی فرمول‌نویسی کود را می‌توان به صورت زیر فرمول‌بندی کرد:
-
-min
-⁡
-x
-≥
-0
-∥
-A
-x
-−
-b
-∥
-2
-2
-min 
-x≥0
-​
- ∥Ax−b∥ 
-2
-2
-​
- 
-
-که در آن:
-
-A ∈ ℝᵐˣⁿ = ماتریس ضرایب (m عنصر، n کود)
-
-x ∈ ℝⁿ = بردار وزن‌ها (مقدار مصرف هر کود)
-
-b ∈ ℝᵐ = بردار اهداف (نیاز خالص هر عنصر)
-
-ساخت ماتریس ضرایب (A)
-هر ستون از ماتریس A مربوط به یک کود است و هر سطر مربوط به یک عنصر. مقدار هر خانه به صورت زیر محاسبه می‌شود:
-
-A
-i
-j
-=
-درصد عنصر 
-i
- در کود 
-j
-100
-×
-خلوص کود 
-j
-A 
-ij
-​
- = 
-100
-درصد عنصر i در کود j
-​
- ×خلوص کود j
-
-بردار هدف (b)
-بردار هدف با کسر عناصر موجود در آب از مقادیر هدف محاسبه می‌شود:
-
-b
-i
-=
-max
-⁡
-(
-0
-,
-Target
-i
-−
-Water
-i
-)
-b 
-i
-​
- =max(0,Target 
-i
-​
- −Water 
-i
-​
- )
-
-الگوریتم NNLS
-الگوریتم NNLS توسط Lawson و Hanson در سال ۱۹۷۴ معرفی شد و یکی از پایدارترین روش‌ها برای حل مسائل حداقل مربعات با قید غیرمنفی است.
-
-python
+```python
 from scipy.optimize import nnls
+weights, residual = nnls(A,b)
+```
 
-def optimize_with_nnls(A, b):
-    weights, residual = nnls(A, b)
-    return weights, residual
-روش‌های جایگزین
-روش	فرمول	مزایا	معایب
-NNLS	
-min
-⁡
-∥
-A
-x
-−
-b
-∥
-2
-min∥Ax−b∥ 
-2
-  با 
-x
-≥
-0
-x≥0	تضمین غیرمنفی، پایدار	سرعت متوسط
-LSQ-Linear	
-min
-⁡
-∥
-A
-x
-−
-b
-∥
-2
-min∥Ax−b∥ 
-2
- 	سرعت بالا	ممکن است جواب منفی بدهد
-Cost-based	
-min
-⁡
-(
-∥
-A
-x
-−
-b
-∥
-2
-+
-λ
-∑
-x
-i
-c
-i
-)
-min(∥Ax−b∥ 
-2
- +λ∑x 
-i
-​
- c 
-i
-​
- )	بهینه‌سازی هزینه	پیچیده‌تر
-🏗️ معماری فنی
-لایه	فناوری
-فرانت‌اند	Vue 3، TypeScript، Tailwind CSS، Vite، Pinia
-بک‌اند	FastAPI، Python 3.11، SQLAlchemy
-دیتابیس	PostgreSQL 15 (با پشتیبانی از SQLite برای توسعه)
-احراز هویت	توکن‌های نشست با ذخیره‌سازی در دیتابیس
-بهینه‌سازی	NumPy، SciPy (الگوریتم NNLS)
-HTTP Client	Axios
-Containerization	Docker، Docker Compose
-📁 ساختار پروژه
-text
-FarmTech-ProFertilizer/
-│
-├── backend/                              # 📁 بک‌اند FastAPI
-│   ├── app/
-│   │   ├── main.py                       # 🚀 نقطه ورود برنامه
-│   │   ├── config.py                     # ⚙️ تنظیمات (PostgreSQL)
-│   │   ├── models.py                     # 📊 مدل‌های دیتابیس
-│   │   ├── schemas.py                    # 📝 طرح‌های Pydantic
-│   │   ├── crud.py                       # 📂 عملیات CRUD
-│   │   ├── security.py                   # 🔒 احراز هویت و توکن
-│   │   ├── database.py                   # 🗄️ اتصال به PostgreSQL
-│   │   ├── routes/                       # 🛣️ مسیرهای API
-│   │   └── seeds/                        # 🌱 داده‌های اولیه
-│   ├── tests/                            # 🧪 تست‌های جامع
-│   └── requirements.txt                  # 📦 وابستگی‌ها
-│
-├── frontend/                             # 📁 فرانت‌اند Vue 3
-│   ├── src/
-│   │   ├── components/                   # 📁 کامپوننت‌ها
-│   │   ├── store/                        # 📁 مدیریت State (Pinia)
-│   │   ├── composables/                  # 📁 توابع ترکیبی
-│   │   ├── services/                     # 📁 ارتباط با API
-│   │   ├── types/                        # 📁 تعاریف TypeScript
-│   │   └── views/                        # 📁 صفحات اصلی
-│   ├── public/fonts/                     # 📁 فونت‌های فارسی
-│   ├── package.json                      # 📦 وابستگی‌ها
-│   └── vite.config.ts                    # ⚙️ تنظیمات Vite
-│
-├── scripts/                              # 📁 اسکریپت‌های مدیریتی
-│   ├── cli.py                            # 🖥️ منوی خط فرمان (CLI)
-│   └── init_db.py                        # 🗄️ مقداردهی اولیه دیتابیس
-│
-├── docker-compose.yml                    # 🐳 Docker Compose
-├── Dockerfile.backend                    # 🐳 Dockerfile بک‌اند
-├── Dockerfile.frontend                   # 🐳 Dockerfile فرانت‌اند
-├── .env                                  # 🔐 متغیرهای محیطی
-├── .env.example                          # 📄 نمونه متغیرهای محیطی
-└── README.md                             # 📄 این مستندات
-🚀 نصب و راه‌اندازی
-پیش‌نیازها
-Docker 24.0+
+Validation stages include:
 
-Docker Compose 2.20+
+- Water subtraction
+- Target vector generation
+- Matrix construction
+- NNLS optimization
+- Residual validation
+- Ionic balance
+- Tank compatibility
+- EC estimation
+- Recommendation generation
 
-Git
+## Architecture
 
-روش سریع با Docker
-bash
-# ۱. کلون کردن مخزن
+```text
+User
+ │
+Vue 3 + TypeScript
+ │
+Axios
+ │
+FastAPI REST API
+ │
+Business Logic
+ │
+NNLS Optimizer
+ │
+SQLAlchemy
+ │
+PostgreSQL
+```
+
+## Technology Stack
+
+| Layer | Technology |
+|---|---|
+|Frontend|Vue3, TypeScript, Tailwind, Vite|
+|Backend|FastAPI, Python|
+|Database|PostgreSQL|
+|Scientific|NumPy, SciPy|
+|Container|Docker|
+
+## Folder Structure
+
+```text
+backend/
+ frontend/
+ scripts/
+ docs/
+ docker/
+ tests/
+ README.md
+```
+
+## Installation
+
+```bash
 git clone https://github.com/yourusername/FarmTech-ProFertilizer.git
 cd FarmTech-ProFertilizer
-
-# ۲. کپی و ویرایش فایل محیطی
 cp .env.example .env
-# ویرایش .env با تنظیمات مورد نظر
+docker compose up --build -d
+```
 
-# ۳. ساختن و اجرای سرویس‌ها
-docker-compose up --build -d
+### Manual
 
-# ۴. بررسی وضعیت
-docker-compose ps
-
-# ۵. مشاهده لاگ‌ها
-docker-compose logs -f
-
-# ۶. مقداردهی اولیه دیتابیس (اختیاری - خودکار انجام می‌شود)
-docker-compose exec backend python scripts/init_db.py
-روش دستی (بدون Docker)
-bash
-# ----- بک‌اند -----
+```bash
 cd backend
-python -m venv venv
-source venv/bin/activate        # در ویندوز: venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload
+```
 
-# ----- فرانت‌اند (در ترمینال جدید) -----
+```bash
 cd frontend
 npm install
 npm run dev
-🌐 دسترسی به برنامه
-سرویس	آدرس
-فرانت‌اند	http://localhost:3000
-بک‌اند (API)	http://localhost:8000
-مستندات API	http://localhost:8000/docs
-سلامت سرور	http://localhost:8000/health
-اطلاعات کاربر تست
-فیلد	مقدار
-شماره تلفن	09121234567
-رمز عبور	Test@123456
-🧪 اجرای تست‌ها
-bash
-# با Docker
-docker-compose exec backend python tests/test_all.py
+```
 
-# یا از طریق CLI
-python scripts/cli.py
-# سپس گزینه ۵ را انتخاب کنید
-🐳 دستورات مفید Docker
-bash
-# مشاهده لاگ‌های یک سرویس خاص
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f db
+## API
 
-# ورود به کانتینر بک‌اند
-docker-compose exec backend bash
+### Endpoint 1
+`GET /api/v1/example1`
 
-# ورود به دیتابیس
-docker-compose exec db psql -U postgres -d farmtech_db
+Description placeholder.
 
-# توقف سرویس‌ها
-docker-compose down
+### Endpoint 2
+`GET /api/v1/example2`
 
-# توقف و حذف کامل داده‌ها
-docker-compose down -v
+Description placeholder.
 
-# بازسازی و اجرا
-docker-compose up --build -d
+### Endpoint 3
+`GET /api/v1/example3`
 
-# بررسی وضعیت سلامت
-docker-compose ps
+Description placeholder.
 
-# مشاهده استفاده از منابع
-docker stats
+### Endpoint 4
+`GET /api/v1/example4`
 
-# ری‌استارت یک سرویس
-docker-compose restart backend
-docker-compose restart frontend
+Description placeholder.
 
-# ورود به شل فرانت‌اند
-docker-compose exec frontend sh
-💾 بکاپ دیتابیس
-bash
-# بکاپ گرفتن از دیتابیس
-docker-compose exec db pg_dump -U postgres -d farmtech_db > backup_$(date +%Y%m%d_%H%M%S).sql
+### Endpoint 5
+`GET /api/v1/example5`
 
-# ریستور بکاپ
-cat backup.sql | docker-compose exec -T db psql -U postgres -d farmtech_db
-🔧 عیب‌یابی
-❌ خطای اتصال به دیتابیس
-bash
-# بررسی آمادگی دیتابیس
-docker-compose exec db pg_isready -U postgres
+Description placeholder.
 
-# مشاهده لاگ‌های دیتابیس
-docker-compose logs db
+### Endpoint 6
+`GET /api/v1/example6`
 
-# ریستارت دیتابیس
-docker-compose restart db
-❌ خطای psycopg2
-bash
-# اطمینان از نصب پکیج‌های مورد نیاز در Dockerfile
-apt-get install -y gcc libpq-dev
-❌ خطای پورت درگیر
-bash
-# بررسی پورت‌های درگیر
-sudo lsof -i :8000
-sudo lsof -i :3000
-sudo lsof -i :5432
+Description placeholder.
 
-# کشتن پروسه درگیر
-sudo kill -9 <PID>
-📚 منابع علمی
-Resh, H. M. (2012). Hydroponic Food Production: A Definitive Guidebook for the Advanced Home Gardener and the Commercial Hydroponic Grower. CRC Press.
+### Endpoint 7
+`GET /api/v1/example7`
 
-Jones, J. B. (2016). Hydroponics: A Practical Guide for the Soilless Grower. CRC Press.
+Description placeholder.
 
-Lawson, C. L., & Hanson, R. J. (1974). Solving Least Squares Problems. Prentice-Hall.
+### Endpoint 8
+`GET /api/v1/example8`
 
-Peckenpaugh, D. (2015). Hydroponic Solutions: Volume 1. Growing Edge Publications.
+Description placeholder.
 
-University of Florida, IFAS Extension. (2020). Tomato Production in Florida.
+### Endpoint 9
+`GET /api/v1/example9`
 
-Nielsen, N. E. (2006). Plant Nutrition and Fertilization. Springer.
+Description placeholder.
 
-Barker, A. V. & Pilbeam, D. J. (2007). Handbook of Plant Nutrition. CRC Press.
+### Endpoint 10
+`GET /api/v1/example10`
 
-👨‍💻 توسعه‌دهنده
-امید رحمانی
-توسعه‌دهنده ارشد و طراح سیستم
+Description placeholder.
 
-ایمیل: info@farmtech.ir
+## Database
 
-گیت‌هاب: github.com/omidrph
+Core tables:
 
-📄 مجوز
-نرم‌افزار اختصاصی (Proprietary)
+- users
+- fertilizers
+- nutrient_targets
+- water_analysis
+- recommendations
+- reports
+- sessions
+- audit_logs
 
-© ۲۰۲۶ FarmTech. تمامی حقوق محفوظ است.
+## Authentication
 
-این نرم‌افزار متعلق به FarmTech بوده و هرگونه کپی، توزیع، تغییر یا استفاده غیرمجاز از آن ممنوع می‌باشد.
-برای دریافت مجوز، با ایمیل زیر تماس بگیرید:
-📧 info@farmtech.ir
+Session tokens stored securely in the database with protected endpoints.
 
-📞 ارتباط با ما
-ایمیل: info@farmtech.ir
+## Testing
 
-وب‌سایت: www.farmtech.ir
+```bash
+docker compose exec backend python tests/test_all.py
+pytest
+```
 
-تلفن: ۰۲۱-۸۸۴۱۴۶۷۹
+## Performance
+
+| Metric | Value |
+|---|---:|
+|Optimization|<50 ms|
+|Supported nutrients|15|
+|Supported fertilizers|42|
+|Residual error|<10|
+|Accuracy|95-100%|
+
+## Troubleshooting
+
+- Verify database connectivity.
+- Check Docker logs.
+- Confirm environment variables.
+- Validate API health endpoint.
+- Ensure migrations are applied.
+
+## Roadmap
+
+- AI assistant
+- Mobile application
+- Advanced reporting
+- Cloud synchronization
+- IoT integration
+- Sensor connectivity
+- Cost optimization improvements
+- Multi-greenhouse support
+
+## References
+
+- Lawson & Hanson – Solving Least Squares Problems.
+- Howard Resh – Hydroponic Food Production.
+- Handbook of Plant Nutrition.
+- IFAS Extension publications.
+
+## License
+
+Proprietary Software © FarmTech.
