@@ -1,0 +1,7 @@
+# ============================================================
+# FarmTech - Frontend Production Environment Variables
+# ============================================================
+
+# ===== API URLs =====
+VITE_API_URL=https://your-domain.com/api/v1
+VITE_BACKEND_URL=https://your-domain.com

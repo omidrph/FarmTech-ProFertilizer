@@ -1,0 +1,41 @@
+# ============================================================
+# FarmTech - Production Environment Variables
+# ============================================================
+
+# ===== Database =====
+POSTGRES_USER=farmtech_user
+POSTGRES_PASSWORD=your-strong-password-here
+POSTGRES_DB=farmtech_db
+DATABASE_URL=postgresql://farmtech_user:your-strong-password-here@db:5432/farmtech_db
+
+# ===== Security =====
+SECRET_KEY=your-super-secret-key-min-32-characters-change-this
+
+# ===== App =====
+APP_NAME=FarmTech - ProFertilizer
+APP_VERSION=0.1.0
+DEBUG=False
+
+# ===== CORS =====
+CORS_ORIGINS=["https://your-domain.com","https://www.your-domain.com","http://your-domain.com"]
+
+# ===== Frontend API URL =====
+VITE_API_URL=https://your-domain.com/api/v1
+VITE_BACKEND_URL=https://your-domain.com
+
+# ===== Rate Limiting =====
+RATE_LIMIT_MAX_REQUESTS=5
+RATE_LIMIT_WINDOW_SECONDS=300
+
+# ===== Account Lock =====
+MAX_FAILED_ATTEMPTS=5
+ACCOUNT_LOCK_MINUTES=15
+
+# ===== Session =====
+SESSION_EXPIRY_HOURS=24
+SESSION_INACTIVITY_DAYS=30
+
+# ===== SMS (Optional) =====
+SMS_PROVIDER=kavenegar
+SMS_API_KEY=your-sms-api-key
+SMS_SENDER_NUMBER=1000xxxx
