@@ -5,6 +5,7 @@
 
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 import logging
 
 from app.models import User
@@ -15,31 +16,71 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# CRUD برای User (کاربر)
+# CRUD برای User (کاربر) - نسخه نهایی با مدیریت خطا
 # ============================================================
 
 def create_user(db: Session, user_data: UserCreate) -> User:
-    """ایجاد کاربر جدید"""
+    """
+    ایجاد کاربر جدید
+    
+    Returns:
+        User: کاربر ایجاد شده
+    
+    Raises:
+        ValueError: اگر خطایی در ایجاد کاربر رخ دهد
+    """
     try:
+        # اعتبارسنجی ورودی
+        if not user_data.phone_number:
+            raise ValueError("شماره تلفن نمی‌تواند خالی باشد")
+        
+        if not user_data.password:
+            raise ValueError("رمز عبور نمی‌تواند خالی باشد")
+        
+        if len(user_data.phone_number) != 11:
+            raise ValueError("شماره تلفن باید ۱۱ رقم باشد")
+        
+        if not user_data.phone_number.startswith("09"):
+            raise ValueError("شماره تلفن باید با 09 شروع شود")
+        
+        # هش کردن رمز عبور
         hashed_password = get_password_hash(user_data.password)
         
+        # ایجاد کاربر
         db_user = User(
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             phone_number=user_data.phone_number,
-            password_hash=hashed_password
+            password_hash=hashed_password,
+            is_active=True,
+            failed_attempts=0
         )
         
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
         
-        logger.info(f"User created: {db_user.id} - {db_user.phone_number}")
+        logger.info(f"✅ User created: {db_user.id} - {db_user.phone_number}")
         return db_user
+        
+    except IntegrityError as e:
+        db.rollback()
+        # خطای یکتایی (Duplicate)
+        if "unique" in str(e).lower() or "duplicate" in str(e).lower():
+            logger.error(f"Duplicate phone number: {user_data.phone_number}")
+            raise ValueError("این شماره تلفن قبلاً ثبت شده است")
+        logger.error(f"Integrity error creating user: {e}")
+        raise ValueError(f"خطا در ایجاد کاربر: {str(e)}")
+        
+    except ValueError:
+        # خطاهای اعتبارسنجی را دوباره raise می‌کنیم
+        db.rollback()
+        raise
+        
     except Exception as e:
         db.rollback()
-        logger.error(f"Error creating user: {e}")
-        raise e
+        logger.error(f"Unexpected error creating user: {e}")
+        raise ValueError(f"خطا در ایجاد کاربر: {str(e)}")
 
 
 def get_user_by_id(db: Session, user_id: int) -> Optional[User]:

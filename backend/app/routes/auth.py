@@ -59,83 +59,149 @@ def register(
     """
     ثبت‌نام کاربر جدید با اعتبارسنجی امنیتی
     """
+    # دریافت IP و User-Agent
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("User-Agent", "unknown")
+    
+    # ============================================================
+    # مرحله ۱: اعتبارسنجی اولیه داده‌ها
+    # ============================================================
+    
+    # بررسی شماره تلفن
+    if not user_data.phone_number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="شماره تلفن نمی‌تواند خالی باشد"
+        )
+    
+    if len(user_data.phone_number) != 11:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="شماره تلفن باید ۱۱ رقم باشد"
+        )
+    
+    if not user_data.phone_number.startswith("09"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="شماره تلفن باید با 09 شروع شود"
+        )
+    
+    # بررسی رمز عبور
+    if not user_data.password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="رمز عبور نمی‌تواند خالی باشد"
+        )
+    
+    # ============================================================
+    # مرحله ۲: بررسی وجود کاربر تکراری
+    # ============================================================
+    
     try:
-        # دریافت IP و User-Agent
-        client_ip = request.client.host if request.client else "unknown"
-        user_agent = request.headers.get("User-Agent", "unknown")
-        
-        # بررسی وجود کاربر
         existing_user = crud.get_user_by_phone(db, user_data.phone_number)
-        if existing_user:
-            # ثبت رویداد امنیتی
-            log_security_event(
-                db=db,
-                event_type="REGISTER_FAILED",
-                ip_address=client_ip,
-                user_agent=user_agent,
-                endpoint="/auth/register",
-                method="POST",
-                details={"phone": user_data.phone_number, "reason": "User already exists"},
-                severity="WARNING"
-            )
+    except Exception as e:
+        logger.error(f"Error checking existing user: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="خطا در بررسی اطلاعات کاربر"
+        )
+    
+    if existing_user:
+        # ثبت رویداد امنیتی
+        log_security_event(
+            db=db,
+            event_type="REGISTER_FAILED",
+            ip_address=client_ip,
+            user_agent=user_agent,
+            endpoint="/auth/register",
+            method="POST",
+            details={"phone": user_data.phone_number, "reason": "User already exists"},
+            severity="WARNING"
+        )
+        
+        # برگرداندن خطا با پیام واضح
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="این شماره تلفن قبلاً ثبت شده است"
+        )
+    
+    # ============================================================
+    # مرحله ۳: اعتبارسنجی قدرت رمز عبور
+    # ============================================================
+    
+    is_valid, password_message = validate_password_strength(user_data.password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=password_message
+        )
+    
+    # ============================================================
+    # مرحله ۴: ایجاد کاربر
+    # ============================================================
+    
+    try:
+        user = crud.create_user(db, user_data)
+    except ValueError as e:
+        # خطاهای اعتبارسنجی و دیتابیس
+        error_msg = str(e)
+        logger.error(f"Error in create_user: {error_msg}")
+        
+        # اگر پیام خطا حاوی "قبلاً ثبت شده" باشد
+        if "قبلاً ثبت شده" in error_msg:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="این شماره تلفن قبلاً ثبت شده است"
             )
         
-        # اعتبارسنجی قدرت رمز عبور
-        is_valid, password_message = validate_password_strength(user_data.password)
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=password_message
-            )
-        
-        # ایجاد کاربر
-        user = crud.create_user(db, user_data)
-        
-        # ثبت رویداد امنیتی
-        log_security_event(
-            db=db,
-            event_type="REGISTER_SUCCESS",
-            user_id=user.id,
-            ip_address=client_ip,
-            user_agent=user_agent,
-            endpoint="/auth/register",
-            method="POST",
-            details={"phone": user.phone_number}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=error_msg
         )
-        
-        # ایجاد نشست
-        access_token = create_session_token(
-            user_id=user.id,
-            db=db,
-            ip_address=client_ip,
-            user_agent=user_agent
-        )
-        
-        # تنظیم Cookie
-        response.set_cookie(
-            key="access_token",
-            value=access_token,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-            max_age=settings.SESSION_EXPIRY_HOURS * 3600,
-            path="/"
-        )
-        
-        logger.info(f"User registered: {user.id} - {user.phone_number}")
-        return user
-        
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Error in register: {e}")
+        logger.error(f"Unexpected error in create_user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در ثبت‌نام: {str(e)}"
+            detail="خطا در ایجاد کاربر. لطفاً دوباره تلاش کنید."
         )
+    
+    # ============================================================
+    # مرحله ۵: ثبت رویداد و ایجاد نشست
+    # ============================================================
+    
+    # ثبت رویداد امنیتی
+    log_security_event(
+        db=db,
+        event_type="REGISTER_SUCCESS",
+        user_id=user.id,
+        ip_address=client_ip,
+        user_agent=user_agent,
+        endpoint="/auth/register",
+        method="POST",
+        details={"phone": user.phone_number}
+    )
+    
+    # ایجاد نشست
+    access_token = create_session_token(
+        user_id=user.id,
+        db=db,
+        ip_address=client_ip,
+        user_agent=user_agent
+    )
+    
+    # تنظیم Cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.SESSION_EXPIRY_HOURS * 3600,
+        path="/"
+    )
+    
+    logger.info(f"✅ User registered: {user.id} - {user.phone_number}")
+    return user
 
 
 @auth_router.post("/login", response_model=Token)
@@ -302,7 +368,7 @@ def login(
         logger.error(f"Error in login: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در ورود: {str(e)}"
+            detail="خطا در ورود. لطفاً دوباره تلاش کنید."
         )
 
 
@@ -361,7 +427,7 @@ def logout(
         logger.error(f"Error in logout: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در خروج: {str(e)}"
+            detail="خطا در خروج از حساب"
         )
 
 
@@ -382,7 +448,7 @@ def get_me(
         logger.error(f"Error in get_me: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در دریافت اطلاعات کاربر: {str(e)}"
+            detail="خطا در دریافت اطلاعات کاربر"
         )
 
 
@@ -462,7 +528,7 @@ def change_password(
         logger.error(f"Error in change_password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در تغییر رمز عبور: {str(e)}"
+            detail="خطا در تغییر رمز عبور"
         )
 
 
@@ -566,8 +632,6 @@ def forgot_password(
         )
         
         # ذخیره کد در دیتابیس (برای تأیید بعدی)
-        # برای سادگی، کد را در توکن ذخیره می‌کنیم
-        # در محیط تولید، بهتر است از Redis یا جدول جداگانه استفاده کنید
         token_record.token = f"{reset_token}:{verification_code}"
         db.commit()
         
@@ -576,14 +640,14 @@ def forgot_password(
         return {
             "message": "کد تأیید به شماره تلفن شما ارسال شد. لطفاً کد را وارد کنید.",
             "success": True,
-            "reset_id": reset_token[:8]  # برای ردیابی
+            "reset_id": reset_token[:8]
         }
         
     except Exception as e:
         logger.error(f"Error in forgot_password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در درخواست فراموشی رمز: {str(e)}"
+            detail="خطا در درخواست فراموشی رمز عبور"
         )
 
 
@@ -688,7 +752,7 @@ def reset_password(
         logger.error(f"Error in reset_password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در بازنشانی رمز عبور: {str(e)}"
+            detail="خطا در بازنشانی رمز عبور"
         )
 
 
@@ -763,7 +827,7 @@ def enable_2fa(
         logger.error(f"Error enabling 2FA: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در فعال‌سازی 2FA: {str(e)}"
+            detail="خطا در فعال‌سازی تأیید دو مرحله‌ای"
         )
 
 
@@ -840,7 +904,7 @@ def verify_2fa(
         logger.error(f"Error verifying 2FA: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در تأیید 2FA: {str(e)}"
+            detail="خطا در تأیید کد 2FA"
         )
 
 
@@ -910,5 +974,5 @@ def disable_2fa(
         logger.error(f"Error disabling 2FA: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"خطا در غیرفعال‌سازی 2FA: {str(e)}"
+            detail="خطا در غیرفعال‌سازی تأیید دو مرحله‌ای"
         )

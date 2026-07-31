@@ -145,16 +145,16 @@
           </div>
         </Transition>
 
-        <!-- پیام خطا -->
+        <!-- ===== پیام خطا - نمایش خطاهای ثبت‌نام ===== -->
         <Transition name="fade">
-          <div v-if="authError" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-3 mb-4">
+          <div v-if="displayError" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-3 mb-4">
             <div class="flex items-start gap-2">
               <svg class="w-5 h-5 text-danger-600 dark:text-danger-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
               <div class="flex-1">
-                <p class="text-danger-700 dark:text-danger-400 text-sm">{{ authError }}</p>
-                <button @click="authError = null" class="text-xs text-danger-600 hover:text-danger-800 dark:hover:text-danger-300 mt-1 underline">
+                <p class="text-danger-700 dark:text-danger-400 text-sm font-medium">{{ displayError }}</p>
+                <button @click="clearError" class="text-xs text-danger-600 hover:text-danger-800 dark:hover:text-danger-300 mt-1 underline">
                   بستن
                 </button>
               </div>
@@ -266,7 +266,6 @@
                 </svg>
               </button>
             </div>
-            <!-- فقط متن راهنمای رمز عبور یکپارچه -->
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -275,7 +274,7 @@
             </p>
           </div>
 
-          <!-- دکمه ثبت‌نام - همیشه فعال با اعتبارسنجی -->
+          <!-- دکمه ثبت‌نام -->
           <button
             type="submit"
             :disabled="isLoading || connectionStatus === 'disconnected'"
@@ -330,7 +329,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import axios from 'axios';
@@ -347,8 +346,26 @@ const registerSuccess = ref(false);
 const isDarkMode = ref(false);
 const currentSlide = ref(0);
 const submitted = ref(false);
+const localError = ref('');
 
 const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checking');
+
+// ===== ترکیب خطاها از authError و localError =====
+const displayError = computed(() => {
+  // اولویت با authError است (خطای دریافتی از سرور)
+  if (authError.value) {
+    return authError.value;
+  }
+  return localError.value;
+});
+
+// ===== وقتی authError تغییر کرد، آن را به کاربر نشان بده =====
+watch(authError, (newError) => {
+  if (newError) {
+    console.log('📢 نمایش خطا به کاربر:', newError);
+    // خطا به طور خودکار از طریق displayError نمایش داده می‌شود
+  }
+});
 
 const slides = [
   {
@@ -409,7 +426,14 @@ const retryConnection = async () => {
   await checkConnection();
 };
 
-// ===== 🔐 اعتبارسنجی رمز عبور (منطق نگه داشته شده، نمایش حذف شده) =====
+const clearError = () => {
+  localError.value = '';
+  if (authError.value) {
+    authError.value = null;
+  }
+};
+
+// ===== اعتبارسنجی رمز عبور =====
 const passwordRequirements = computed(() => {
   const p = password.value || '';
   return {
@@ -429,6 +453,7 @@ const isPasswordValid = computed(() => {
 
 const handleRegister = async () => {
   submitted.value = true;
+  localError.value = '';
   
   if (connectionStatus.value !== 'connected') {
     const connected = await checkConnection();
@@ -438,6 +463,7 @@ const handleRegister = async () => {
   }
 
   if (!isPasswordValid.value) {
+    localError.value = 'لطفاً رمز عبور معتبر وارد کنید (حداقل ۸ کاراکتر با حروف بزرگ، کوچک، عدد و کاراکتر خاص)';
     return;
   }
 
@@ -453,6 +479,12 @@ const handleRegister = async () => {
     setTimeout(() => {
       router.push('/');
     }, 800);
+  } else {
+    // اگر authError خالی نبود، آن را نمایش بده
+    if (authError.value) {
+      localError.value = authError.value;
+      console.log('📢 خطای ثبت‌نام دریافت شد:', authError.value);
+    }
   }
 };
 

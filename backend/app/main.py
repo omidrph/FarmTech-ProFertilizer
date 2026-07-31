@@ -130,21 +130,21 @@ app.add_middleware(
 )
 
 # ============================================================
-# Exception Handlers (امنیتی)
+# Exception Handlers (امنیتی) - ✅ اصلاح شده برای نمایش خطاهای دقیق
 # ============================================================
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
-    """مدیریت خطاهای HTTP - نمایش پیام‌های عمومی"""
+    """مدیریت خطاهای HTTP - نمایش پیام‌های دقیق"""
     logger.error(f"HTTP Exception: {exc.status_code} - {exc.detail}")
     
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": "خطا در پردازش درخواست", "status_code": exc.status_code}
+        content={"detail": exc.detail, "status_code": exc.status_code}
     )
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
-    """مدیریت خطاهای اعتبارسنجی - عدم افشای جزئیات فنی"""
+    """مدیریت خطاهای اعتبارسنجی"""
     errors = []
     for error in exc.errors():
         errors.append({
@@ -165,25 +165,34 @@ async def validation_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    """مدیریت خطاهای عمومی - عدم افشای جزئیات فنی"""
+    """
+    مدیریت خطاهای عمومی - نمایش پیام‌های دقیق برای خطاهای خاص
+    """
     logger.error(f"Unhandled Exception: {str(exc)}")
     logger.error(traceback.format_exc())
     
+    # ✅ اگر خطا از نوع ValueError باشد، پیام آن را برگردان
+    if isinstance(exc, ValueError):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": str(exc), "status_code": 400}
+        )
+    
+    # در حالت Debug، جزئیات کامل خطا نمایش داده شود
     if settings.DEBUG:
         return JSONResponse(
             status_code=500,
             content={
                 "detail": "خطای داخلی سرور",
                 "message": str(exc),
-                "traceback": traceback.format_exc()
+                "traceback": traceback.format_exc(),
+                "status_code": 500
             }
         )
     
     return JSONResponse(
         status_code=500,
-        content={
-            "detail": "خطای داخلی سرور. لطفاً با پشتیبانی تماس بگیرید."
-        }
+        content={"detail": "خطای داخلی سرور. لطفاً با پشتیبانی تماس بگیرید.", "status_code": 500}
     )
 
 # ============================================================

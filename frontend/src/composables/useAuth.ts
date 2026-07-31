@@ -15,29 +15,30 @@ export function useAuth() {
 
   // ===== تنظیم توکن از Cookie =====
   const getTokenFromCookie = (): string | null => {
-    // تلاش برای دریافت توکن از Cookie
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'access_token') {
-        return value;
+    try {
+      const cookies = document.cookie.split(';');
+      for (const cookie of cookies) {
+        const trimmed = cookie.trim();
+        if (trimmed.startsWith('access_token=')) {
+          return trimmed.substring('access_token='.length);
+        }
       }
+      return null;
+    } catch {
+      return null;
     }
-    return null;
   };
 
   // ===== دریافت توکن =====
   const getToken = (): string | null => {
     if (token.value) return token.value;
     
-    // تلاش از Cookie
     const cookieToken = getTokenFromCookie();
     if (cookieToken) {
       token.value = cookieToken;
       return cookieToken;
     }
     
-    // Fallback به localStorage (برای سازگاری با نسخه‌های قبلی)
     const storedToken = localStorage.getItem('access_token');
     if (storedToken) {
       token.value = storedToken;
@@ -49,7 +50,6 @@ export function useAuth() {
 
   const setToken = (newToken: string) => {
     token.value = newToken;
-    // برای سازگاری، در localStorage هم ذخیره کن (فعلاً)
     localStorage.setItem('access_token', newToken);
   };
 
@@ -74,7 +74,7 @@ export function useAuth() {
           Authorization: `Bearer ${currentToken}`
         },
         timeout: 5000,
-        withCredentials: true // برای ارسال Cookie
+        withCredentials: true
       });
       
       if (response.data) {
@@ -109,7 +109,6 @@ export function useAuth() {
       console.log('✅ Registration response:', response.status);
       
       if (response.status === 200 || response.status === 201) {
-        // دریافت توکن از Cookie
         const cookieToken = getTokenFromCookie();
         if (cookieToken) {
           setToken(cookieToken);
@@ -117,14 +116,12 @@ export function useAuth() {
           return true;
         }
         
-        // Fallback: از response
         if (response.data?.access_token) {
           setToken(response.data.access_token);
           await fetchUser();
           return true;
         }
         
-        // اگر توکنی نبود، با اطلاعات کاربر وارد شو
         await login(data.phone_number, data.password);
         return true;
       }
@@ -132,25 +129,99 @@ export function useAuth() {
     } catch (err: any) {
       console.error('❌ Registration error:', err.response?.data);
       
-      if (err.response?.status === 400) {
-        const detail = err.response?.data?.detail;
-        if (typeof detail === 'string') {
-          error.value = detail;
-        } else if (detail && typeof detail === 'object' && 'msg' in detail) {
-          error.value = detail.msg;
-        } else {
-          error.value = 'این شماره تلفن قبلاً ثبت شده است';
+      // ================================================================
+      // مدیریت دقیق تمام انواع خطاها
+      // ================================================================
+      
+      if (err.response) {
+        const status = err.response.status;
+        const responseData = err.response.data;
+        
+        // === خطاهای 400 (Bad Request) ===
+        if (status === 400) {
+          // حالت 1: detail به صورت string
+          if (typeof responseData?.detail === 'string') {
+            error.value = responseData.detail;
+          }
+          // حالت 2: detail به صورت object
+          else if (responseData?.detail && typeof responseData.detail === 'object') {
+            if (responseData.detail.msg) {
+              error.value = responseData.detail.msg;
+            } else if (responseData.detail.message) {
+              error.value = responseData.detail.message;
+            } else {
+              error.value = 'اطلاعات وارد شده صحیح نیست. لطفاً بررسی کنید.';
+            }
+          }
+          // حالت 3: message مستقیم
+          else if (responseData?.message) {
+            error.value = responseData.message;
+          }
+          // حالت 4: errors array
+          else if (responseData?.errors && Array.isArray(responseData.errors)) {
+            const firstError = responseData.errors[0];
+            error.value = firstError?.message || firstError?.msg || 'خطا در اعتبارسنجی اطلاعات.';
+          }
+          // حالت پیش‌فرض
+          else {
+            error.value = 'این شماره تلفن قبلاً ثبت شده است یا اطلاعات وارد شده معتبر نیست.';
+          }
+          return false;
         }
-      } else if (err.response?.status === 422) {
-        const errors = err.response?.data?.errors;
-        if (errors && Array.isArray(errors)) {
-          error.value = errors.map((e: any) => e.message).join(', ');
-        } else {
-          error.value = 'خطا در اعتبارسنجی اطلاعات';
+        
+        // === خطاهای 422 (Validation Error) ===
+        if (status === 422) {
+          if (typeof responseData?.detail === 'string') {
+            error.value = responseData.detail;
+          } else if (responseData?.errors && Array.isArray(responseData.errors)) {
+            const firstError = responseData.errors[0];
+            error.value = `${firstError.field || 'ورودی'}: ${firstError.message || 'نامعتبر است'}`;
+          } else {
+            error.value = 'خطا در اعتبارسنجی داده‌ها. لطفاً اطلاعات را بررسی کنید.';
+          }
+          return false;
         }
-      } else {
-        error.value = err.response?.data?.detail || 'خطا در ثبت‌نام';
+        
+        // === خطاهای 403 (Forbidden) ===
+        if (status === 403) {
+          error.value = responseData?.detail || 'حساب کاربری غیرفعال یا قفل شده است.';
+          return false;
+        }
+        
+        // === خطاهای 404 (Not Found) ===
+        if (status === 404) {
+          error.value = responseData?.detail || 'منبع درخواستی یافت نشد.';
+          return false;
+        }
+        
+        // === خطاهای 429 (Too Many Requests) ===
+        if (status === 429) {
+          error.value = responseData?.detail || 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً چند دقیقه دیگر تلاش کنید.';
+          return false;
+        }
+        
+        // === سایر خطاهای 4xx و 5xx ===
+        if (status >= 400 && status < 600) {
+          if (typeof responseData?.detail === 'string') {
+            error.value = responseData.detail;
+          } else if (responseData?.message) {
+            error.value = responseData.message;
+          } else {
+            error.value = `خطا در ثبت‌نام (کد ${status}). لطفاً دوباره تلاش کنید.`;
+          }
+          return false;
+        }
       }
+      
+      // === خطاهای شبکه ===
+      if (err.code === 'ECONNABORTED') {
+        error.value = 'اتصال به سرور زمان‌بر است. لطفاً دوباره تلاش کنید.';
+      } else if (err.message === 'Network Error') {
+        error.value = 'ارتباط با سرور برقرار نیست. لطفاً مطمئن شوید بک‌اند در حال اجراست.';
+      } else {
+        error.value = err.message || 'خطای ناشناخته در ثبت‌نام.';
+      }
+      
       return false;
     } finally {
       isLoading.value = false;
@@ -174,7 +245,6 @@ export function useAuth() {
 
       console.log('✅ Login response:', response.status);
 
-      // دریافت توکن از Cookie
       const cookieToken = getTokenFromCookie();
       if (cookieToken) {
         setToken(cookieToken);
@@ -185,7 +255,6 @@ export function useAuth() {
         }
       }
 
-      // Fallback: از response
       if (response.data?.access_token) {
         const newToken = response.data.access_token;
         setToken(newToken);
@@ -227,7 +296,7 @@ export function useAuth() {
     }
   };
 
-  // ===== خروج =====
+  // ===== خروج - نسخه کامل اصلاح شده =====
   const logout = async () => {
     const currentToken = getToken();
     
@@ -241,13 +310,34 @@ export function useAuth() {
           timeout: 2000,
           withCredentials: true
         });
-      } catch {
-        // خطا را نادیده بگیر
+      } catch (error) {
+        // خطا را نادیده بگیر - حتی اگر سرور پاسخ ندهد، ما توکن را پاک می‌کنیم
+        console.warn('Logout API error (ignored):', error);
       }
     }
     
-    clearToken();
-    console.log('👋 Logged out');
+    // ============================================================
+    // ✅ پاک کردن کامل تمام state ها
+    // ============================================================
+    
+    // 1. پاک کردن توکن از حافظه
+    token.value = null;
+    
+    // 2. پاک کردن کاربر
+    user.value = null;
+    
+    // 3. پاک کردن localStorage
+    localStorage.removeItem('access_token');
+    
+    // 4. پاک کردن cookie (چندین روش برای اطمینان)
+    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=localhost';
+    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.localhost';
+    
+    // 5. پاک کردن error
+    error.value = null;
+    
+    console.log('👋 Logged out - All state cleared');
   };
 
   // ===== بررسی احراز هویت =====

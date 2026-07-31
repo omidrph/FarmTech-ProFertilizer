@@ -138,11 +138,47 @@ const openProfileModal = () => {
   window.dispatchEvent(new CustomEvent('open-profile-modal'));
 };
 
-// ===== خروج از حساب =====
+// ============================================================
+// ✅ خروج از حساب - نسخه اصلاح شده
+// ============================================================
 const handleLogout = async () => {
-  if (confirm('آیا از خروج از حساب خود اطمینان دارید؟')) {
-    logout();
+  // بررسی اینکه کاربر واقعاً لاگین است
+  if (!user.value) {
+    // اگر کاربر لاگین نیست، مستقیم به صفحه ورود برو
     await router.push('/login');
+    return;
+  }
+
+  // تأیید از کاربر
+  if (!confirm('آیا از خروج از حساب خود اطمینان دارید؟')) {
+    return;
+  }
+
+  try {
+    // 1. اجرای تابع logout که توکن را پاک می‌کند
+    await logout();
+    
+    // 2. پاک کردن state کاربر
+    user.value = null;
+    
+    // 3. پاک کردن localStorage
+    localStorage.removeItem('access_token');
+    
+    // 4. پاک کردن cookie (از طریق سرور انجام می‌شود ولی برای اطمینان)
+    document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    
+    // 5. هدایت به صفحه ورود
+    await router.push('/login');
+    
+    // 6. رفرش کامل صفحه برای پاک شدن کامل state
+    // این کار باعث می‌شود همه چیز ریست شود
+    window.location.href = '/login';
+    
+  } catch (error) {
+    console.error('❌ Error during logout:', error);
+    // اگر خطایی رخ داد، باز هم کاربر را به صفحه ورود ببر
+    await router.push('/login');
+    window.location.href = '/login';
   }
 };
 
