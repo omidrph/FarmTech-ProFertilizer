@@ -7,7 +7,9 @@ import type {
     OptimizationLogResponse
 } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// 🔧 همان اصلاح useApi.ts: پیش‌فرض به مسیر نسبی هم‌مبدأ تغییر کرد چون
+// آدرس لوکال قبلی در build نهایی برای کاربران واقعی کار نمی‌کرد.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 // ============================================================
 // Types برای APIهای محاسباتی

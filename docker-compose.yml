@@ -14,8 +14,15 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
-    ports:
-      - "5432:5432"
+    # 🔧 پورت 5432 دیگر به بیرون (اینترنت/هاست) expose نمی‌شود.
+    # قبلاً "5432:5432" بود که یعنی هرکسی که به سرور دسترسی شبکه داشت
+    # می‌توانست مستقیماً به PostgreSQL وصل شود. الان فقط سرویس‌های داخل
+    # همین شبکه‌ی docker (یعنی backend) به آن دسترسی دارند.
+    # اگر برای دیباگ نیاز به اتصال از لپ‌تاپ خودتان دارید، به‌جای باز
+    # کردن این پورت در پروڈاکشن، از SSH tunnel استفاده کنید:
+    #   ssh -L 5432:localhost:5432 user@your-server
+    expose:
+      - "5432"
     networks:
       - farmtech-network
     healthcheck:
@@ -40,14 +47,28 @@ services:
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-farmtech_db}
       - DEBUG=${DEBUG:-False}
-      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-this-in-production}
-      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173","http://127.0.0.1:3000","http://127.0.0.1:5173"]}
+      # 🔧 دیگر مقدار پیش‌فرض ناامن ندارد. این متغیر باید در فایل .env
+      # شما تنظیم شده باشد، وگرنه (طبق اصلاح config.py) برنامه در
+      # DEBUG=False اصلاً بالا نمی‌آید. برای تولید یک مقدار امن:
+      #   python -c "import secrets; print(secrets.token_urlsafe(64))"
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY باید در فایل .env تنظیم شود}
+      # 🔧 اکنون واقعاً استفاده می‌شود (در config.py هم درست شد).
+      # لیستی جدا شده با کاما از دامنه‌های مجاز فرانت‌اند، مثال:
+      # CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
     depends_on:
       db:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
     networks:
       - farmtech-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # ============================================================
   # Frontend (Vue 3) - Production Build
@@ -56,16 +77,28 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      # 🔧 قبلاً VITE_API_URL به‌عنوان environment (runtime) روی این
+      # سرویس ست می‌شد که برای یک build استاتیک Vite کاملاً بی‌اثر است.
+      # اکنون به‌صورت build-arg پاس داده می‌شود تا واقعاً در باندل نهایی
+      # جاسازی شود. مقدار پیش‌فرض یک مسیر نسبی است ("/api/v1") که چون
+      # nginx.conf مسیر "/api/" را به backend پروکسی می‌کند، بدون نیاز
+      # به تنظیم CORS هم روی هر دامنه‌ای درست کار می‌کند.
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: farmtech-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - VITE_API_URL=http://localhost:8000/api/v1
     depends_on:
       - backend
     networks:
       - farmtech-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 # ============================================================
 # Volumes

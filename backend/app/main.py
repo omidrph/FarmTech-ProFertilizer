@@ -17,6 +17,17 @@ import json
 
 from app.config import settings, CORS_ORIGINS
 from app.database import create_tables, SessionLocal
+import re
+
+
+def _mask_db_url(url: str) -> str:
+    """
+    🔧 حذف رمز عبور از DATABASE_URL قبل از نوشتن در لاگ.
+    قبلاً کل DATABASE_URL (شامل رمز عبور PostgreSQL به‌صورت متن ساده)
+    مستقیماً در لاگ‌های startup نوشته می‌شد که یک ریسک امنیتی جدی است
+    (به‌خصوص اگر لاگ‌ها به سرویس مانیتورینگ/فایل قابل‌دسترسی ارسال شوند).
+    """
+    return re.sub(r"(://[^:/]+):[^@]+@", r"\1:***@", url)
 from app.routes import router
 from app.security import get_current_user
 from app.models import User
@@ -110,7 +121,15 @@ async def add_security_headers(request: Request, call_next):
     if settings.DEBUG:
         csp = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://localhost:3000;"
     else:
-        csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://yourdomain.com;"
+        # 🔧 قبلاً "https://yourdomain.com" هاردکد بود که برای هیچ دامنه‌ی
+        # واقعی‌ای کار نمی‌کرد و مرورگر درخواست‌های API را بلاک می‌کرد.
+        # اکنون از همان CORS_ORIGINS که در .env تنظیم می‌شود ساخته می‌شود.
+        allowed_connect = " ".join(CORS_ORIGINS) if CORS_ORIGINS else "'self'"
+        csp = (
+            "default-src 'self'; script-src 'self'; style-src 'self'; "
+            "img-src 'self' data:; font-src 'self' data:; "
+            f"connect-src 'self' {allowed_connect};"
+        )
     
     response.headers["Content-Security-Policy"] = csp
     
@@ -276,7 +295,7 @@ async def startup_event():
     """رویداد شروع برنامه"""
     logger.info(f"🚀 Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"🔧 Debug mode: {settings.DEBUG}")
-    logger.info(f"🗄️ Database URL: {settings.DATABASE_URL}")
+    logger.info(f"🗄️ Database URL: {_mask_db_url(settings.DATABASE_URL)}")
     
     try:
         create_tables()

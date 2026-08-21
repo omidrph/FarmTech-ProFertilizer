@@ -3,8 +3,13 @@ import axios, { type AxiosInstance, type AxiosResponse, type AxiosError } from '
 import { ref } from 'vue';
 
 // استفاده از متغیر محیطی
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+// 🔧 قبلاً پیش‌فرض "http://localhost:8000..." بود که چون این متغیرها فقط
+// در زمان build جایگزین می‌شوند (نه runtime)، در هر دیپلوی واقعی همیشه
+// همین آدرس لوکال در باندل نهایی باقی می‌ماند و برای کاربران واقعی کار
+// نمی‌کرد. اکنون پیش‌فرض یک مسیر نسبی (هم‌مبدأ) است که توسط nginx.conf
+// به backend پروکسی می‌شود و روی هر دامنه‌ای بدون تنظیم اضافه کار می‌کند.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 export function useApi() {
   const isLoading = ref(false);

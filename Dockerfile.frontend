@@ -15,6 +15,24 @@ RUN npm ci
 # Copy source code
 COPY frontend/ .
 
+# ============================================================
+# 🔧 آدرس API به‌صورت Build Argument دریافت می‌شود
+# ============================================================
+# Vite متغیرهای import.meta.env.VITE_* را فقط در لحظه‌ی build جایگزین
+# می‌کند، نه در runtime. قبلاً VITE_API_URL به‌عنوان environment variable
+# روی کانتینر nginx (که فقط فایل‌های استاتیک از پیش build‌شده را serve
+# می‌کند) ست می‌شد که هیچ اثری نداشت و همیشه مقدار fallback
+# "http://localhost:8000/api/v1" در بیلد نهایی باقی می‌ماند.
+# اکنون این مقدار باید در زمان build با --build-arg پاس داده شود
+# (به docker-compose.yml نگاه کنید).
+ARG VITE_API_URL=/api/v1
+ENV VITE_API_URL=${VITE_API_URL}
+
+# 🔧 همین مشکل برای useApi.ts هم وجود داشت (VITE_BACKEND_URL برای
+# درخواست /health) - همان‌جا هم به localhost:8000 فال‌بک می‌کرد.
+ARG VITE_BACKEND_URL=""
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+
 # Build the application
 RUN npm run build
 
