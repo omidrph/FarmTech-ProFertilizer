@@ -36,12 +36,8 @@ services:
       dockerfile: Dockerfile.backend
     container_name: farmtech-backend
     restart: unless-stopped
-    # 🔧 "ports: - 8000:8000" حذف شد. این باعث خطای دیپلوی روی Coolify
-    # می‌شد ("Bind for 0.0.0.0:8000 failed: port is already allocated")
-    # چون پورت 8000 روی سرور از قبل اشغال بود (خود Coolify یا اپ دیگری
-    # از آن استفاده می‌کند). با "expose" فقط داخل شبکه‌ی داکر در دسترس
-    # است و Coolify از طریق پراکسی داخلی خودش (Traefik) به آن وصل می‌شود؛
-    # دیگر نیازی به بایند مستقیم پورت روی هاست نیست.
+    # "ports: - 8000:8000" حذف شد چون باعث تداخل با پورت اشغال‌شده روی
+    # هاست Coolify می‌شد. با "expose" فقط داخل شبکه‌ی داکر در دسترس است.
     expose:
       - "8000"
     volumes:
@@ -59,7 +55,10 @@ services:
     networks:
       - farmtech-network
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      # این healthcheck همین الان دارد درست کار می‌کند (لاگ‌های بک‌اند
+      # هر بار "GET /health - Status: 200" را نشان می‌دهند)، پس دست
+      # نخورده باقی می‌ماند.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -76,19 +75,35 @@ services:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: farmtech-frontend
     restart: unless-stopped
-    # 🔧 "ports: - 3000:3000" هم حذف شد به همان دلیل بالا (تداخل پورت
-    # روی هاست). این سرویس همان سرویسی است که باید دامنه‌ی اصلی سایت
-    # روی آن تنظیم شود؛ لیبل زیر به Coolify می‌گوید کدام سرویس و کدام
-    # پورت داخلی باید پشت دامنه/HTTPS قرار بگیرد.
+    # "ports: - 3000:3000" حذف شد به همان دلیل بالا (تداخل پورت روی هاست).
     expose:
       - "3000"
-    labels:
     depends_on:
       - backend
     networks:
       - farmtech-network
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      # ============================================================
+      # 🔧 اصلاح اصلی: "localhost" به "127.0.0.1" تغییر کرد
+      # ============================================================
+      # علت واقعیِ خطای "no available server" در Traefik این بود که
+      # کانتینر frontend همیشه (unhealthy) می‌ماند. با بررسی مستقیم روی
+      # سرور مشخص شد:
+      #   - nginx واقعاً و درست روی 0.0.0.0:3000 (IPv4) در حال گوش دادن
+      #     بود (تأیید شده با netstat).
+      #   - اما healthcheck از "wget http://localhost:3000/" استفاده
+      #     می‌کرد، و چون این کانفیگ سفارشی (custom) است، اسکریپت
+      #     entrypoint رسمی ایمیج nginx خط "listen [::]:3000;" (یعنی
+      #     IPv6) را به آن اضافه نکرد.
+      #   - داخل کانتینر (Alpine/musl)، هاست‌نیم "localhost" ابتدا به
+      #     آدرس IPv6 لوپ‌بک (::1) resolve می‌شود؛ چون nginx روی IPv6
+      #     گوش نمی‌دهد، اتصال بلافاصله با خطای
+      #     "Connection refused" رد می‌شد و healthcheck همیشه fail
+      #     می‌کرد - حتی وقتی نسخه‌ی IPv4 (127.0.0.1) کاملاً سالم بود.
+      # با تغییر صریح به "127.0.0.1"، این ابهام resolve شدن حذف می‌شود
+      # و healthcheck واقعاً به همان آدرسی وصل می‌شود که nginx رویش
+      # listen می‌کند.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
       interval: 15s
       timeout: 5s
       retries: 5
