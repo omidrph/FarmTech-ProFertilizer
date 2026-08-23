@@ -83,8 +83,6 @@ services:
     expose:
       - "3000"
     labels:
-      - "coolify.managed=true"
-      - "coolify.port=3000"
     depends_on:
       - backend
     networks:
