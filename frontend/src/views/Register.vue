@@ -411,7 +411,11 @@ const toggleTheme = () => {
 const checkConnection = async (): Promise<boolean> => {
   connectionStatus.value = 'checking';
   try {
-    const response = await axios.get('http://localhost:8000/health', {
+    // 🔧 قبلاً آدرس مطلق "http://localhost:8000/health" هاردکد بود که
+    // در پروڈاکشن همیشه fail می‌شد (چون به سیستم خودِ کاربر اشاره
+    // می‌کرد، نه سرور واقعی). اکنون مسیر نسبی است و nginx آن را به
+    // بک‌اند پروکسی می‌کند.
+    const response = await axios.get('/health', {
       timeout: 3000,
     });
     connectionStatus.value = response.status === 200 ? 'connected' : 'disconnected';

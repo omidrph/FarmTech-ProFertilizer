@@ -363,7 +363,12 @@ const toggleTheme = () => {
 const checkConnection = async (): Promise<boolean> => {
   connectionStatus.value = 'checking';
   try {
-    const response = await axios.get('http://localhost:8000/health', {
+    // 🔧 قبلاً آدرس مطلق "http://localhost:8000/health" هاردکد بود که
+    // اصلاً از هیچ متغیر محیطی نمی‌آمد. روی هر دامنه‌ی پروڈاکشنی، این
+    // درخواست همیشه سعی می‌کرد به پورت 8000 روی سیستم خودِ کاربر (نه
+    // سرور واقعی) وصل شود و همیشه با خطا مواجه می‌شد. اکنون از مسیر
+    // نسبی استفاده می‌شود که nginx آن را به بک‌اند پروکسی می‌کند.
+    const response = await axios.get('/health', {
       timeout: 3000,
     });
     connectionStatus.value = response.status === 200 ? 'connected' : 'disconnected';

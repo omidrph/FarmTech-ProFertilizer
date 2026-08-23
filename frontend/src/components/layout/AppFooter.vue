@@ -113,7 +113,17 @@ const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checkin
 
 const checkConnection = async () => {
   try {
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
+    // 🔧 قبلاً وقتی VITE_API_URL برابر مسیر نسبی "/api/v1" بود، بعد از
+    // .replace('/api/v1', '') مقدار به رشته‌ی خالی "" تبدیل می‌شد که در
+    // جاوااسکریپت falsy است، پس همیشه با "|| 'http://localhost:8000'"
+    // جایگزین می‌شد. یعنی این چک اتصال در پروڈاکشن همیشه سعی می‌کرد به
+    // localhost:8000 روی سیستم خودِ کاربر وصل شود (که هیچ‌وقت جواب
+    // نمی‌داد) و وضعیت همیشه "قطع" نشان داده می‌شد، حتی وقتی سرور سالم
+    // بود. اکنون اگر آدرس نسبی باشد، baseUrl خالی می‌ماند و درخواست به
+    // مسیر نسبی "/health" ارسال می‌شود که nginx آن را به بک‌اند
+    // پروکسی می‌کند (بدون فال‌بک اشتباه به localhost).
+    const rawApiUrl = import.meta.env.VITE_API_URL || '/api/v1';
+    const baseUrl = rawApiUrl.replace('/api/v1', '');
     const response = await fetch(`${baseUrl}/health`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },

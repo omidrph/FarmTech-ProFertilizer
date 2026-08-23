@@ -14,12 +14,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql:ro
-    # 🔧 پورت 5432 دیگر به بیرون (اینترنت/هاست) expose نمی‌شود.
-    # قبلاً "5432:5432" بود که یعنی هرکسی که به سرور دسترسی شبکه داشت
-    # می‌توانست مستقیماً به PostgreSQL وصل شود. الان فقط سرویس‌های داخل
-    # همین شبکه‌ی docker (یعنی backend) به آن دسترسی دارند.
-    # اگر برای دیباگ نیاز به اتصال از لپ‌تاپ خودتان دارید، به‌جای باز
-    # کردن این پورت در پروڈاکشن، از SSH tunnel استفاده کنید:
+    # پورت 5432 به هاست بایند نمی‌شود - فقط سرویس‌های همین شبکه (backend)
+    # به آن دسترسی دارند. برای اتصال از بیرون از SSH tunnel استفاده کنید:
     #   ssh -L 5432:localhost:5432 user@your-server
     expose:
       - "5432"
@@ -40,21 +36,20 @@ services:
       dockerfile: Dockerfile.backend
     container_name: farmtech-backend
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    # 🔧 "ports: - 8000:8000" حذف شد. این باعث خطای دیپلوی روی Coolify
+    # می‌شد ("Bind for 0.0.0.0:8000 failed: port is already allocated")
+    # چون پورت 8000 روی سرور از قبل اشغال بود (خود Coolify یا اپ دیگری
+    # از آن استفاده می‌کند). با "expose" فقط داخل شبکه‌ی داکر در دسترس
+    # است و Coolify از طریق پراکسی داخلی خودش (Traefik) به آن وصل می‌شود؛
+    # دیگر نیازی به بایند مستقیم پورت روی هاست نیست.
+    expose:
+      - "8000"
     volumes:
       - ./logs:/app/logs
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-farmtech_db}
       - DEBUG=${DEBUG:-False}
-      # 🔧 دیگر مقدار پیش‌فرض ناامن ندارد. این متغیر باید در فایل .env
-      # شما تنظیم شده باشد، وگرنه (طبق اصلاح config.py) برنامه در
-      # DEBUG=False اصلاً بالا نمی‌آید. برای تولید یک مقدار امن:
-      #   python -c "import secrets; print(secrets.token_urlsafe(64))"
-      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY باید در فایل .env تنظیم شود}
-      # 🔧 اکنون واقعاً استفاده می‌شود (در config.py هم درست شد).
-      # لیستی جدا شده با کاما از دامنه‌های مجاز فرانت‌اند، مثال:
-      # CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY باید در Environment Variables تنظیم شود}
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - ENVIRONMENT=${ENVIRONMENT:-production}
     depends_on:
@@ -77,18 +72,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      # 🔧 قبلاً VITE_API_URL به‌عنوان environment (runtime) روی این
-      # سرویس ست می‌شد که برای یک build استاتیک Vite کاملاً بی‌اثر است.
-      # اکنون به‌صورت build-arg پاس داده می‌شود تا واقعاً در باندل نهایی
-      # جاسازی شود. مقدار پیش‌فرض یک مسیر نسبی است ("/api/v1") که چون
-      # nginx.conf مسیر "/api/" را به backend پروکسی می‌کند، بدون نیاز
-      # به تنظیم CORS هم روی هر دامنه‌ای درست کار می‌کند.
       args:
         VITE_API_URL: ${VITE_API_URL:-/api/v1}
     container_name: farmtech-frontend
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # 🔧 "ports: - 3000:3000" هم حذف شد به همان دلیل بالا (تداخل پورت
+    # روی هاست). این سرویس همان سرویسی است که باید دامنه‌ی اصلی سایت
+    # روی آن تنظیم شود؛ لیبل زیر به Coolify می‌گوید کدام سرویس و کدام
+    # پورت داخلی باید پشت دامنه/HTTPS قرار بگیرد.
+    expose:
+      - "3000"
+    labels:
+      - "coolify.managed=true"
+      - "coolify.port=3000"
     depends_on:
       - backend
     networks:

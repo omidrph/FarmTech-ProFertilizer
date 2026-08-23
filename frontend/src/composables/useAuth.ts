@@ -3,7 +3,9 @@ import { ref, computed } from 'vue';
 import axios from 'axios';
 import type { RegisterData, User } from '@/types';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+// 🔧 قبلاً پیش‌فرض "http://localhost:8000/api/v1" بود که در باندل
+// نهایی برای هیچ دامنه‌ی واقعی‌ای کار نمی‌کرد. اکنون مسیر نسبی است.
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export function useAuth() {
   const isLoading = ref(false);
@@ -459,7 +461,11 @@ export function useAuth() {
   // ===== بررسی اتصال به بک‌اند =====
   const checkConnection = async (): Promise<boolean> => {
     try {
-      const response = await axios.get('http://localhost:8000/health', { 
+      // 🔧 قبلاً آدرس مطلق "http://localhost:8000/health" هاردکد بود که
+      // در پروڈاکشن همیشه fail می‌شد (چون از هیچ متغیر محیطی نمی‌آمد
+      // و همیشه به سیستم خودِ کاربر اشاره می‌کرد). اکنون مسیر نسبی است
+      // و nginx آن را به بک‌اند پروکسی می‌کند.
+      const response = await axios.get('/health', { 
         timeout: 3000 
       });
       const connected = response.status === 200;
