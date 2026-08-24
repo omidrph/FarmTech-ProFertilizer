@@ -51,7 +51,22 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    # ============================================================
+    # 🔧 اضافه شد: --proxy-headers --forwarded-allow-ips='*'
+    # ============================================================
+    # بدون این پرچم‌ها، uvicorn به هدرهای X-Forwarded-Proto که nginx
+    # می‌فرستد اعتماد نمی‌کند. نتیجه: وقتی FastAPI/Starlette خودش
+    # به‌صورت خودکار مسیرهای بدون اسلش پایانی را ریدایرکت می‌کند (مثلاً
+    # /api/v1/water-templates -> /api/v1/water-templates/)، آدرس مطلق
+    # ریدایرکت را با "http://" (نه "https://") می‌سازد. چون سایت روی
+    # HTTPS باز شده، مرورگر این ریدایرکت را به‌عنوان Mixed Content به
+    # طور کامل و بی‌صدا بلاک می‌کند (نه CORS error، نه چیزی در لاگ
+    # بک‌اند - فقط "Network Error" در فرانت). این باعث می‌شد ثبت
+    # water-template و دیدن recipes (که مسیرشان دقیقاً با اسلش انتهایی
+    # درخواست فرانت مطابقت نداشت) کامل fail شوند، در حالی که مسیرهایی
+    # مثل fertilizers/system که ریدایرکتشان دستی و نسبی بود مشکلی
+    # نداشتند.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4 --proxy-headers --forwarded-allow-ips='*'
     networks:
       - farmtech-network
     healthcheck:
