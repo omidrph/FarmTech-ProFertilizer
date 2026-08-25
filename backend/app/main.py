@@ -62,6 +62,30 @@ app = FastAPI(
 )
 
 # ============================================================
+# 🔧 اضافه شد: اصلاح دستی scheme درخواست بر اساس X-Forwarded-Proto
+# ============================================================
+# قبلاً فقط به پرچم‌های "--proxy-headers --forwarded-allow-ips='*'" در
+# دستور اجرای uvicorn تکیه شده بود تا FastAPI/Starlette بفهمد پشت یک
+# reverse proxy (nginx در Coolify) قرار دارد و درخواست واقعی HTTPS بوده.
+# اما در عمل این پرچم‌ها به‌تنهایی کافی نبودند: وقتی Starlette به‌صورت
+# خودکار مسیرهای بدون اسلش پایانی را ریدایرکت می‌کرد (مثلاً
+# /api/v1/reports -> /api/v1/reports/)، هدر Location همچنان با
+# "http://" (نه "https://") ساخته می‌شد. علتش این است که تشخیص خودکار
+# uvicorn به IP دقیق کلاینت پروکسی (nginx داخل شبکه‌ی داکر) حساس است و
+# در این محیط به‌درستی match نمی‌شد.
+# راه‌حل قطعی: خودمان مستقیماً و صریح scope["scheme"] درخواست ASGI را
+# بر اساس هدر X-Forwarded-Proto (که nginx.conf از قبل درست می‌فرستد)
+# تنظیم می‌کنیم، قبل از اینکه هر middleware یا route دیگری اجرا شود.
+# این تضمین می‌کند هر ریدایرکتی که FastAPI/Starlette خودش می‌سازد،
+# scheme درست (https) را از همان ابتدا می‌بیند.
+@app.middleware("http")
+async def fix_forwarded_scheme(request: Request, call_next):
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    if forwarded_proto:
+        request.scope["scheme"] = forwarded_proto.split(",")[0].strip()
+    return await call_next(request)
+
+# ============================================================
 # 🔐 اضافه کردن Rate Limiter Middleware
 # ============================================================
 app.add_middleware(RateLimiter)

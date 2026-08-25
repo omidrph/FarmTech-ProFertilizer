@@ -1,180 +1,189 @@
-# 🌱 FarmTech - ProFertilizer
+# 🌱 FarmTech — ProFertilizer
 
-> Intelligent Fertilizer Formulation Platform for Hydroponics, Greenhouses and Soilless Cultivation
-
-
-![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
-![Vue](https://img.shields.io/badge/Vue-3-4FC08D?logo=vuedotjs)
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql)
-![Docker](https://img.shields.io/badge/Docker-24-2496ED?logo=docker)
-
----
-
-# Table of Contents
-
-1. Overview
-2. Executive Summary
-3. Features
-4. Scientific Background
-5. Optimization Engine
-6. Architecture
-7. Technology Stack
-8. Folder Structure
-9. Installation
-10. Docker
-11. Manual Installation
-12. Configuration
-13. API
-14. Database
-15. Authentication
-16. Testing
-17. Deployment
-18. Performance
-19. Troubleshooting
-20. Roadmap
-21. References
-22. License
-
----
+Intelligent fertilizer formulation and nutrient management platform for hydroponic and greenhouse cultivation.
 
 ## Overview
 
-FarmTech ProFertilizer is a scientific fertilizer recommendation system designed to automate fertilizer formulation using water analysis, nutrient targets, optimization algorithms, ionic balance validation, and greenhouse-oriented workflows. The application integrates FastAPI, Vue, PostgreSQL, Docker and SciPy into a single production-ready platform.
+**FarmTech ProFertilizer** is a web-based platform for managing fertilizers, analyzing water and nutrient data, generating fertilizer formulations, and validating nutrient solutions.
 
-## Executive Summary
-
-The project aims to reduce manual fertilizer calculations by transforming laboratory analyses into optimized fertilizer recipes. It supports hydroponics, substrate culture and greenhouse production with emphasis on precision, repeatability and scientific validation.
+The system is designed for greenhouse, hydroponic, and soilless cultivation workflows.
 
 ## Features
 
-- Feature 1: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 2: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 3: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 4: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 5: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 6: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 7: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 8: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 9: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 10: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 11: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 12: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 13: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 14: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 15: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 16: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 17: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 18: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 19: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 20: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 21: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 22: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 23: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 24: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 25: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 26: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 27: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 28: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 29: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 30: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 31: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 32: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 33: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 34: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 35: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 36: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 37: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 38: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 39: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
-- Feature 40: Detailed capability description covering fertilizer management, reports, validation, optimization, multilingual interface and productivity.
+* Fertilizer management
+* System and user-defined fertilizers
+* Water analysis
+* Nutrient target management
+* Fertilizer formulation and optimization
+* Non-Negative Least Squares (NNLS) optimization
+* Nutrient balance validation
+* Precipitation compatibility checks
+* Reservoir calculation
+* Recipe management
+* Reports and calculation history
+* User authentication and authorization
+* Persian user interface
+* RESTful API
 
-## Scientific Algorithm
+## Technology Stack
 
-The optimization problem is formulated as:
-
-```
-min ||Ax-b||²
-subject to x >= 0
-```
-
-The system uses Non-Negative Least Squares (NNLS) to calculate fertilizer quantities while preventing negative solutions.
-
-```python
-from scipy.optimize import nnls
-weights, residual = nnls(A,b)
-```
-
-Validation stages include:
-
-- Water subtraction
-- Target vector generation
-- Matrix construction
-- NNLS optimization
-- Residual validation
-- Ionic balance
-- Tank compatibility
-- EC estimation
-- Recommendation generation
+| Layer                | Technology              |
+| -------------------- | ----------------------- |
+| Frontend             | Vue 3, TypeScript, Vite |
+| Backend              | Python, FastAPI         |
+| Database             | PostgreSQL              |
+| ORM                  | SQLAlchemy              |
+| Scientific Computing | NumPy, SciPy            |
+| HTTP Client          | Axios                   |
+| Containerization     | Docker, Docker Compose  |
+| Reverse Proxy        | Traefik / Caddy         |
 
 ## Architecture
 
 ```text
-User
- │
-Vue 3 + TypeScript
- │
-Axios
- │
-FastAPI REST API
- │
-Business Logic
- │
-NNLS Optimizer
- │
-SQLAlchemy
- │
+Vue 3 Frontend
+       │
+       │ HTTPS / REST API
+       ▼
+FastAPI Backend
+       │
+       ├── Authentication
+       ├── Fertilizer Management
+       ├── Water Analysis
+       ├── Recipe Management
+       ├── Reports
+       └── Optimization Engine
+              │
+              ├── NumPy
+              └── SciPy / NNLS
+       │
+       ▼
 PostgreSQL
 ```
 
-## Technology Stack
+## Optimization
 
-| Layer | Technology |
-|---|---|
-|Frontend|Vue3, TypeScript, Tailwind, Vite|
-|Backend|FastAPI, Python|
-|Database|PostgreSQL|
-|Scientific|NumPy, SciPy|
-|Container|Docker|
+The fertilizer optimization engine uses Non-Negative Least Squares (NNLS) to determine fertilizer quantities while preventing negative fertilizer amounts.
 
-## Folder Structure
+The optimization problem is formulated as:
 
 ```text
-backend/
- frontend/
- scripts/
- docs/
- docker/
- tests/
- README.md
+minimize ||Ax - b||²
+
+subject to:
+
+x ≥ 0
 ```
+
+A simplified implementation:
+
+```python
+from scipy.optimize import nnls
+
+weights, residual = nnls(A, b)
+```
+
+The calculation workflow generally consists of:
+
+1. Processing water analysis
+2. Calculating required nutrient concentrations
+3. Subtracting nutrients already present in the water
+4. Building the fertilizer matrix
+5. Solving the NNLS optimization problem
+6. Validating the resulting solution
+7. Checking fertilizer compatibility
+8. Generating the final formulation
+
+## Project Structure
+
+```text
+FarmTech-ProFertilizer/
+│
+├── backend/
+│   ├── app/
+│   │   ├── routes/
+│   │   ├── models/
+│   │   ├── services/
+│   │   ├── seeds/
+│   │   ├── middleware/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   └── main.py
+│   │
+│   ├── tests/
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── vite.config.*
+│
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+## Requirements
+
+For local development:
+
+* Python 3.11+
+* Node.js 20+
+* PostgreSQL 15+
+* Docker and Docker Compose (recommended)
 
 ## Installation
 
+Clone the repository:
+
 ```bash
-git clone https://github.com/yourusername/FarmTech-ProFertilizer.git
+git clone https://github.com/omidrph/FarmTech-ProFertilizer.git
 cd FarmTech-ProFertilizer
-cp .env.example .env
-docker compose up --build -d
 ```
 
-### Manual
+Create the environment file:
+
+```bash
+cp .env.example .env
+```
+
+Configure the required environment variables in `.env`.
+
+### Docker
+
+Build and start the application:
+
+```bash
+docker compose up -d --build
+```
+
+Check running containers:
+
+```bash
+docker compose ps
+```
+
+View logs:
+
+```bash
+docker compose logs -f
+```
+
+### Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
+```
+
+Run the development server:
+
+```bash
 uvicorn app.main:app --reload
 ```
+
+### Frontend
 
 ```bash
 cd frontend
@@ -182,118 +191,139 @@ npm install
 npm run dev
 ```
 
+## Environment Variables
+
+The exact configuration depends on the deployment environment.
+
+Important variables include:
+
+```env
+DATABASE_URL=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+
+SECRET_KEY=
+
+DEBUG=
+ENVIRONMENT=
+
+CORS_ORIGINS=
+
+VITE_API_URL=
+```
+
+For production, sensitive values such as database passwords and `SECRET_KEY` must not be committed to Git.
+
 ## API
 
-### Endpoint 1
-`GET /api/v1/example1`
+The backend exposes a versioned REST API under:
 
-Description placeholder.
+```text
+/api/v1
+```
 
-### Endpoint 2
-`GET /api/v1/example2`
+Examples of available API areas include:
 
-Description placeholder.
+```text
+/api/v1/auth
+/api/v1/users
+/api/v1/fertilizers
+/api/v1/reports
+/api/v1/calculations
+```
 
-### Endpoint 3
-`GET /api/v1/example3`
+The exact endpoints are defined by the backend routers.
 
-Description placeholder.
+## Production Deployment
 
-### Endpoint 4
-`GET /api/v1/example4`
+The application can be deployed using Docker Compose behind a reverse proxy.
 
-Description placeholder.
+Recommended production flow:
 
-### Endpoint 5
-`GET /api/v1/example5`
+```text
+Internet
+   │
+   ▼
+Cloudflare
+   │ HTTPS
+   ▼
+Reverse Proxy
+   │
+   ├── Frontend
+   │
+   └── Backend
+          │
+          ▼
+      PostgreSQL
+```
 
-Description placeholder.
+The frontend and API should be served over HTTPS in production.
 
-### Endpoint 6
-`GET /api/v1/example6`
+The frontend must not make HTTP API requests when the application itself is loaded over HTTPS. The API URL should therefore use an HTTPS URL or an appropriate same-origin configuration.
 
-Description placeholder.
+## Health Check
 
-### Endpoint 7
-`GET /api/v1/example7`
+The backend provides:
 
-Description placeholder.
+```text
+GET /health
+```
 
-### Endpoint 8
-`GET /api/v1/example8`
+A healthy response is:
 
-Description placeholder.
+```json
+{
+  "status": "healthy",
+  "database": "connected"
+}
+```
 
-### Endpoint 9
-`GET /api/v1/example9`
+## Development
 
-Description placeholder.
+Run backend and frontend separately during development:
 
-### Endpoint 10
-`GET /api/v1/example10`
+```bash
+# Backend
+cd backend
+uvicorn app.main:app --reload
+```
 
-Description placeholder.
-
-## Database
-
-Core tables:
-
-- users
-- fertilizers
-- nutrient_targets
-- water_analysis
-- recommendations
-- reports
-- sessions
-- audit_logs
-
-## Authentication
-
-Session tokens stored securely in the database with protected endpoints.
+```bash
+# Frontend
+cd frontend
+npm run dev
+```
 
 ## Testing
 
+Run the backend test suite with:
+
 ```bash
-docker compose exec backend python tests/test_all.py
 pytest
 ```
 
-## Performance
+For Docker-based testing:
 
-| Metric | Value |
-|---|---:|
-|Optimization|<50 ms|
-|Supported nutrients|15|
-|Supported fertilizers|42|
-|Residual error|<10|
-|Accuracy|95-100%|
+```bash
+docker compose exec backend pytest
+```
 
-## Troubleshooting
+## Security
 
-- Verify database connectivity.
-- Check Docker logs.
-- Confirm environment variables.
-- Validate API health endpoint.
-- Ensure migrations are applied.
+Production deployments should:
 
-## Roadmap
-
-- AI assistant
-- Mobile application
-- Advanced reporting
-- Cloud synchronization
-- IoT integration
-- Sensor connectivity
-- Cost optimization improvements
-- Multi-greenhouse support
-
-## References
-
-- Lawson & Hanson – Solving Least Squares Problems.
-- Howard Resh – Hydroponic Food Production.
-- Handbook of Plant Nutrition.
-- IFAS Extension publications.
+* Use HTTPS
+* Store secrets in environment variables
+* Use strong database credentials
+* Restrict CORS origins
+* Keep dependencies updated
+* Avoid exposing PostgreSQL directly to the Internet
+* Use secure authentication tokens
+* Enable HTTPS-only communication between the browser and API
 
 ## License
 
-Proprietary Software © FarmTech.
+Proprietary software © FarmTech.
+
+Unauthorized copying, redistribution, or commercial use is prohibited unless explicitly permitted by the copyright holder.
