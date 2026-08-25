@@ -4,6 +4,7 @@ import MainLayout from '@/views/MainLayout.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
 import ForgotPassword from '@/views/ForgotPassword.vue';
+import TermsAndConditions from '@/views/TermsAndConditions.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -24,6 +25,15 @@ const router = createRouter({
       path: '/forgot-password',
       name: 'forgot-password',
       component: ForgotPassword,
+      meta: { requiresAuth: false }
+    },
+    // 🔧 اضافه شد: صفحه قوانین و شرایط استفاده. requiresAuth: false تا
+    // کاربرِ هنوز ثبت‌نام‌نکرده هم بتواند پیش از تأیید چک‌باکس آن را
+    // در تب جدید یا مستقیم مطالعه کند.
+    {
+      path: '/terms',
+      name: 'terms',
+      component: TermsAndConditions,
       meta: { requiresAuth: false }
     },
     {

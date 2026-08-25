@@ -274,10 +274,38 @@
             </p>
           </div>
 
+          <!-- ============================================================ -->
+          <!-- 🔧 اضافه شد: چک‌باکس تأیید قوانین و شرایط استفاده -->
+          <!-- ============================================================ -->
+          <div class="flex items-start gap-2.5 pt-1">
+            <input
+              id="accept-terms"
+              type="checkbox"
+              v-model="acceptedTerms"
+              class="mt-0.5 w-4.5 h-4.5 rounded border-2 border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 focus:ring-offset-0 cursor-pointer"
+            />
+            <label for="accept-terms" class="text-sm text-gray-600 dark:text-gray-400 cursor-pointer select-none">
+              <router-link
+                to="/terms"
+                target="_blank"
+                class="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-semibold underline underline-offset-2"
+              >
+                قوانین و شرایط استفاده
+              </router-link>
+              را مطالعه کرده‌ام و آن‌ها را می‌پذیرم.
+            </label>
+          </div>
+          <p v-if="submitted && !acceptedTerms" class="text-danger-600 dark:text-danger-400 text-sm -mt-2">
+            <svg class="w-4 h-4 inline-block ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            برای ادامه، باید قوانین و شرایط استفاده را بپذیرید
+          </p>
+
           <!-- دکمه ثبت‌نام -->
           <button
             type="submit"
-            :disabled="isLoading || connectionStatus === 'disconnected'"
+            :disabled="isLoading || connectionStatus === 'disconnected' || !acceptedTerms"
             class="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6 shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50 transition-shadow"
           >
             <span v-if="!isLoading" class="flex items-center justify-center gap-2">
@@ -347,6 +375,8 @@ const isDarkMode = ref(false);
 const currentSlide = ref(0);
 const submitted = ref(false);
 const localError = ref('');
+// 🔧 اضافه شد: وضعیت تأیید قوانین و شرایط استفاده
+const acceptedTerms = ref(false);
 
 const connectionStatus = ref<'checking' | 'connected' | 'disconnected'>('checking');
 
@@ -412,9 +442,8 @@ const checkConnection = async (): Promise<boolean> => {
   connectionStatus.value = 'checking';
   try {
     // 🔧 قبلاً آدرس مطلق "http://localhost:8000/health" هاردکد بود که
-    // در پروڈاکشن همیشه fail می‌شد (چون به سیستم خودِ کاربر اشاره
-    // می‌کرد، نه سرور واقعی). اکنون مسیر نسبی است و nginx آن را به
-    // بک‌اند پروکسی می‌کند.
+    // در پروڈاکشن همیشه fail می‌شد. اکنون مسیر نسبی است و nginx آن را
+    // به بک‌اند پروکسی می‌کند.
     const response = await axios.get('/health', {
       timeout: 3000,
     });
@@ -458,7 +487,14 @@ const isPasswordValid = computed(() => {
 const handleRegister = async () => {
   submitted.value = true;
   localError.value = '';
-  
+
+  // 🔧 اضافه شد: جلوگیری از ثبت‌نام بدون تأیید قوانین (حتی اگر کاربر
+  // با دستکاری مستقیم فرم بخواهد چک‌باکس غیرفعال دکمه را دور بزند،
+  // این بررسی سمت کلاینت به‌عنوان لایه‌ی دوم اطمینان عمل می‌کند)
+  if (!acceptedTerms.value) {
+    return;
+  }
+
   if (connectionStatus.value !== 'connected') {
     const connected = await checkConnection();
     if (!connected) {
