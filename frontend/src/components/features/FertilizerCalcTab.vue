@@ -102,6 +102,7 @@
       :fertilizers="fertilizers"
       :target-values="targetStore.targetElements"
       @export-csv="exportCSV"
+      @update-weight="handleWeightEdit"
     />
 
     <!-- ============================================================ -->
@@ -186,9 +187,23 @@ const { optimizeFertilizers, isOptimizing } = useCalculations();
 const { exportOptimizationResult } = useCSVExport();
 
 // ===== State =====
-const mainTankVolume = ref(5000);
-const stockVolume = ref(25);
-const injectionRatio = ref(100);
+// 🆕 رفع باگ: قبلاً این مقادیر فقط رف محلی همین کامپوننت بودند، هرگز در
+// هیچ storeای ذخیره نمی‌شدند، هرگز همراه گزارش ذخیره/بازیابی نمی‌شدند و
+// حتی وقتی به بک‌اند فرستاده می‌شدند، بک‌اند آن‌ها را نادیده می‌گرفت.
+// الان به‌طور مستقیم از calcStore.stockSettings (که هم به بک‌اند اعمال
+// می‌شود و هم همراه گزارش ذخیره/بازیابی می‌شود) استفاده می‌شود.
+const mainTankVolume = computed({
+  get: () => calcStore.stockSettings.tankVolume,
+  set: (v: number) => calcStore.setStockSettings({ tankVolume: v })
+});
+const stockVolume = computed({
+  get: () => calcStore.stockSettings.stockVolume,
+  set: (v: number) => calcStore.setStockSettings({ stockVolume: v })
+});
+const injectionRatio = computed({
+  get: () => calcStore.stockSettings.injectionRatio,
+  set: (v: number) => calcStore.setStockSettings({ injectionRatio: v })
+});
 const localSelectedFertilizers = ref<string[]>([...props.selectedFertilizers]);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
@@ -264,15 +279,25 @@ const exportCSV = () => {
   }
 };
 
+// 🆕 ویژگی درخواستی: کاربر مستقیم از روی جدول نتیجه، وزن (گرم) یک کود
+// را تغییر می‌دهد و همه‌چیز (غلظت، EC، pH، تعادل یونی، هزینه) به‌درستی
+// دوباره محاسبه و در گزارش جاری ذخیره می‌شود.
+const handleWeightEdit = async (payload: { fertilizerId: string; weight: number }) => {
+  const ok = await calcStore.recalculateManualWeight(payload.fertilizerId, payload.weight);
+  if (ok) {
+    showToast('وزن به‌روزرسانی و ذخیره شد', 'success');
+  } else {
+    showToast(calcStore.errorMessages[calcStore.errorMessages.length - 1] || 'خطا در به‌روزرسانی وزن', 'error');
+  }
+};
+
 const resetAll = () => {
   if (confirm('آیا از بازنشانی اطمینان دارید؟ تمام داده‌ها پاک خواهند شد.')) {
     emit('update:calcRows', []);
     emit('update:calcErrors', []);
     localSelectedFertilizers.value = [];
     emit('update:selectedFertilizers', []);
-    mainTankVolume.value = 5000;
-    stockVolume.value = 25;
-    injectionRatio.value = 100;
+    calcStore.setStockSettings({ tankVolume: 5000, stockVolume: 25, injectionRatio: 100 });
     calcStore.clearOptimizationResult();
     showToast('همه داده‌ها پاک شدند', 'success');
   }
@@ -308,3 +333,5 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   transform: translate(-50%, 10px);
 }
 </style>
+
+

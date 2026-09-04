@@ -26,6 +26,7 @@ from .final_solution import api_calculate_final_solution
 from .reservoir import api_calculate_reservoir
 from .convert_unit import api_convert_unit
 from .optimization import optimize_fertilizers_endpoint
+from .recalculate import recalculate_manual_weights
 from .precipitation import check_precipitation_endpoint
 from .history import get_optimization_history_endpoint
 from .crud_calculations import create_calculation, get_calculation, update_calculation
@@ -47,6 +48,8 @@ calculations_router.post("/convert-unit", response_model=UnitConversionResponse)
 
 # ---- مسیرهای بهینه‌سازی ----
 calculations_router.post("/optimize", response_model=OptimizationResponse)(optimize_fertilizers_endpoint)
+# 🆕 محاسبه مجدد پس از ویرایش دستی وزن یک کود در جدول نتیجه
+calculations_router.post("/recalculate-manual", response_model=OptimizationResponse)(recalculate_manual_weights)
 calculations_router.post("/check-precipitation", response_model=PrecipitationCheckResponse)(check_precipitation_endpoint)
 calculations_router.get("/optimization-history", response_model=List[OptimizationLogResponse])(get_optimization_history_endpoint)
 
@@ -57,3 +60,5 @@ calculations_router.put("/{calc_id}", response_model=CalculationResponse)(update
 
 # ---- مسیر تفسیر ----
 calculations_router.post("/{report_id}/calculate", response_model=InterpretationResponse)(calculate_and_interpret)
+
+

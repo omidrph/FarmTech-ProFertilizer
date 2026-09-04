@@ -176,6 +176,20 @@ export const useReportStore = defineStore('report', () => {
               }
             }
             calcStore.setReservoirData(reservoirData);
+
+            // 🆕 رفع باگ «صفحه محاسبه کود ناقص برمی‌گردد»: تنظیمات استوک
+            // (حجم مخزن اصلی، حجم سطل استوک، نسبت تزریق) قبلاً هیچ‌جا ذخیره
+            // نمی‌شدند و با بازکردن گزارش قدیمی همیشه مقدار پیش‌فرض نشان
+            // داده می‌شد. حالا این تنظیمات از داخل reservoir_data.settings
+            // بازیابی می‌شوند.
+            const savedSettings = (reservoirData as any)?.settings;
+            if (savedSettings) {
+              calcStore.setStockSettings({
+                tankVolume: savedSettings.tank_volume,
+                stockVolume: savedSettings.stock_volume,
+                injectionRatio: savedSettings.injection_ratio
+              });
+            }
           }
           
           console.log('🧮 Calculation data loaded');
@@ -263,10 +277,22 @@ export const useReportStore = defineStore('report', () => {
       }
       
       // Calculation data
+      // 🆕 تنظیمات استوک (حجم مخزن اصلی، حجم سطل استوک، نسبت تزریق) داخل
+      // reservoir_data ذخیره می‌شود تا این گزارش هنگام بازکردن مجدد کامل
+      // برگردد (رفع باگ «این صفحه ناقص برمی‌گردد»).
+      const reservoirDataWithSettings = {
+        ...calcStore.reservoirData,
+        settings: {
+          tank_volume: calcStore.stockSettings.tankVolume,
+          stock_volume: calcStore.stockSettings.stockVolume,
+          injection_ratio: calcStore.stockSettings.injectionRatio
+        }
+      };
+
       const calcPayload = {
         target_values: targetStore.targetElements,
         final_values: calcStore.getFinalConcentrations(),
-        reservoir_data: calcStore.reservoirData,
+        reservoir_data: reservoirDataWithSettings,
         calc_rows: calcStore.calculationRows,
         interpretation: null
       };
@@ -378,3 +404,5 @@ export const useReportStore = defineStore('report', () => {
 });
 
 export default useReportStore;
+
+

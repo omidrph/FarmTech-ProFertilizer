@@ -133,10 +133,24 @@ export interface ReservoirItem {
     is_acid?: boolean;
 }
 
+export interface StockSettings {
+    tankVolume: number;
+    stockVolume: number;
+    injectionRatio: number;
+}
+
 export interface ReservoirData {
     A: ReservoirItem[];
     B: ReservoirItem[];
     C: ReservoirItem[];
+    // 🆕 تنظیمات استوک (حجم مخزن، حجم سطل استوک، نسبت تزریق) اینجا هم
+    // ذخیره می‌شود تا با ذخیره/بارگذاری گزارش گم نشود (بدون نیاز به
+    // migration پایگاه‌داده، چون reservoir_data یک ستون JSON آزاد است).
+    settings?: {
+        tank_volume: number;
+        stock_volume: number;
+        injection_ratio: number;
+    };
 }
 
 export interface CalculationRow {
@@ -478,3 +492,5 @@ export interface User {
     updated_at?: string;
     full_name: string;
 }
+
+

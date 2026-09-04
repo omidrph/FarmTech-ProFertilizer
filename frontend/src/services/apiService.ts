@@ -345,6 +345,29 @@ class ApiService {
         }
     }
 
+    /**
+     * 🆕 محاسبه مجدد نتیجه پس از ویرایش دستی وزن یک کود در جدول نتیجه
+     * (بدون اجرای دوباره الگوریتم بهینه‌سازی NNLS)
+     */
+    async recalculateManualWeights(data: {
+        fertilizers: any[];
+        weights: Record<string, number>;
+        target_values: Record<string, number>;
+        water_values?: Record<string, number>;
+        tank_volume: number;
+    }): Promise<OptimizationResponse> {
+        try {
+            const response: AxiosResponse<OptimizationResponse> = await this.api.post(
+                '/calculations/recalculate-manual',
+                data
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error recalculating manual weights:', error);
+            throw error;
+        }
+    }
+
     async checkPrecipitation(concentrations: Record<string, number>, temperature: number = 25): Promise<PrecipitationCheckResponse> {
         try {
             const response: AxiosResponse<PrecipitationCheckResponse> = await this.api.post(
@@ -847,3 +870,5 @@ class ApiService {
 
 export const apiService = new ApiService();
 export default apiService;
+
+

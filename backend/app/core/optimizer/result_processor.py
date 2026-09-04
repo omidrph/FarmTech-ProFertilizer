@@ -211,11 +211,12 @@ def process_optimization_result(
     target_values: Dict[str, float],
     water_values: Dict[str, float],
     costs: np.ndarray,
-    options: Dict[str, Any]
+    options: Dict[str, Any],
+    scale_factor: float = 1.0
 ) -> Dict[str, Any]:
     """
     پردازش کامل نتیجه بهینه‌سازی با قابلیت تعادل یونی خودکار
-    
+
     Args:
         solver_result: نتیجه حل‌کننده بهینه‌سازی
         A: ماتریس ضرایب
@@ -226,10 +227,16 @@ def process_optimization_result(
         water_values: مقادیر آب
         costs: هزینه هر کود
         options: تنظیمات بهینه‌سازی (شامل auto_balance)
-    
+        scale_factor: ضریب تبدیل وزن «به ازای ۱۰۰۰ لیتر» به وزن واقعی
+            برای حجم مخزن کاربر (= tank_volume / 1000). فقط روی وزن‌ها،
+            هزینه کل و توزیع مخازن اعمال می‌شود؛ غلظت‌ها (ppm) و تعادل
+            یونی به حجم وابسته نیستند و بدون تغییر باقی می‌مانند.
+
     Returns:
         Dict: نتیجه پردازش شده کامل
     """
+    if not scale_factor or scale_factor <= 0:
+        scale_factor = 1.0
     weights = solver_result.get('weights', np.zeros(len(fertilizers)))
     weights = np.maximum(weights, 0)
     
@@ -265,8 +272,18 @@ def process_optimization_result(
                 options['warnings'].append(f"🔧 تعادل یونی خودکار: {balance_result['added_element']} اضافه شد")
                 options['suggestions'].append(f"برای برقراری تعادل یونی، {balance_result['added_element']} به ترکیب اضافه شد.")
     
-    # محاسبه هزینه کل
-    total_cost = np.sum(weights * costs)
+    # ============================================================
+    # 🆕 مقیاس‌دهی وزن‌ها به حجم واقعی مخزن (رفع باگ نادیده گرفتن تنظیمات استوک)
+    # ============================================================
+    # `weights` تا این‌جا بر مبنای «گرم به ازای ۱۰۰۰ لیتر» است (چون ماتریس
+    # بهینه‌سازی روی همین مبنا ساخته شده). برای این‌که کاربر مقدار واقعی
+    # کود لازم برای حجم مخزن خودش (مثلاً ۵۰۰۰ لیتر) را ببیند، وزن‌ها در
+    # scale_factor = tank_volume / 1000 ضرب می‌شوند. غلظت‌ها (ppm) و
+    # تعادل یونی که بالاتر محاسبه شدند به این مقیاس‌دهی وابسته نیستند.
+    scaled_weights = weights * scale_factor
+
+    # محاسبه هزینه کل (بر مبنای وزن واقعی مورد نیاز)
+    total_cost = np.sum(scaled_weights * costs)
     
     # محاسبه تعادل یونی نهایی
     cation, anion, is_balanced, ion_details = calculate_ion_balance(
@@ -282,11 +299,11 @@ def process_optimization_result(
     # محاسبه درصد تحقق
     achievement = calculate_target_achievement(target_values, final_concentrations)
     
-    # ساخت دیکشنری وزن‌ها
+    # ساخت دیکشنری وزن‌ها (وزن واقعی برای حجم مخزن کاربر، بر حسب گرم)
     weights_dict = {}
     for i, fert in enumerate(fertilizers):
         fert_id = fert.get('id', f'fert_{i}')
-        weights_dict[fert_id] = float(weights[i])
+        weights_dict[fert_id] = float(scaled_weights[i])
     
     # ============================================================
     # 🆕 محاسبه مخازن
@@ -372,3 +389,5 @@ def process_optimization_result(
         'summary': summary,
         'auto_balanced': auto_balance and is_balanced
     }
+
+

@@ -35,6 +35,43 @@ export const useCalcStore = defineStore('calc', () => {
     const optimizationResult = ref<OptimizationResponse | null>(null);
     const optimizationHistory = ref<OptimizationResponse[]>([]);
     const lastOptimizationError = ref<string | null>(null);
+    // 🆕 آخرین لیست کودهای استفاده‌شده در بهینه‌سازی، برای استفاده در
+    // ویژگی «ویرایش دستی وزن» بدون نیاز به اجرای دوباره کل فرم
+    const lastFertilizersUsed = ref<any[]>([]);
+    const lastWaterValuesUsed = ref<Record<string, number>>({});
+    const lastTargetValuesUsed = ref<Record<string, number>>({});
+
+    // ============================================================
+    // 🆕 تنظیمات استوک (حجم مخزن اصلی، حجم سطل استوک، نسبت تزریق)
+    // ============================================================
+    // ✅ رفع باگ: قبلاً این مقادیر فقط در یک ref محلی داخل
+    // FertilizerCalcTab.vue نگه داشته می‌شدند و هرگز:
+    //   ۱) در هیچ storeای ذخیره نمی‌شدند (با تعویض تب/مسیر یا رفرش صفحه پاک می‌شدند)
+    //   ۲) به همراه گزارش ذخیره نمی‌شدند (با بازکردن گزارش قدیمی همیشه به مقدار
+    //      پیش‌فرض ۵۰۰۰/۲۵/۱۰۰ برمی‌گشتند، حتی اگر کاربر برای همان گزارش عدد دیگری زده بود)
+    //   ۳) هرگز به بک‌اند فرستاده نمی‌شدند تا واقعاً در محاسبه وزن کود اثر بگذارند
+    const stockSettings = ref({
+        tankVolume: 5000,
+        stockVolume: 25,
+        injectionRatio: 100
+    });
+
+    function setStockSettings(settings: Partial<{ tankVolume: number; stockVolume: number; injectionRatio: number }>) {
+        stockSettings.value = { ...stockSettings.value, ...settings };
+    }
+
+    /**
+     * 🆕 نرمال‌سازی نتیجه خام API: بک‌اند فیلد `is_balanced` (snake_case)
+     * برمی‌گرداند اما تایپ‌ها و قالب Vue از `isBalanced` (camelCase) استفاده
+     * می‌کنند. رفع نشدن این ناهماهنگی باعث می‌شد وضعیت «تعادل یونی» همیشه
+     * false/نامتعادل نمایش داده شود، حتی وقتی واقعاً متعادل بود.
+     */
+    function normalizeOptimizationResult(raw: any): OptimizationResponse {
+        if (raw && raw.ion_balance && raw.ion_balance.isBalanced === undefined) {
+            raw.ion_balance.isBalanced = raw.ion_balance.is_balanced ?? false;
+        }
+        return raw as OptimizationResponse;
+    }
 
     // ===== Getters =====
     const elementTotals = computed(() => {
@@ -235,10 +272,22 @@ export const useCalcStore = defineStore('calc', () => {
                 }
             }
 
+            // 🆕 تنظیمات استوک (حجم مخزن، حجم استوک، نسبت تزریق) داخل
+            // reservoir_data ذخیره می‌شود تا با بارگذاری مجدد گزارش گم نشود
+            // (رفع باگ «این صفحه ناقص برمی‌گردد»).
+            const reservoirWithSettings = {
+                ...reservoir,
+                settings: {
+                    tank_volume: stockSettings.value.tankVolume,
+                    stock_volume: stockSettings.value.stockVolume,
+                    injection_ratio: stockSettings.value.injectionRatio
+                }
+            };
+
             const calcData = {
                 target_values: {},
                 final_values: finalValues,
-                reservoir_data: reservoir,
+                reservoir_data: reservoirWithSettings,
                 calc_rows: calculationRows.value.map((row: CalculationRow) => ({
                     material_name: row.materialName,
                     weight: row.weight,
@@ -279,6 +328,16 @@ export const useCalcStore = defineStore('calc', () => {
                 }
                 if (data.reservoir_data) {
                     setReservoirData(data.reservoir_data);
+                    // 🆕 بازیابی تنظیمات استوک ذخیره‌شده همراه گزارش
+                    // (رفع باگ: قبلاً همیشه به مقدار پیش‌فرض ۵۰۰۰/۲۵/۱۰۰ برمی‌گشت)
+                    const savedSettings = (data.reservoir_data as any)?.settings;
+                    if (savedSettings) {
+                        setStockSettings({
+                            tankVolume: savedSettings.tank_volume ?? stockSettings.value.tankVolume,
+                            stockVolume: savedSettings.stock_volume ?? stockSettings.value.stockVolume,
+                            injectionRatio: savedSettings.injection_ratio ?? stockSettings.value.injectionRatio
+                        });
+                    }
                 }
                 currentReportId.value = reportId;
                 return true;
@@ -310,7 +369,12 @@ export const useCalcStore = defineStore('calc', () => {
         lastOptimizationError.value = null;
         optimizationResult.value = null;
 
+        // 🆕 تنظیمات استوک ارسالی همیشه در store هم نگه داشته می‌شود
+        // تا با تعویض تب/بارگذاری مجدد گم نشود.
+        setStockSettings({ tankVolume, stockVolume, injectionRatio });
+
         try {
+            const reportStore = useReportStore();
             const requestData = {
                 target_values: targetValues,
                 water_values: waterValues,
@@ -331,13 +395,21 @@ export const useCalcStore = defineStore('calc', () => {
                 },
                 tank_volume: tankVolume,
                 stock_volume: stockVolume,
-                injection_ratio: injectionRatio
+                injection_ratio: injectionRatio,
+                // 🆕 report_id صریح، تا بک‌اند نتیجه را روی گزارش درست ذخیره کند
+                // (قبلاً بک‌اند حدس می‌زد و ممکن بود گزارش اشتباه را به‌روزرسانی کند)
+                report_id: reportStore.currentReportId ? Number(reportStore.currentReportId) : null
             };
 
-            const result = await apiService.optimizeFertilizers(requestData);
+            const rawResult = await apiService.optimizeFertilizers(requestData as any);
+            const result = rawResult ? normalizeOptimizationResult(rawResult) : null;
             
             if (result) {
                 optimizationResult.value = result;
+                // 🆕 ذخیره ورودی‌های این بهینه‌سازی برای استفاده در ویرایش دستی وزن
+                lastFertilizersUsed.value = fertilizers;
+                lastWaterValuesUsed.value = waterValues;
+                lastTargetValuesUsed.value = targetValues;
                 
                 const newRows: CalculationRow[] = [];
                 let totalCostValue = 0;
@@ -400,6 +472,86 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
+    /**
+     * 🆕 ویژگی «ویرایش دستی وزن»: کاربر مستقیم از روی جدول نتیجه، وزن
+     * (گرم) یک کود را تغییر می‌دهد. این تابع بدون اجرای دوباره الگوریتم
+     * NNLS، غلظت‌ها/EC/pH/تعادل یونی/هزینه را دوباره و به‌درستی محاسبه
+     * می‌کند، سپس نتیجه و ردیف‌های محاسبه را به‌روزرسانی و در گزارش جاری
+     * ذخیره می‌کند.
+     */
+    async function recalculateManualWeight(fertilizerId: string, newWeightGrams: number): Promise<boolean> {
+        if (!optimizationResult.value) {
+            errorMessages.value.push('ابتدا باید یک‌بار محاسبه بهینه انجام شود');
+            return false;
+        }
+        isLoading.value = true;
+        try {
+            const currentWeights: Record<string, number> = { ...optimizationResult.value.weights };
+            currentWeights[fertilizerId] = Math.max(0, newWeightGrams);
+
+            const rawResult = await apiService.recalculateManualWeights({
+                fertilizers: lastFertilizersUsed.value.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    elements: f.elements || {},
+                    price_per_kg: f.pricePerKg || 0,
+                    purity: f.concentration || 100,
+                    is_acid: f.isAcid || false,
+                    is_system_default: f.isSystemDefault || false
+                })),
+                weights: currentWeights,
+                target_values: lastTargetValuesUsed.value,
+                water_values: lastWaterValuesUsed.value,
+                tank_volume: stockSettings.value.tankVolume
+            });
+
+            const result = normalizeOptimizationResult(rawResult);
+            optimizationResult.value = result;
+
+            // به‌روزرسانی ردیف‌های محاسبه از روی وزن‌های جدید
+            const newRows: CalculationRow[] = [];
+            let totalCostValue = 0;
+            for (const [fid, weight] of Object.entries(result.weights)) {
+                const fert = lastFertilizersUsed.value.find(f => f.id === fid);
+                if (fert && weight > 0) {
+                    const cost = (weight / 1000) * (fert.pricePerKg || 0);
+                    totalCostValue += cost;
+                    newRows.push({
+                        id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                        materialName: fert.name || 'نامشخص',
+                        weight: weight,
+                        purity: fert.concentration || 100,
+                        cost: cost,
+                        elements: fert.elements || {},
+                        isAcid: fert.isAcid || false,
+                        acidType: fert.acidType || null,
+                        fertilizerId: fid,
+                        isFixedRow: false
+                    });
+                }
+            }
+            calculationRows.value = newRows;
+            totalCost.value = totalCostValue;
+            if (result.reservoir_data) {
+                reservoirData.value = result.reservoir_data;
+            }
+
+            // ذخیره خودکار در گزارش جاری (رفع باگ «ذخیره ناقص»)
+            const reportStore = useReportStore();
+            if (reportStore.currentReportId) {
+                await reportStore.saveCurrentReport();
+            }
+
+            return true;
+        } catch (error: any) {
+            console.error('Error in recalculateManualWeight:', error);
+            errorMessages.value.push(error.message || 'خطا در محاسبه مجدد وزن');
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
     async function saveOptimizationToReport(reportId: string): Promise<boolean> {
         if (!optimizationResult.value) {
             errorMessages.value.push('هیچ نتیجه بهینه‌سازی برای ذخیره وجود ندارد');
@@ -430,7 +582,7 @@ export const useCalcStore = defineStore('calc', () => {
                 ion_balance: {
                     cation: item.ion_balance?.cation || 0,
                     anion: item.ion_balance?.anion || 0,
-                    isBalanced: item.ion_balance?.isBalanced || false
+                    isBalanced: item.ion_balance?.is_balanced || item.ion_balance?.isBalanced || false
                 },
                 target_achievement: {},
                 warnings: item.warnings || [],
@@ -487,6 +639,10 @@ export const useCalcStore = defineStore('calc', () => {
         optimizationResult.value = null;
         lastOptimizationError.value = null;
         optimizationHistory.value = [];
+        lastFertilizersUsed.value = [];
+        lastWaterValuesUsed.value = {};
+        lastTargetValuesUsed.value = {};
+        stockSettings.value = { tankVolume: 5000, stockVolume: 25, injectionRatio: 100 };
         
         console.log('🔄 calcStore reset complete');
     }
@@ -524,6 +680,7 @@ export const useCalcStore = defineStore('calc', () => {
         optimizationResult,
         optimizationHistory,
         lastOptimizationError,
+        stockSettings,
         
         // Getters
         elementTotals,
@@ -558,8 +715,12 @@ export const useCalcStore = defineStore('calc', () => {
         calculateTotals,
         getFinalConcentrations,
         setCalculationRows,
-        setReservoirData
+        setReservoirData,
+        setStockSettings,
+        recalculateManualWeight
     };
 });
 
 export default useCalcStore;
+
+

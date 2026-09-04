@@ -72,11 +72,14 @@ def optimize_fertilizers_endpoint(
             options['auto_balance'] = True
         
         # ۲. اجرای بهینه‌سازی با استفاده از core
+        # 🆕 ارسال tank_volume به موتور بهینه‌سازی تا وزن‌ها برای حجم واقعی
+        # مخزن کاربر (نه همیشه ۱۰۰۰ لیتر فرضی) مقیاس‌دهی شوند.
         result = core_optimize_fertilizers(
             target_values=target_values,
             fertilizers=fertilizers,
             water_values=water_values,
-            options=options
+            options=options,
+            tank_volume=request.tank_volume
         )
         
         if 'error' in result:
@@ -87,19 +90,51 @@ def optimize_fertilizers_endpoint(
             )
         
         # ============================================================
+        # 🆕 محاسبه اطلاعات استوک (تعداد سطل، حجم کل استوک، وزن هر سطل)
+        # ============================================================
+        # ✅ رفع باگ: قبلاً tank_volume/stock_volume/injection_ratio که از
+        # فرانت‌اند (بخش «تنظیمات استوک») می‌آمدند اصلاً استفاده نمی‌شدند.
+        stock_info = None
+        try:
+            tank_volume = request.tank_volume
+            stock_volume = request.stock_volume
+            injection_ratio = request.injection_ratio
+            total_stock_liters = tank_volume / injection_ratio if injection_ratio else 0
+            buckets_needed = 0
+            if stock_volume and stock_volume > 0 and total_stock_liters > 0:
+                buckets_needed = max(1, int(-(-total_stock_liters // stock_volume)))  # ceil
+
+            weight_per_bucket = {}
+            if buckets_needed > 1:
+                for fert_id, w in result.get('weights', {}).items():
+                    weight_per_bucket[fert_id] = round(w / buckets_needed, 3)
+
+            stock_info = {
+                'tank_volume': tank_volume,
+                'stock_volume': stock_volume,
+                'injection_ratio': injection_ratio,
+                'total_stock_liters': round(total_stock_liters, 2),
+                'buckets_needed': buckets_needed,
+                'weight_per_bucket': weight_per_bucket
+            }
+        except Exception as e:
+            logger.warning(f"Could not compute stock_info: {e}")
+
+        # ============================================================
         # 🆕 ذخیره final_values و reservoir_data در دیتابیس
         # ============================================================
-        try:
-            # دریافت آخرین گزارش کاربر
-            reports = crud.get_reports_by_user(db, current_user.id, skip=0, limit=1)
-            if reports:
-                report = reports[0]
-                
-                # دریافت یا ایجاد محاسبات
-                calculation = crud.get_calculation_by_report(db, report.id)
-                
-                if calculation:
-                    # ساخت calc_rows از روی weights
+        # ✅ رفع باگ مهم: قبلاً این بخش «آخرین گزارش کاربر» را حدس می‌زد و
+        # نتیجه بهینه‌سازی را روی آن می‌نوشت، حتی اگر کاربر در حال ویرایش
+        # گزارش دیگری بود. این می‌توانست باعث شود گزارش‌های قدیمی به‌طور
+        # ناخواسته تغییر کنند یا داده‌های گزارش جاری گم شوند. اکنون فقط
+        # وقتی ذخیره می‌کند که report_id صریحاً از فرانت‌اند ارسال شده و
+        # متعلق به همان کاربر باشد.
+        if request.report_id:
+            try:
+                report = crud.get_report_by_id(db, request.report_id)
+                if report and report.user_id == current_user.id:
+                    calculation = crud.get_calculation_by_report(db, report.id)
+
                     calc_rows = []
                     for fert_id, weight in result.get('weights', {}).items():
                         if weight > 0:
@@ -116,22 +151,37 @@ def optimize_fertilizers_endpoint(
                                     'fertilizerId': fert_id,
                                     'isFixedRow': False
                                 })
-                    
-                    # به‌روزرسانی محاسبات
-                    from app.schemas import CalculationUpdate
+
+                    # 🆕 تنظیمات استوک هم داخل reservoir_data ذخیره می‌شود تا
+                    # با بارگذاری مجدد گزارش، «تنظیمات استوک» ناقص برنگردد.
+                    reservoir_data_to_save = dict(result.get('reservoir_data') or {'A': [], 'B': [], 'C': []})
+                    reservoir_data_to_save['settings'] = {
+                        'tank_volume': request.tank_volume,
+                        'stock_volume': request.stock_volume,
+                        'injection_ratio': request.injection_ratio
+                    }
+
+                    from app.schemas import CalculationUpdate, CalculationCreate
                     update_data = {
+                        'target_values': target_values,
                         'final_values': result.get('concentrations', {}),
-                        'reservoir_data': result.get('reservoir_data', {'A': [], 'B': [], 'C': []}),
+                        'reservoir_data': reservoir_data_to_save,
                         'calc_rows': calc_rows
                     }
-                    calc_update = CalculationUpdate(**update_data)
-                    crud.update_calculation(db, calculation.id, calc_update)
-                    
-                    logger.info(f"✅ Updated calculation {calculation.id} with final_values and reservoir_data")
-                    
-        except Exception as e:
-            logger.warning(f"Could not save optimization result to database: {e}")
-            traceback.print_exc()
+
+                    if calculation:
+                        calc_update = CalculationUpdate(**update_data)
+                        crud.update_calculation(db, calculation.id, calc_update)
+                        logger.info(f"✅ Updated calculation {calculation.id} for report {report.id}")
+                    else:
+                        calc_create = CalculationCreate(**update_data)
+                        crud.create_calculation(db, calc_create, report.id)
+                        logger.info(f"✅ Created calculation for report {report.id}")
+                else:
+                    logger.warning(f"report_id {request.report_id} not found or not owned by user {current_user.id}; skipping auto-save")
+            except Exception as e:
+                logger.warning(f"Could not save optimization result to database: {e}")
+                traceback.print_exc()
         
         # ۳. اعتبارسنجی نتایج
         validation = validate_optimization_result(result)
@@ -249,3 +299,5 @@ def optimize_fertilizers_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در بهینه‌سازی: {str(e)}"
         )
+
+

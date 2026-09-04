@@ -21,22 +21,40 @@ def optimize_fertilizers(
     target_values: Dict[str, float],
     fertilizers: List[Dict[str, Any]],
     water_values: Optional[Dict[str, float]] = None,
-    options: Optional[Dict[str, Any]] = None
+    options: Optional[Dict[str, Any]] = None,
+    tank_volume: float = 1000.0
 ) -> Dict[str, Any]:
     """
     🎯 تابع اصلی بهینه‌سازی ترکیب کودها
-    
+
     Args:
         target_values: عناصر هدف (ppm)
         fertilizers: لیست کودها با عناصر و قیمت
         water_values: عناصر موجود در آب (اختیاری)
         options: تنظیمات بهینه‌سازی (اختیاری)
             - auto_balance: bool (پیش‌فرض True) - تعادل یونی خودکار
-    
+        tank_volume: حجم واقعی مخزن اصلی به لیتر (پیش‌فرض ۱۰۰۰ لیتر).
+
+            ⚠️ نکته مهم (رفع باگ اساسی «تنظیمات استوک اعمال نمی‌شود»):
+            ماتریس بهینه‌سازی به گونه‌ای ساخته می‌شود که وزن هر کود بر
+            حسب «گرم به ازای ۱۰۰۰ لیتر محلول نهایی» محاسبه می‌شود، چون
+            رابطه ppm = (درصد عنصر) × (وزن به گرم) فقط وقتی صادق است که
+            حجم محلول ۱۰۰۰ لیتر باشد. پیش از این اصلاح، مقدار tank_volume
+            که از فرانت‌اند (تنظیمات استوک) ارسال می‌شد اصلاً استفاده
+            نمی‌شد و همیشه وزن‌ها برای ۱۰۰۰ لیتر محاسبه و نمایش داده
+            می‌شدند؛ در نتیجه اگر حجم واقعی مخزن ۵۰۰۰ لیتر بود، مقدار کود
+            واقعی مورد نیاز ۵ برابر عدد نمایش داده شده بود. غلظت‌ها (ppm)
+            به حجم وابسته نیستند و بدون تغییر باقی می‌مانند؛ فقط وزن‌ها،
+            هزینه کل و توزیع مخازن با ضریب tank_volume/1000 مقیاس‌دهی
+            می‌شوند.
+
     Returns:
         Dict: شامل وزن‌ها، غلظت‌ها، خطا، تحلیل و توصیه‌ها
     """
     start_time = time.time()
+    if not tank_volume or tank_volume <= 0:
+        tank_volume = 1000.0
+    scale_factor = tank_volume / 1000.0
     
     # ===== ۱. آماده‌سازی =====
     water_values = water_values or {}
@@ -145,11 +163,13 @@ def optimize_fertilizers(
             target_values=target_values,
             water_values=water_values,
             costs=costs,
-            options=options
+            options=options,
+            scale_factor=scale_factor
         )
         
         result['total_time_ms'] = (time.time() - start_time) * 1000
         result['auto_balance_applied'] = auto_balance
+        result['tank_volume'] = tank_volume
         
         logger.info(f"✅ Optimization completed in {result['convergence_time_ms']:.2f}ms")
         logger.info(f"   Residual error: {result['residual_error']:.4f}")
@@ -175,3 +195,5 @@ def optimize_fertilizers(
             'is_converged': False,
             'summary': f"❌ خطا در پردازش نتایج: {str(e)}"
         }
+
+

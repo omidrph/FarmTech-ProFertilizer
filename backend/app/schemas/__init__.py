@@ -97,6 +97,7 @@ from .optimization import (
     PrecipitationCheckRequest,
     PrecipitationRiskItem,
     PrecipitationCheckResponse,
+    ManualWeightRecalculateRequest,
 )
 
 # ============================================================
@@ -203,6 +204,7 @@ __all__ = [
     'OptimizationResponse',
     'EcPhStatusResponse',
     'OptimizationLogResponse',
+    'ManualWeightRecalculateRequest',
     'PrecipitationCheckRequest',
     'PrecipitationRiskItem',
     'PrecipitationCheckResponse',
@@ -236,3 +238,5 @@ __all__ = [
     'validate_element_name',
     'validate_code',
 ]
+
+

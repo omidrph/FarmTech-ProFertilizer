@@ -47,9 +47,17 @@ class OptimizationRequest(BaseModel):
     water_values: Optional[Dict[str, float]] = Field(default_factory=dict, description="عناصر موجود در آب (ppm) - شامل EC و pH")
     fertilizers: List[OptimizationFertilizerInput] = Field(..., description="لیست کودهای موجود با عناصر و قیمت")
     options: Optional[OptimizationOptions] = Field(default_factory=lambda: OptimizationOptions(), description="تنظیمات بهینه‌سازی")
-    tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن (لیتر)")
-    stock_volume: float = Field(100.0, ge=1, description="حجم استوک (لیتر)")
+    tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن اصلی (لیتر)")
+    stock_volume: float = Field(100.0, ge=1, description="حجم سطل استوک (لیتر)")
     injection_ratio: float = Field(100.0, ge=1, description="نسبت تزریق (1:X)")
+    report_id: Optional[int] = Field(
+        None,
+        description="شناسه گزارش فعلی کاربر (اختیاری). اگر ارسال شود، نتیجه "
+                    "بهینه‌سازی و تنظیمات استوک روی همین گزارش ذخیره می‌شود. "
+                    "در صورت عدم ارسال، بک‌اند هیچ گزارشی را حدس نمی‌زند "
+                    "(قبلاً به اشتباه آخرین گزارش کاربر را حدس می‌زد که می‌توانست "
+                    "باعث نوشته‌شدن نتیجه روی گزارش اشتباه شود)."
+    )
 
 
 class EcPhStatusResponse(BaseModel):
@@ -91,6 +99,25 @@ class OptimizationResponse(BaseModel):
     ec_status: str = Field("", description="وضعیت EC (مطلوب, کم, بالا, بحرانی)")
     ph_status: str = Field("", description="وضعیت pH (مطلوب, اسیدی, قلیایی, بحرانی)")
     ec_ph_status: EcPhStatusResponse = Field(..., description="وضعیت ترکیبی EC و pH")
+    stock_info: Optional[Dict[str, Any]] = Field(
+        None,
+        description="🆕 اطلاعات مخزن/استوک برای این نتیجه: شامل tank_volume, "
+                    "stock_volume, injection_ratio, total_stock_liters, "
+                    "buckets_needed, weight_per_bucket (وزن هر کود اگر در "
+                    "چند سطل استوک تقسیم شود)."
+    )
+
+
+class ManualWeightRecalculateRequest(BaseModel):
+    """
+    🆕 درخواست محاسبهٔ مجدد نتیجه پس از ویرایش دستی وزن یک یا چند کود
+    توسط کاربر در جدول نتیجه بهینه‌سازی (بدون اجرای دوباره الگوریتم NNLS).
+    """
+    fertilizers: List[OptimizationFertilizerInput] = Field(..., description="لیست کودهای همان بهینه‌سازی قبلی")
+    weights: Dict[str, float] = Field(..., description="وزن‌های فعلی (گرم) به ازای هر fertilizer id - شامل وزن ویرایش‌شده")
+    target_values: Dict[str, float] = Field(..., description="مقادیر هدف عناصر (ppm)")
+    water_values: Optional[Dict[str, float]] = Field(default_factory=dict, description="عناصر موجود در آب")
+    tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن اصلی (لیتر) - همان مبنایی که weights روی آن حساب شده")
 
 
 class OptimizationLogResponse(BaseModel):
@@ -142,3 +169,5 @@ class PrecipitationCheckResponse(BaseModel):
     is_safe: bool = Field(..., description="آیا ترکیب ایمن است؟")
     risks: List[PrecipitationRiskItem] = Field(default_factory=list, description="خطرات احتمالی")
     suggestions: List[str] = Field(default_factory=list, description="پیشنهادات اصلاحی")
+
+

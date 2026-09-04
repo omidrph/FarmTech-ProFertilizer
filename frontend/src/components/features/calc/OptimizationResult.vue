@@ -198,7 +198,17 @@
                   </div>
                 </td>
                 <td class="px-4 py-2.5 text-center font-mono tabular-nums font-semibold text-gray-900 dark:text-white" style="font-family: 'Vazirmatn', sans-serif;">
-                  {{ weight.toFixed(3) }}
+                  <!-- 🆕 ویژگی درخواستی: ویرایش مستقیم وزن (گرم) از روی نتیجه -->
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    class="w-24 text-center bg-transparent border border-transparent hover:border-gray-300 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-800 rounded px-1 py-0.5 outline-none transition-colors font-mono tabular-nums"
+                    :value="editedWeights[fertilizerId] ?? Number(weight.toFixed(3))"
+                    @input="onWeightInput(String(fertilizerId), $event)"
+                    @change="onWeightCommit(String(fertilizerId))"
+                    @keyup.enter="onWeightCommit(String(fertilizerId))"
+                  />
                 </td>
                 <td class="px-4 py-2.5 text-center font-mono tabular-nums font-semibold text-gray-900 dark:text-white" style="font-family: 'Vazirmatn', sans-serif;">
                   {{ formatCurrency(getFertilizerCost(fertilizerId, weight)) }}
@@ -396,7 +406,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { OptimizationResponse } from '@/types';
 
 // ===== Props =====
@@ -412,7 +422,27 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   (e: 'save'): void;
   (e: 'export-csv'): void;
+  // 🆕 ویژگی درخواستی: ویرایش مستقیم وزن (گرم) از روی جدول نتیجه
+  (e: 'update-weight', payload: { fertilizerId: string; weight: number }): void;
 }>();
+
+// 🆕 مقادیر در حال ویرایش (قبل از تایید/ارسال) تا هنگام تایپ، جدول از
+// نو رندر نشود و مکان‌نما نپرد. با هر نتیجه جدید از سرور پاک می‌شود.
+const editedWeights = ref<Record<string, number>>({});
+watch(() => props.result, () => { editedWeights.value = {}; });
+
+const onWeightInput = (fertilizerId: string, event: Event) => {
+  const value = parseFloat((event.target as HTMLInputElement).value);
+  editedWeights.value[fertilizerId] = isNaN(value) ? 0 : value;
+};
+
+const onWeightCommit = (fertilizerId: string) => {
+  const newWeight = editedWeights.value[fertilizerId];
+  if (newWeight === undefined) return;
+  const oldWeight = result.value?.weights?.[fertilizerId] ?? 0;
+  if (Math.abs(newWeight - oldWeight) < 0.0005) return; // بدون تغییر معنادار
+  emit('update-weight', { fertilizerId, weight: newWeight });
+};
 
 // ===== Computed =====
 const result = computed(() => props.result);
@@ -735,3 +765,5 @@ const formatCurrency = (value: number): string => {
   background: #6b7280;
 }
 </style>
+
+
