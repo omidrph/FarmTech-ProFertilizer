@@ -34,6 +34,8 @@ from app.core import (
     calculate_target_achievement,
     calculate_reservoir_data,
     check_precipitation,
+    calculate_stock_instructions,
+    check_nutrient_interactions,
     ALL_ELEMENTS,
 )
 from app.core.optimizer.matrix_builder import prepare_fertilizer_data
@@ -118,8 +120,27 @@ def recalculate_manual_weights(request: ManualWeightRecalculateRequest):
         # تعادل یونی
         cation, anion, is_balanced, ion_details = calculate_ion_balance(final_concentrations, unit="ppm")
 
+        # 🆕 تخمین pH پیش از بررسی رسوب (لازم برای [OH-] واقعی و کسر PO4³⁻ درست)
+        water_ph_for_precip = water_values.get('pH', 7.0) if water_values else 7.0
+        prelim_ph_result = calculate_ph(final_concentrations, unit="ppm", water_ph=water_ph_for_precip)
+        has_chelated_iron = any(
+            fert.get('elements', {}).get('Fe', 0) > 0 and (
+                'کلات' in fert.get('name', '') or
+                'edta' in fert.get('name', '').lower() or
+                'dtpa' in fert.get('name', '').lower() or
+                'eddha' in fert.get('name', '').lower() or
+                'chelate' in fert.get('name', '').lower()
+            )
+            for fert in fertilizers
+        )
+
         # رسوب
-        precipitation_result = check_precipitation(final_concentrations)
+        precipitation_result = check_precipitation(
+            final_concentrations,
+            ph=prelim_ph_result.get('ph'),
+            has_chelated_iron=has_chelated_iron,
+            alkalinity_ppm_caco3=water_values.get('Alkalinity')
+        )
 
         # درصد تحقق اهداف
         achievement = calculate_target_achievement(request.target_values, final_concentrations)
@@ -151,21 +172,34 @@ def recalculate_manual_weights(request: ManualWeightRecalculateRequest):
                 warnings.append(f'عنصر {element}: {pct:.0f}% تحقق (بیش‌بود)')
                 suggestions.append(f'کاهش {element} یا استفاده از کود با درصد کمتر')
 
+        # EC / pH (از pH محاسبه‌شده پیش‌تر استفاده مجدد می‌شود - رفع محاسبه تکراری)
+        water_ec = water_values.get('EC', 0) if water_values else 0
+        ec_result = calculate_ec(final_concentrations, unit="ppm", water_ec=water_ec)
+        ph_result = prelim_ph_result
+        ec_ph_status = get_ec_ph_status(
+            ec=ec_result['ec'], ph=ph_result['ph'], water_ec=water_ec, water_ph=water_ph_for_precip
+        )
+
+        if ph_result.get('nh4_warning'):
+            warnings.append(ph_result['nh4_warning'])
+
+        # 🆕 تداخلات تغذیه‌ای/شیمیایی (آهن+فسفر، قفل ریزمغذی در pH بالا، کلر/سدیم/بور، K/Ca)
+        warnings.extend(check_nutrient_interactions(final_concentrations, ph_estimate=ph_result.get('ph')))
+
         warnings.append('⚠️ این نتیجه بر اساس ویرایش دستی وزن است، نه بهینه‌سازی خودکار.')
 
         warnings = list(dict.fromkeys(warnings))
         suggestions = list(dict.fromkeys(suggestions))
 
-        # EC / pH
-        ec_result = calculate_ec(final_concentrations, unit="ppm")
-        water_ph = water_values.get('pH', 7.0) if water_values else 7.0
-        ph_result = calculate_ph(final_concentrations, unit="ppm", water_ph=water_ph)
-        water_ec = water_values.get('EC', 0) if water_values else 0
-        ec_ph_status = get_ec_ph_status(
-            ec=ec_result['ec'], ph=ph_result['ph'], water_ec=water_ec, water_ph=water_ph
-        )
-
         weights_dict = {fert['id']: actual_weights.get(fert['id'], 0.0) for fert in prepared}
+
+        # 🆕 دستورالعمل ساخت استوک به‌روزشده بر مبنای وزن‌های ویرایش‌شده
+        stock_instructions = calculate_stock_instructions(
+            fertilizers=fertilizers,
+            weights=weights_dict,
+            reservoir_data=reservoir_data,
+            default_bucket_volume=request.stock_volume
+        )
 
         response = OptimizationResponse(
             weights=weights_dict,
@@ -206,10 +240,16 @@ def recalculate_manual_weights(request: ManualWeightRecalculateRequest):
                 ph_status=ec_ph_status.get('ph_status', ''),
                 ph_label=ec_ph_status.get('ph_label', '')
             ),
+            ph_min=ph_result.get('ph_min'),
+            ph_max=ph_result.get('ph_max'),
+            ph_is_estimate=ph_result.get('is_estimate', True),
+            ph_disclaimer=ph_result.get('disclaimer'),
+            nh4_ratio_percent=ph_result.get('nh4_ratio_percent'),
             stock_info={
                 'tank_volume': tank_volume,
                 'manual_edit': True
-            }
+            },
+            stock_instructions=stock_instructions
         )
 
         return response

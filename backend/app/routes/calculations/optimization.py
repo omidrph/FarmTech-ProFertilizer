@@ -22,7 +22,11 @@ from app.core import (
     optimize_fertilizers as core_optimize_fertilizers,
     calculate_ec,
     calculate_ph,
-    get_ec_ph_status
+    get_ec_ph_status,
+    calculate_stock_instructions,
+    check_nutrient_interactions,
+    check_manual_fertilizer_selection,
+    get_plant_ec_range,
 )
 from app.core.optimizer.result_processor import validate_optimization_result
 
@@ -70,6 +74,16 @@ def optimize_fertilizers_endpoint(
         # 🆕 اضافه کردن گزینه auto_balance (پیش‌فرض فعال)
         if 'auto_balance' not in options:
             options['auto_balance'] = True
+
+        # 🆕 pH آب کاربر به options اضافه می‌شود تا بررسی رسوب (که داخل
+        # موتور بهینه‌سازی، پیش از این‌که pH نهایی محاسبه شود، اجرا
+        # می‌شود) به‌جای فرض خنثی پیش‌فرض، از pH واقعی آب کاربر استفاده کند.
+        options['water_ph'] = water_values.get('pH', 7.0) if water_values else 7.0
+
+        # 🆕 هشدار دربارهٔ ترکیب دستی کودهای انتخابی کاربر (پیش از اجرای
+        # بهینه‌سازی) - مثلاً اگر هم منبع کلسیم و هم سولفات/فسفات انتخاب
+        # کرده یا چند اسید مختلف را هم‌زمان انتخاب کرده باشد.
+        manual_selection_warnings = check_manual_fertilizer_selection(fertilizers)
         
         # ۲. اجرای بهینه‌سازی با استفاده از core
         # 🆕 ارسال tank_volume به موتور بهینه‌سازی تا وزن‌ها برای حجم واقعی
@@ -216,24 +230,82 @@ def optimize_fertilizers_endpoint(
             logger.warning(f"Could not save optimization log: {e}")
         
         # ============================================================
-        # 🆕 ۵. محاسبه EC و pH نهایی
+        # 🆕 ۵. محاسبه EC و pH نهایی (محلول مخزن اصلی - بدون وابستگی به حجم)
         # ============================================================
         concentrations = result.get('concentrations', {})
         
-        # محاسبه EC
-        ec_result = calculate_ec(concentrations, unit="ppm")
+        # محاسبه EC (با احتساب EC پایه آب منبع کاربر)
+        water_ec = water_values.get('EC', 0) if water_values else 0
+        ec_result = calculate_ec(concentrations, unit="ppm", water_ec=water_ec)
         
-        # محاسبه pH (با استفاده از pH آب کاربر یا پیش‌فرض)
+        # محاسبه pH (تخمین بر مبنای نسبت آمونیوم/نیترات + pH آب کاربر)
         water_ph = water_values.get('pH', 7.0) if water_values else 7.0
         ph_result = calculate_ph(concentrations, unit="ppm", water_ph=water_ph)
         
         # وضعیت ترکیبی
-        water_ec = water_values.get('EC', 0) if water_values else 0
         ec_ph_status = get_ec_ph_status(
             ec=ec_result['ec'],
             ph=ph_result['ph'],
             water_ec=water_ec,
             water_ph=water_ph
+        )
+
+        # 🆕 هشدار اختصاصی نسبت آمونیوم اضافه می‌شود به هشدارهای کلی نتیجه
+        if ph_result.get('nh4_warning'):
+            result.setdefault('warnings', []).append(ph_result['nh4_warning'])
+
+        # 🆕 بررسی تداخلات تغذیه‌ای/شیمیایی (فراتر از رسوب Ksp): آهن+فسفر،
+        # قفل‌شدن ریزمغذی در pH بالا، کلر/سدیم/بور بیش‌ازحد، نسبت K/Ca و...
+        nutrient_interaction_warnings = check_nutrient_interactions(
+            concentrations, ph_estimate=ph_result.get('ph')
+        )
+        result.setdefault('warnings', []).extend(nutrient_interaction_warnings)
+
+        # 🆕 افزودن هشدارهای ترکیب دستی کودهای انتخابی کاربر (محاسبه‌شده
+        # پیش از اجرای بهینه‌سازی)
+        result.setdefault('warnings', []).extend(manual_selection_warnings)
+
+        # ============================================================
+        # 🆕 هشدار EC اختصاصی بر اساس نوع گیاه (اگر گزارش/گیاه مشخص باشد)
+        # ============================================================
+        # به‌جای فقط یک بازه عمومی ثابت EC (که برای همه گیاهان یکسان
+        # اعمال می‌شد)، در صورتی که report_id ارسال شده و گزارش دارای
+        # plant_name باشد، EC نهایی با بازه مطلوب همان گروه گیاهی مقایسه
+        # می‌شود (بر اساس جدول دسته‌بندی منتشرشده در ادبیات هیدروپونیک).
+        plant_ec_warning = None
+        if request.report_id:
+            try:
+                _report_for_plant = crud.get_report_by_id(db, request.report_id)
+                if _report_for_plant and _report_for_plant.user_id == current_user.id and _report_for_plant.plant_name:
+                    plant_range = get_plant_ec_range(_report_for_plant.plant_name)
+                    ec_value = ec_result['ec']
+                    if ec_value < plant_range['min']:
+                        plant_ec_warning = (
+                            f'⚠️ EC محاسبه‌شده ({ec_value:.2f} dS/m) برای «{_report_for_plant.plant_name}» '
+                            f'({plant_range["label"]}) کمتر از محدوده مطلوب ({plant_range["min"]}-{plant_range["max"]} dS/m) است. '
+                            f'{"" if plant_range["is_specific"] else "(این بازه عمومی است؛ برای دقت بیشتر با منبع تخصصی محصول خود مقایسه کنید.)"}'
+                        )
+                    elif ec_value > plant_range['max']:
+                        plant_ec_warning = (
+                            f'⚠️ EC محاسبه‌شده ({ec_value:.2f} dS/m) برای «{_report_for_plant.plant_name}» '
+                            f'({plant_range["label"]}) بیشتر از محدوده مطلوب ({plant_range["min"]}-{plant_range["max"]} dS/m) است. '
+                            f'{"" if plant_range["is_specific"] else "(این بازه عمومی است؛ برای دقت بیشتر با منبع تخصصی محصول خود مقایسه کنید.)"}'
+                        )
+                    if plant_ec_warning:
+                        result.setdefault('warnings', []).append(plant_ec_warning)
+            except Exception as e:
+                logger.warning(f"Could not compute plant-specific EC warning: {e}")
+
+        # حذف موارد تکراری با حفظ ترتیب
+        result['warnings'] = list(dict.fromkeys(result.get('warnings', [])))
+
+        # 🆕 دستورالعمل ساخت استوک برای هر کود (ویژگی اصلی درخواستی):
+        # برای هر کود با وزن مثبت، حجم آب پیشنهادی سطل + هشدار حلالیت
+        stock_instructions = calculate_stock_instructions(
+            fertilizers=fertilizers,
+            weights=result.get('weights', {}),
+            reservoir_data=result.get('reservoir_data', {'A': [], 'B': [], 'C': []}),
+            default_bucket_volume=request.stock_volume
         )
         
         # ساخت EcPhStatusResponse
@@ -279,7 +351,14 @@ def optimize_fertilizers_endpoint(
             ph=ph_result['ph'],
             ec_status=ec_result['status_label'],
             ph_status=ph_result['status_label'],
-            ec_ph_status=ec_ph_response
+            ec_ph_status=ec_ph_response,
+            ph_min=ph_result.get('ph_min'),
+            ph_max=ph_result.get('ph_max'),
+            ph_is_estimate=ph_result.get('is_estimate', True),
+            ph_disclaimer=ph_result.get('disclaimer'),
+            nh4_ratio_percent=ph_result.get('nh4_ratio_percent'),
+            stock_info=stock_info,
+            stock_instructions=stock_instructions
         )
         
         logger.info(f"✅ Optimization completed in {response.convergence_time_ms:.2f}ms")

@@ -368,6 +368,42 @@ class ApiService {
         }
     }
 
+    /**
+     * 🆕 ماشین‌حساب اصلاح pH: محاسبه دوز اسید/باز لازم بر اساس pH واقعی
+     * اندازه‌گیری‌شده با دستگاه، pH هدف، قلیائیت آب و حجم مخزن.
+     */
+    async calculatePHAdjustment(data: {
+        current_ph: number;
+        target_ph: number;
+        alkalinity_ppm_caco3: number;
+        tank_volume: number;
+        acid_or_base_type: string;
+        product_concentration_percent: number;
+        product_price_per_kg?: number;
+    }): Promise<{
+        needs_acid: boolean;
+        needs_base: boolean;
+        ph_current: number;
+        ph_target: number;
+        ph_difference: number;
+        alkalinity_ppm_caco3: number;
+        product_type: string;
+        product_name: string;
+        grams_needed: number;
+        estimated_cost: number | null;
+        type_mismatch_warning: string | null;
+        method: string;
+        safety_instruction: string;
+    }> {
+        try {
+            const response = await this.api.post('/calculations/ph-adjustment', data);
+            return response.data;
+        } catch (error) {
+            console.error('Error calculating pH adjustment:', error);
+            throw error;
+        }
+    }
+
     async checkPrecipitation(concentrations: Record<string, number>, temperature: number = 25): Promise<PrecipitationCheckResponse> {
         try {
             const response: AxiosResponse<PrecipitationCheckResponse> = await this.api.post(

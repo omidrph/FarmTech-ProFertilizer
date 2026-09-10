@@ -26,6 +26,27 @@ class OptimizationOptions(BaseModel):
     auto_balance: bool = Field(True, description="تعادل یونی خودکار (اضافه کردن Na یا Cl)")
     reservoir_mode: str = Field("auto", description="حالت مخازن: auto (خودکار), manual (دستی)")
 
+    # ============================================================
+    # 🆕 گزینه‌های چندهدفه بهینه‌سازی (چک‌باکس‌های کاربر)
+    # ============================================================
+    prefer_fewer_fertilizers: bool = Field(
+        False,
+        description="🆕 اولویت با تعداد کمتر کود (حتی با کمی افزایش خطا). "
+                    "برای کشاورزانی که نمی‌توانند/نمی‌خواهند تعداد زیادی کود تهیه کنند."
+    )
+    max_fertilizers_count: Optional[int] = Field(
+        None, ge=1,
+        description="🆕 حداکثر تعداد کود مجاز در ترکیب نهایی (اگر prefer_fewer_fertilizers فعال باشد)"
+    )
+    prefer_cheapest: bool = Field(
+        False,
+        description="🆕 اولویت با کمترین هزینه کل (حتی با کمی افزایش خطا نسبت به دقیق‌ترین حالت)"
+    )
+    prefer_most_accurate: bool = Field(
+        True,
+        description="🆕 اولویت با کمترین خطا نسبت به اهداف (دقیق‌ترین حالت، پیش‌فرض فعلی سیستم)"
+    )
+
 
 class OptimizationFertilizerInput(BaseModel):
     """ورودی کود برای بهینه‌سازی"""
@@ -99,12 +120,24 @@ class OptimizationResponse(BaseModel):
     ec_status: str = Field("", description="وضعیت EC (مطلوب, کم, بالا, بحرانی)")
     ph_status: str = Field("", description="وضعیت pH (مطلوب, اسیدی, قلیایی, بحرانی)")
     ec_ph_status: EcPhStatusResponse = Field(..., description="وضعیت ترکیبی EC و pH")
+    # 🆕 pH یک تخمین است نه اندازه‌گیری دقیق؛ بازه محتمل + توضیح صریح
+    ph_min: Optional[float] = Field(None, description="حد پایین بازه تخمین pH")
+    ph_max: Optional[float] = Field(None, description="حد بالای بازه تخمین pH")
+    ph_is_estimate: bool = Field(True, description="pH یک تخمین است، نه اندازه‌گیری دقیق")
+    ph_disclaimer: Optional[str] = Field(None, description="توضیح محدودیت مدل تخمین pH")
+    nh4_ratio_percent: Optional[float] = Field(None, description="درصد نیتروژن آمونیومی از کل نیتروژن")
     stock_info: Optional[Dict[str, Any]] = Field(
         None,
         description="🆕 اطلاعات مخزن/استوک برای این نتیجه: شامل tank_volume, "
                     "stock_volume, injection_ratio, total_stock_liters, "
                     "buckets_needed, weight_per_bucket (وزن هر کود اگر در "
                     "چند سطل استوک تقسیم شود)."
+    )
+    # 🆕 دستورالعمل ساخت استوک به‌تفکیک هر کود (ویژگی اصلی درخواستی)
+    stock_instructions: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="برای هر کود: وزن، حجم آب پیشنهادی سطل، غلظت استوک، "
+                    "مخزن مقصد (A/B/C) و متن دستورالعمل فارسی"
     )
 
 
@@ -118,6 +151,39 @@ class ManualWeightRecalculateRequest(BaseModel):
     target_values: Dict[str, float] = Field(..., description="مقادیر هدف عناصر (ppm)")
     water_values: Optional[Dict[str, float]] = Field(default_factory=dict, description="عناصر موجود در آب")
     tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن اصلی (لیتر) - همان مبنایی که weights روی آن حساب شده")
+    stock_volume: float = Field(100.0, ge=1, description="حجم پیش‌فرض سطل استوک (لیتر) برای محاسبه دستورالعمل")
+
+
+class PHAdjustmentRequest(BaseModel):
+    """
+    🆕 درخواست «ماشین‌حساب اصلاح pH»: بر اساس pH واقعی اندازه‌گیری‌شده با
+    دستگاه (نه تخمین نرم‌افزار)، pH هدف، قلیائیت آب و حجم مخزن، مقدار
+    اسید یا باز لازم را محاسبه می‌کند.
+    """
+    current_ph: float = Field(..., ge=0, le=14, description="pH فعلی اندازه‌گیری‌شده با دستگاه")
+    target_ph: float = Field(6.0, ge=0, le=14, description="pH هدف")
+    alkalinity_ppm_caco3: float = Field(..., ge=0, description="قلیائیت آب (ppm CaCO3)")
+    tank_volume: float = Field(1000.0, gt=0, description="حجم مخزن اصلی (لیتر)")
+    acid_or_base_type: str = Field("HNO3", description="نوع اسید/باز: HNO3, H3PO4, H2SO4, KOH")
+    product_concentration_percent: float = Field(100.0, gt=0, le=100, description="درصد خلوص محصول تجاری")
+    product_price_per_kg: Optional[float] = Field(None, ge=0, description="قیمت هر کیلوگرم محصول (برای نمایش هزینه تخمینی)")
+
+
+class PHAdjustmentResponse(BaseModel):
+    """پاسخ ماشین‌حساب اصلاح pH"""
+    needs_acid: bool
+    needs_base: bool
+    ph_current: float
+    ph_target: float
+    ph_difference: float
+    alkalinity_ppm_caco3: float
+    product_type: str
+    product_name: str
+    grams_needed: float
+    estimated_cost: Optional[float] = None
+    type_mismatch_warning: Optional[str] = None
+    method: str
+    safety_instruction: str
 
 
 class OptimizationLogResponse(BaseModel):

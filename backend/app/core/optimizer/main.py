@@ -69,7 +69,23 @@ def optimize_fertilizers(
     use_precipitation_check = options.get('use_precipitation_check', True)
     use_ion_balance_check = options.get('use_ion_balance_check', True)
     auto_balance = options.get('auto_balance', True)  # 🆕 پیش‌فرض فعال
-    
+
+    # ============================================================
+    # 🆕 گزینه «دقیق‌ترین ترکیب» (prefer_most_accurate)
+    # ============================================================
+    # پیش از این، این گزینه فقط یک flag بی‌اثر در schema بود و هیچ اثر
+    # واقعی روی محاسبه نداشت. اکنون وقتی صریحاً فعال باشد (و گزینه‌های
+    # «کم‌تعداد» و «ارزان‌ترین» فعال نباشند)، حتی ضریب هزینهٔ پیش‌فرض
+    # (cost_weight=0.01، که کمی به‌سمت گزینه‌های ارزان‌تر متمایل می‌کند)
+    # هم صفر می‌شود تا خروجی صرفاً کمینه‌کنندهٔ خطای NNLS محض باشد، بدون
+    # هیچ نوع سوگیری هزینه‌ای.
+    prefer_fewer = options.get('prefer_fewer_fertilizers', False)
+    prefer_cheap = options.get('prefer_cheapest', False)
+    prefer_accurate = options.get('prefer_most_accurate', False)
+    if prefer_accurate and not prefer_fewer and not prefer_cheap:
+        cost_weight = 0.0
+        method = 'nnls'
+
     logger.info(f"🚀 Starting optimization with method: {method}")
     logger.info(f"   Targets: {len(target_values)} elements")
     logger.info(f"   Fertilizers: {len(fertilizers)} items")
@@ -128,7 +144,10 @@ def optimize_fertilizers(
             max_iterations=max_iterations,
             tolerance=tolerance,
             element_weights=element_weights,
-            active_elements=active_elements
+            active_elements=active_elements,
+            prefer_fewer_fertilizers=options.get('prefer_fewer_fertilizers', False),
+            max_fertilizers_count=options.get('max_fertilizers_count'),
+            prefer_cheapest=options.get('prefer_cheapest', False)
         )
     except Exception as e:
         logger.error(f"Optimization error: {e}")

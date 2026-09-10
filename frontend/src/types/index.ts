@@ -280,6 +280,11 @@ export interface OptimizationOptions {
     use_ion_balance_check?: boolean;
     reservoir_mode?: 'auto' | 'manual';
     auto_balance?: boolean;
+    // 🆕 گزینه‌های چندهدفه بهینه‌سازی (چک‌باکس‌های کاربر)
+    prefer_fewer_fertilizers?: boolean;
+    max_fertilizers_count?: number;
+    prefer_cheapest?: boolean;
+    prefer_most_accurate?: boolean;
 }
 
 export interface OptimizationFertilizerInput {
@@ -320,6 +325,20 @@ export interface EcPhStatus {
     ph_label: string;
 }
 
+// 🆕 دستورالعمل ساخت استوک برای یک کود (ویژگی اصلی درخواستی)
+export interface StockInstruction {
+    fertilizer_id: string;
+    fertilizer_name: string;
+    weight_grams: number;
+    reservoir: 'A' | 'B' | 'C';
+    is_acid: boolean;
+    recommended_bucket_liters: number;
+    stock_concentration_g_per_l: number;
+    solubility_g_per_l: number | null;
+    warning: string | null;
+    instruction_text: string;
+}
+
 export interface OptimizationResponse {
     weights: Record<string, number>;
     concentrations: Record<string, number>;
@@ -339,6 +358,23 @@ export interface OptimizationResponse {
     ec_status: string;
     ph_status: string;
     ec_ph_status: EcPhStatus;
+    // 🆕 pH یک تخمین است، نه اندازه‌گیری دقیق - بازه محتمل + توضیح
+    ph_min?: number;
+    ph_max?: number;
+    ph_is_estimate?: boolean;
+    ph_disclaimer?: string;
+    nh4_ratio_percent?: number;
+    // 🆕 اطلاعات مخزن/استوک و دستورالعمل ساخت استوک به‌تفکیک هر کود
+    stock_info?: {
+        tank_volume: number;
+        stock_volume?: number;
+        injection_ratio?: number;
+        total_stock_liters?: number;
+        buckets_needed?: number;
+        weight_per_bucket?: Record<string, number>;
+        manual_edit?: boolean;
+    };
+    stock_instructions?: StockInstruction[];
 }
 
 export interface PrecipitationRiskItem {

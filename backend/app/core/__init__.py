@@ -23,6 +23,7 @@ from .ion_balance import (
     ACIDITY_COEFFICIENTS,
     EC_RANGES,
     PH_RANGES,
+    get_plant_ec_range,
     # Converters
     ppm_to_meq,
     meq_to_ppm,
@@ -63,7 +64,10 @@ from .optimizer import (
 from .reservoir import (
     calculate_reservoir_data,
     check_reservoir_compatibility,
-    RESERVOIR_RULES
+    RESERVOIR_RULES,
+    calculate_stock_instructions,
+    check_nutrient_interactions,
+    check_manual_fertilizer_selection,
 )
 
 __all__ = [
@@ -79,6 +83,7 @@ __all__ = [
     'ACIDITY_COEFFICIENTS',
     'EC_RANGES',
     'PH_RANGES',
+    'get_plant_ec_range',
     # Ion Balance - Converters
     'ppm_to_meq',
     'meq_to_ppm',
@@ -110,5 +115,10 @@ __all__ = [
     # Reservoir
     'calculate_reservoir_data',
     'check_reservoir_compatibility',
-    'RESERVOIR_RULES'
+    'RESERVOIR_RULES',
+    'calculate_stock_instructions',
+    'check_nutrient_interactions',
+    'check_manual_fertilizer_selection',
 ]
+
+

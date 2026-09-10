@@ -83,11 +83,14 @@
           <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-xs text-gray-500 dark:text-gray-400">pH نهایی</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">pH نهایی (تخمینی)</p>
                 <p class="text-xl font-bold text-purple-600 dark:text-purple-400 tabular-nums" style="font-family: 'Vazirmatn', sans-serif;">
                   {{ result.ph.toFixed(2) }}
                 </p>
-                <p class="text-[10px] text-gray-400">pH</p>
+                <!-- 🆕 بازه محتمل به‌جای عدد قطعی گمراه‌کننده -->
+                <p v-if="result.ph_min !== undefined && result.ph_max !== undefined" class="text-[10px] text-gray-400">
+                  بازه محتمل: {{ result.ph_min.toFixed(2) }} - {{ result.ph_max.toFixed(2) }}
+                </p>
               </div>
               <div class="flex flex-col items-end">
                 <span 
@@ -103,7 +106,15 @@
             </div>
           </div>
         </div>
-        
+
+        <!-- 🆕 توضیح صادقانه محدودیت مدل تخمین pH -->
+        <div v-if="result.ph_disclaimer" class="mt-2 p-2 rounded-lg text-xs bg-gray-50 dark:bg-gray-700/40 text-gray-600 dark:text-gray-400 flex items-start gap-2">
+          <svg class="w-3.5 h-3.5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{{ result.ph_disclaimer }}</span>
+        </div>
+
         <div 
           v-if="result.ec_ph_status && result.ec_ph_status.message"
           class="mt-2 p-2 rounded-lg text-sm"
@@ -123,7 +134,62 @@
           </div>
         </div>
       </div>
-      
+
+      <!-- ============================================================ -->
+      <!-- 🆕 دستورالعمل ساخت استوک - به‌تفکیک هر کود (بخش اصلی و کاربردی) -->
+      <!-- ============================================================ -->
+      <div v-if="result.stock_instructions && result.stock_instructions.length > 0">
+        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          دستورالعمل ساخت استوک (به تفکیک هر کود)
+        </h4>
+        <div class="space-y-2">
+          <div
+            v-for="inst in result.stock_instructions"
+            :key="inst.fertilizer_id"
+            class="rounded-lg border p-3"
+            :class="inst.warning
+              ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700'
+              : 'bg-gray-50 dark:bg-gray-700/40 border-gray-200 dark:border-gray-600'"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span
+                    class="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                    :class="{
+                      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': inst.reservoir === 'A',
+                      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': inst.reservoir === 'B',
+                      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': inst.reservoir === 'C'
+                    }"
+                  >
+                    مخزن {{ inst.reservoir }}
+                  </span>
+                  <span class="font-semibold text-gray-900 dark:text-white text-sm">{{ inst.fertilizer_name }}</span>
+                </div>
+                <p class="text-sm text-gray-700 dark:text-gray-300">{{ inst.instruction_text }}</p>
+                <p v-if="inst.warning" class="text-xs text-amber-700 dark:text-amber-400 mt-1 font-medium">{{ inst.warning }}</p>
+              </div>
+              <div class="text-left flex-shrink-0">
+                <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{{ inst.weight_grams.toFixed(0) }} g</p>
+                <p class="text-[10px] text-gray-400">{{ inst.recommended_bucket_liters }} لیتر آب</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🆕 خلاصه اطلاعات مخزن اصلی -->
+        <div v-if="result.stock_info" class="mt-2 p-2 rounded-lg text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300">
+          مخزن اصلی: {{ result.stock_info.tank_volume }} لیتر
+          <span v-if="result.stock_info.total_stock_liters"> • حجم کل استوک لازم: {{ result.stock_info.total_stock_liters }} لیتر</span>
+          <span v-if="result.stock_info.buckets_needed && result.stock_info.buckets_needed > 1">
+            • در {{ result.stock_info.buckets_needed }} نوبت/سطل تقسیم کنید (هر نوبت را کامل داخل مخزن اصلی بریزید و دوباره پر کنید)
+          </span>
+        </div>
+      </div>
+
       <!-- ============================================================ -->
       <!-- بخش 1: جدول مقدار کودها برای ساخت استوک -->
       <!-- ============================================================ -->

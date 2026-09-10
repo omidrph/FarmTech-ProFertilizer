@@ -17,6 +17,121 @@ from scipy.optimize import nnls, lsq_linear, minimize
 logger = logging.getLogger(__name__)
 
 
+def optimize_sparse_nnls(
+    A: np.ndarray,
+    b: np.ndarray,
+    costs: Optional[np.ndarray] = None,
+    max_fertilizers: Optional[int] = None,
+    max_residual_increase_pct: float = 25.0
+) -> Dict[str, Any]:
+    """
+    🆕 نسخه «کم‌تعداد» بهینه‌سازی: ترکیبی با کمترین تعداد کود ممکن.
+
+    چرا لازم است: NNLS به‌خودی‌خود sparse (کم‌تعداد) نیست — معمولاً از
+    هر کود موجود مقداری استفاده می‌کند، حتی مقادیر خیلی کوچک و
+    غیرعملی. خیلی از کشاورزان توانایی/تمایل تهیه ۱۵-۲۰ نوع کود مختلف را
+    ندارند و ترجیح می‌دهند با مثلاً ۵-۶ کود اصلی کار کنند، حتی با کمی
+    خطای بیشتر نسبت به هدف.
+
+    الگوریتم: حذف تدریجی (Greedy Backward Elimination)
+        ۱. ابتدا NNLS معمولی روی همه کودها اجرا می‌شود (baseline).
+        ۲. در هر مرحله، کودی که کمترین وزن غیرصفر را دارد به‌طور
+           آزمایشی حذف می‌شود و دوباره NNLS روی بقیه کودها اجرا می‌شود.
+        ۳. اگر افزایش خطا (residual) از سقف مجاز (`max_residual_increase_pct`)
+           بیشتر نشود، حذف قطعی می‌شود و ادامه می‌دهیم.
+        ۴. متوقف می‌شویم وقتی: به `max_fertilizers` رسیدیم، یا دیگر
+           حذفی بدون افزایش بیش‌ازحد خطا ممکن نیست.
+
+    این روش بهینهٔ مطلق (که نیازمند بررسی تمام زیرمجموعه‌ها و از نظر
+    محاسباتی غیرعملی است) نیست، اما یک تقریب استاندارد و رایج
+    (greedy sparse approximation) برای این نوع مسئله است.
+
+    Args:
+        A: ماتریس ضرایب (m × n)
+        b: بردار هدف (m)
+        costs: هزینه هر کود (برای ترجیح حذف کودهای گران‌تر در تساوی خطا - اختیاری)
+        max_fertilizers: حداکثر تعداد کود مجاز در جواب نهایی
+        max_residual_increase_pct: حداکثر درصد مجاز افزایش خطا نسبت به
+            جواب کامل NNLS (پیش‌فرض ۲۵٪)
+
+    Returns:
+        Dict: مشابه optimize_with_nnls، به‌علاوه 'removed_count' و
+            'baseline_residual'
+    """
+    start_time = time.time()
+    n = A.shape[1]
+
+    baseline = optimize_with_nnls(A, b)
+    baseline_residual = baseline['residual']
+    weights = baseline['weights'].copy()
+
+    active_indices = list(np.where(weights > 1e-9)[0])
+    removed_count = 0
+
+    def _current_nonzero_count(idx_list, w):
+        return sum(1 for i in idx_list if w[i] > 1e-9)
+
+    while True:
+        nonzero_count = _current_nonzero_count(active_indices, weights)
+
+        if max_fertilizers is not None and nonzero_count <= max_fertilizers:
+            break
+        if len(active_indices) <= 1:
+            break
+
+        # کاندیدهای حذف: کودهای فعال، به ترتیب کوچک‌ترین وزن اول
+        candidates = sorted(active_indices, key=lambda i: weights[i])
+
+        removed_this_round = False
+        for candidate in candidates:
+            trial_indices = [i for i in active_indices if i != candidate]
+            if not trial_indices:
+                continue
+
+            A_trial = A[:, trial_indices]
+            trial_result = optimize_with_nnls(A_trial, b)
+            trial_residual = trial_result['residual']
+
+            residual_increase_pct = (
+                ((trial_residual - baseline_residual) / baseline_residual * 100)
+                if baseline_residual > 1e-9 else
+                (0 if trial_residual < 1e-6 else float('inf'))
+            )
+
+            # اگر هنوز به سقف تعداد نرسیده‌ایم، فقط وقتی حذف می‌کنیم که
+            # خطا بیش‌ازحد مجاز افزایش نیابد؛ اگر کاربر صریحاً سقف تعداد
+            # داده (max_fertilizers)، حتی با خطای بیشتر هم به آن سقف
+            # می‌رسیم (چون این خواستهٔ صریح کاربر است).
+            must_reduce = max_fertilizers is not None and nonzero_count > max_fertilizers
+            if must_reduce or residual_increase_pct <= max_residual_increase_pct:
+                active_indices = trial_indices
+                new_weights = np.zeros(n)
+                new_weights[trial_indices] = trial_result['weights']
+                weights = new_weights
+                removed_count += 1
+                removed_this_round = True
+                break
+
+        if not removed_this_round:
+            # هیچ حذفی بدون افزایش بیش‌ازحد خطا ممکن نبود
+            break
+
+    final_residual = float(np.sum((np.dot(A, weights) - b) ** 2)) ** 0.5 if A.shape[0] > 0 else 0.0
+
+    return {
+        'weights': weights,
+        'residual': final_residual,
+        'iterations': removed_count + 1,
+        'convergence_time_ms': (time.time() - start_time) * 1000,
+        'is_converged': True,
+        'method': 'nnls_sparse',
+        'status': 'success',
+        'removed_count': removed_count,
+        'baseline_residual': baseline_residual,
+        'final_fertilizer_count': _current_nonzero_count(active_indices, weights)
+    }
+
+
 def optimize_with_nnls(
     A: np.ndarray,
     b: np.ndarray,
@@ -247,11 +362,14 @@ def solve_optimization(
     max_iterations: int = 1000,
     tolerance: float = 1e-6,
     element_weights: Optional[Dict[str, float]] = None,
-    active_elements: Optional[List[str]] = None
+    active_elements: Optional[List[str]] = None,
+    prefer_fewer_fertilizers: bool = False,
+    max_fertilizers_count: Optional[int] = None,
+    prefer_cheapest: bool = False
 ) -> Dict[str, Any]:
     """
     حل‌کننده اصلی بهینه‌سازی با انتخاب روش
-    
+
     Args:
         A: ماتریس ضرایب
         b: بردار هدف
@@ -262,15 +380,37 @@ def solve_optimization(
         tolerance: تلرانس همگرایی
         element_weights: وزن‌دهی به عناصر
         active_elements: لیست عناصر فعال
-    
+        prefer_fewer_fertilizers: 🆕 اگر فعال باشد، از الگوریتم حذف
+            تدریجی (greedy sparse) برای رسیدن به کمترین تعداد کود ممکن
+            استفاده می‌شود.
+        max_fertilizers_count: 🆕 حداکثر تعداد کود مجاز (فقط وقتی
+            prefer_fewer_fertilizers فعال است معنا دارد)
+        prefer_cheapest: 🆕 اگر فعال باشد و costs موجود باشد، از روش
+            cost-aware (lsq_linear_with_cost با ضریب هزینهٔ بالاتر)
+            استفاده می‌شود تا ارزان‌ترین ترکیب معقول انتخاب شود.
+
     Returns:
         Dict: نتیجه بهینه‌سازی
-    
+
     Raises:
         ValueError: اگر روش نامعتبر باشد
     """
     logger.info(f"🔄 Starting optimization with method: {method}")
-    
+
+    # 🆕 اولویت با «کم‌تعداد کود» - این حالت جایگزین روش انتخابی می‌شود
+    # چون هدف آن مستقیماً کاهش تعداد است، نه فقط کمینه‌کردن خطا
+    if prefer_fewer_fertilizers:
+        return optimize_sparse_nnls(
+            A, b, costs=costs, max_fertilizers=max_fertilizers_count
+        )
+
+    # 🆕 اولویت با «ارزان‌ترین ترکیب» - از روش هزینه‌محور با ضریب هزینهٔ
+    # بالاتر از حالت پیش‌فرض استفاده می‌شود تا واقعاً به‌سمت ارزان‌ترین
+    # جواب معقول متمایل شود (نه فقط یک تعدیل جزئی).
+    if prefer_cheapest and costs is not None:
+        boosted_cost_weight = max(cost_weight, 0.15)
+        return optimize_with_cost(A, b, costs, boosted_cost_weight, max_iterations, tolerance)
+
     if method == 'nnls':
         return optimize_with_nnls(A, b, element_weights, active_elements)
     
@@ -286,3 +426,5 @@ def solve_optimization(
     
     else:
         raise ValueError(f"روش {method} پشتیبانی نمی‌شود")
+
+

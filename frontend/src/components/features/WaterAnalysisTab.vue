@@ -149,9 +149,10 @@ class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg
 <th class="sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[100px] shadow-sm">
 عنصر
 </th>
-<th v-for="el in waterElements" :key="el" class="px-3 py-3 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[90px]">
+<th v-for="el in waterElements" :key="el" class="px-3 py-3 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[90px]" :title="el === 'Alkalinity' ? 'قلیائیت آب بر حسب ppm CaCO₃ - برای بررسی رسوب کربنات کلسیم و محاسبه دقیق دوز اسید لازم است' : undefined">
 <div class="flex flex-col items-center gap-1">
-<span>{{ el }}</span>
+<span>{{ el === 'Alkalinity' ? 'قلیائیت' : el }}</span>
+<span v-if="el === 'Alkalinity'" class="text-[9px] text-gray-400 font-normal">ppm CaCO₃</span>
 <!-- واحد EC فقط برای ستون EC -->
 <select
 v-if="el === 'EC'"
@@ -410,7 +411,7 @@ const waterStore = useWaterStore();
 const reportStore = useReportStore();
 
 // ===== State =====
-const waterElements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'EC', 'pH'];
+const waterElements = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'EC', 'pH', 'Alkalinity'];
 const currentUnit = ref<'ppm' | 'meq' | 'mmol'>('ppm');
 
 // Auto-save State
@@ -736,3 +737,5 @@ loadWaterTemplates();
 .animate-fade-in { animation: fadeIn 0.5s ease-out; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
+
+

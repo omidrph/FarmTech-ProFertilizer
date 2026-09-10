@@ -98,6 +98,8 @@ from .optimization import (
     PrecipitationRiskItem,
     PrecipitationCheckResponse,
     ManualWeightRecalculateRequest,
+    PHAdjustmentRequest,
+    PHAdjustmentResponse,
 )
 
 # ============================================================
@@ -205,6 +207,8 @@ __all__ = [
     'EcPhStatusResponse',
     'OptimizationLogResponse',
     'ManualWeightRecalculateRequest',
+    'PHAdjustmentRequest',
+    'PHAdjustmentResponse',
     'PrecipitationCheckRequest',
     'PrecipitationRiskItem',
     'PrecipitationCheckResponse',

@@ -65,7 +65,51 @@
             تعادل یونی خودکار
           </span>
         </label>
+
+        <!-- 🆕 گزینه‌های چندهدفه بهینه‌سازی: تصمیم نهایی با کاربر -->
+        <label class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            v-model="preferFewerFertilizers"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
+          />
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            کمترین تعداد کود ممکن
+          </span>
+        </label>
+
+        <!-- تعداد حداکثر کود (فقط وقتی گزینه بالا فعال است) -->
+        <div v-if="preferFewerFertilizers" class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+          <span class="text-sm text-gray-600 dark:text-gray-400">حداکثر</span>
+          <input
+            type="number"
+            min="1"
+            max="20"
+            v-model.number="maxFertilizersCount"
+            class="w-14 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 text-sm"
+          />
+          <span class="text-sm text-gray-600 dark:text-gray-400">کود</span>
+        </div>
+
+        <label class="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            v-model="preferCheapest"
+            class="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-0"
+          />
+          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            ارزان‌ترین ترکیب
+          </span>
+        </label>
       </div>
+
+      <!-- توضیح کوتاه گزینه‌های انتخاب‌شده -->
+      <p v-if="preferFewerFertilizers || preferCheapest" class="mt-2 text-xs text-amber-700 dark:text-amber-400">
+        ⚠️ با فعال‌بودن این گزینه‌ها، ممکن است دقت رسیدن به اهداف کمی کاهش یابد (نسبت به حالت
+        «دقیق‌ترین ترکیب»)، چون اولویت با {{ preferFewerFertilizers ? 'تعداد کمتر کود' : '' }}
+        {{ preferFewerFertilizers && preferCheapest ? ' و ' : '' }}
+        {{ preferCheapest ? 'هزینه کمتر' : '' }} است.
+      </p>
 
       <!-- ردیف دوم: دکمه‌های عملیاتی (بدون دکمه ذخیره) -->
       <div class="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
@@ -103,6 +147,15 @@
       :target-values="targetStore.targetElements"
       @export-csv="exportCSV"
       @update-weight="handleWeightEdit"
+    />
+
+    <!-- ============================================================ -->
+    <!-- 🆕 ماشین‌حساب اصلاح pH (فقط بعد از داشتن یک نتیجه محاسبه) -->
+    <!-- ============================================================ -->
+    <PHAdjustmentCalculator
+      v-if="hasOptimizationResult"
+      :initial-alkalinity="waterStore.waterValues['Alkalinity']"
+      :initial-tank-volume="mainTankVolume"
     />
 
     <!-- ============================================================ -->
@@ -158,6 +211,7 @@ import { useCSVExport } from '@/composables/useCSVExport';
 import StockSettings from './calc/StockSettings.vue';
 import FertilizerSelector from './calc/FertilizerSelector.vue';
 import OptimizationResult from './calc/OptimizationResult.vue';
+import PHAdjustmentCalculator from './calc/PHAdjustmentCalculator.vue';
 
 // ===== Props =====
 const props = defineProps<{
@@ -208,6 +262,10 @@ const localSelectedFertilizers = ref<string[]>([...props.selectedFertilizers]);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
 const autoBalanceEnabled = ref(true);
+// 🆕 گزینه‌های چندهدفه بهینه‌سازی (تصمیم نهایی با کاربر)
+const preferFewerFertilizers = ref(false);
+const maxFertilizersCount = ref(6);
+const preferCheapest = ref(false);
 
 // ===== Computed =====
 const hasOptimizationResult = computed(() => calcStore.optimizationResult !== null);
@@ -242,7 +300,12 @@ const handleAutoOptimize = async () => {
 
   try {
     const options = {
-      auto_balance: autoBalanceEnabled.value
+      auto_balance: autoBalanceEnabled.value,
+      // 🆕 گزینه‌های چندهدفه: تصمیم نهایی با کاربر
+      prefer_fewer_fertilizers: preferFewerFertilizers.value,
+      max_fertilizers_count: preferFewerFertilizers.value ? maxFertilizersCount.value : undefined,
+      prefer_cheapest: preferCheapest.value,
+      prefer_most_accurate: !preferFewerFertilizers.value && !preferCheapest.value
     };
 
     const result = await optimizeFertilizers(

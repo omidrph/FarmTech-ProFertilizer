@@ -19,6 +19,7 @@ from ..ion_balance import (
     calculate_ion_balance,
     get_ion_balance_status,
     check_precipitation,
+    calculate_ph,
     ALL_ELEMENTS,
     auto_balance_ion
 )
@@ -291,10 +292,29 @@ def process_optimization_result(
     )
     
     # بررسی رسوب
+    # 🆕 قبل از بررسی رسوب، pH محلول تخمین زده می‌شود (لازم برای محاسبه
+    # درست [OH-] و کسر واقعی PO4³⁻)، و منابع آهن کلاته شناسایی می‌شوند
+    # (چون آهن کلاته در برابر رسوب Fe(OH)3 مقاوم است).
     use_precipitation_check = options.get('use_precipitation_check', True)
     precipitation_result = None
     if use_precipitation_check:
-        precipitation_result = check_precipitation(final_concentrations)
+        prelim_ph_result = calculate_ph(final_concentrations, unit="ppm", water_ph=options.get('water_ph', 7.0))
+        has_chelated_iron = any(
+            fert.get('elements', {}).get('Fe', 0) > 0 and (
+                'کلات' in fert.get('name', '') or
+                'edta' in fert.get('name', '').lower() or
+                'dtpa' in fert.get('name', '').lower() or
+                'eddha' in fert.get('name', '').lower() or
+                'chelate' in fert.get('name', '').lower()
+            )
+            for fert in fertilizers
+        )
+        precipitation_result = check_precipitation(
+            final_concentrations,
+            ph=prelim_ph_result.get('ph'),
+            has_chelated_iron=has_chelated_iron,
+            alkalinity_ppm_caco3=water_values.get('Alkalinity')
+        )
     
     # محاسبه درصد تحقق
     achievement = calculate_target_achievement(target_values, final_concentrations)

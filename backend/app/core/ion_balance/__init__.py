@@ -23,7 +23,8 @@ from .constants import (
     ION_TO_EC_COEFFICIENTS,
     ACIDITY_COEFFICIENTS,
     EC_RANGES,
-    PH_RANGES
+    PH_RANGES,
+    get_plant_ec_range,
 )
 
 from .converters import (
@@ -64,6 +65,7 @@ __all__ = [
     'ACIDITY_COEFFICIENTS',
     'EC_RANGES',
     'PH_RANGES',
+    'get_plant_ec_range',
     # Converters
     'ppm_to_meq',
     'meq_to_ppm',
@@ -83,3 +85,5 @@ __all__ = [
     'validate_ion_balance_result',
     'check_precipitation'
 ]
+
+

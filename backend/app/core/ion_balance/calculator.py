@@ -23,7 +23,10 @@ from .constants import (
     ION_TO_EC_COEFFICIENTS,
     ACIDITY_COEFFICIENTS,
     EC_RANGES,
-    PH_RANGES
+    PH_RANGES,
+    EC_CONVERSION_FACTOR,
+    NH4_RATIO_WARNING_THRESHOLD,
+    NH4_RATIO_CRITICAL_THRESHOLD
 )
 from .converters import ppm_to_meq
 
@@ -244,56 +247,78 @@ def check_element_status(
 
 def calculate_ec(
     concentrations: Dict[str, float],
-    unit: str = "ppm"
+    unit: str = "ppm",
+    water_ec: Optional[float] = None
 ) -> Dict[str, Any]:
     """
-    محاسبه EC (هدایت الکتریکی) محلول نهایی
-    
-    EC = Σ (غلظت یون × ضریب تبدیل) / 100
-    
-    ✅ اصلاح: تقسیم بر 100 به جای 1000 برای دقت بیشتر
-    
+    محاسبه EC (هدایت الکتریکی) محلول نهایی — بر اساس فرمول استاندارد
+    هیدروپونیک (Sonneveld & Voogt).
+
+    🆕 رفع باگ علمی: فرمول قبلی از ضرایب جداگانه و بی‌منبع برای هر یون
+    استفاده می‌کرد. اکنون از رابطه استاندارد و مستندِ:
+
+        EC (dS/m) = میانگین(مجموع meq/L کاتیون‌ها, مجموع meq/L آنیون‌ها) × 0.1
+
+    استفاده می‌شود. میانگین کاتیون/آنیون به‌جای فقط یکی از آن‌ها گرفته
+    می‌شود تا اگر تعادل یونی کمی به‌هم‌خورده باشد (که در عمل همیشه دقیقاً
+    صفر نیست)، EC واقع‌بینانه‌تر باشد.
+
     Args:
-        concentrations: غلظت عناصر (ppm یا meq/L)
+        concentrations: غلظت عناصر (ppm یا meq/L) — این باید غلظت محلول
+            نهایی «داخل مخزن اصلی» باشد (غلظت به حجم مخزن وابسته نیست،
+            پس همان مقداری که از calculate_final_concentrations یا نتیجه
+            بهینه‌سازی می‌آید مستقیماً قابل استفاده است).
         unit: واحد ورودی ('ppm', 'meq')
-    
+        water_ec: EC پایه آب منبع (dS/m) — اگر داده شود، به EC محلول
+            غذایی اضافه می‌شود (چون EC آب معمولاً از نمک‌های غیر تغذیه‌ای
+            مثل کلراید سدیم/بی‌کربنات ناشی می‌شود که در محاسبه meq بالا
+            لحاظ نشده مگر این‌که Na/Cl آب هم در concentrations باشند).
+
     Returns:
         Dict: شامل EC (dS/m)، وضعیت و توصیه
     """
-    total_ec = 0.0
+    cation_meq = 0.0
+    anion_meq = 0.0
     element_contributions = {}
     active_elements = []
-    
+
     for element, value in concentrations.items():
         if value is None or value == 0:
             continue
-        
-        if element not in ION_TO_EC_COEFFICIENTS:
+
+        if element not in VALENCES:
             continue
-        
+
         # تبدیل به MEQ اگر PPM باشد
         if unit == "ppm":
             meq_value = ppm_to_meq(value, element)
         else:
             meq_value = value
-        
-        coefficient = ION_TO_EC_COEFFICIENTS.get(element, 7.10)
-        contribution = meq_value * coefficient
-        total_ec += contribution
-        
+
+        valence = VALENCES.get(element, 0)
+        if valence > 0:
+            cation_meq += meq_value
+        elif valence < 0:
+            anion_meq += meq_value
+
         element_contributions[element] = {
-            'meq': round(meq_value, 4),
-            'coefficient': coefficient,
-            'contribution': round(contribution, 4)
+            'meq': round(meq_value, 4)
         }
         active_elements.append(element)
-    
-    # ✅ اصلاح: تقسیم بر 100 به جای 1000
-    ec_ds = total_ec / 100
-    
+
+    # میانگین کاتیون و آنیون (تئوری: باید برابر باشند طبق تعادل یونی)
+    avg_meq = (cation_meq + anion_meq) / 2
+
+    ec_ds = avg_meq * EC_CONVERSION_FACTOR
+
+    # 🆕 افزودن EC پایه آب (اگر داده شده) - نمک‌های غیرمغذی آب (مثل
+    # بی‌کربنات، کلراید اضافی) در meq بالا لحاظ نشده‌اند
+    if water_ec:
+        ec_ds += water_ec
+
     # تعیین وضعیت EC
     status_info = _get_ec_status(ec_ds)
-    
+
     return {
         'ec': round(ec_ds, 3),
         'status': status_info['status'],
@@ -302,7 +327,9 @@ def calculate_ec(
         'recommendation': status_info['recommendation'],
         'contributions': element_contributions,
         'active_elements': active_elements,
-        'total_meq': round(sum(c['meq'] for c in element_contributions.values()), 4),
+        'cation_meq': round(cation_meq, 4),
+        'anion_meq': round(anion_meq, 4),
+        'total_meq': round(avg_meq, 4),
         'range_min': status_info.get('range_min', 0),
         'range_max': status_info.get('range_max', 0)
     }
@@ -347,68 +374,95 @@ def calculate_ph(
     water_ph: Optional[float] = None
 ) -> Dict[str, Any]:
     """
-    محاسبه pH تقریبی محلول نهایی
-    
-    pH = pH_water + Σ (غلظت × ضریب اسیدی/بازی)
-    
-    ✅ اصلاح: ضرایب اسیدی/بازی اصلاح شده‌اند
-    
+    تخمین pH محلول نهایی (نه اندازه‌گیری دقیق شیمیایی).
+
+    🆕 اصلاح مفهومی مهم: pH یک کمیت لگاریتمی است (pH = -log[H+]) که به
+    تعادل شیمیایی واقعی (بافرینگ فسفات، کربنات/بی‌کربنات آب، نسبت جذب
+    آمونیوم/نیترات) بستگی دارد. جمع‌کردن خطی «ضریب اسیدی هر عنصر» (مدل
+    قبلی) از نظر شیمیایی گمراه‌کننده است و یک عدد قطعی کاذب تولید
+    می‌کند. مدل جدید:
+
+    ۱) بر مهم‌ترین و مستندترین عامل واقعی تکیه می‌کند: نسبت نیتروژن
+       آمونیومی (NH4-N) به کل نیتروژن. جذب هر یون NH4+ توسط ریشه با آزاد
+       شدن H+ همراه است (اسیدی‌کننده)، جذب NO3- با آزاد شدن HCO3-/OH-
+       همراه است (بازی‌کننده). این اثر تدریجی و در طول زمان (نه لحظه‌ای
+       در مخزن) رخ می‌دهد.
+    ۲) به‌جای یک عدد قطعی، یک «بازه محتمل» برمی‌گرداند (± عدم قطعیت) تا
+       گمراه‌کننده نباشد.
+    ۳) صریحاً اعلام می‌کند که این یک TREND/ESTIMATE است، نه اندازه‌گیری
+       دقیق، و توصیه می‌کند pH واقعی با pH متر بعد از ساخت محلول سنجیده
+       شود (بهترین و تنها روش قابل‌اتکا).
+
     Args:
-        concentrations: غلظت عناصر (ppm یا meq/L)
+        concentrations: غلظت عناصر (ppm یا meq/L) محلول نهایی مخزن اصلی
         unit: واحد ورودی ('ppm', 'meq')
-        water_ph: pH آب (اختیاری، پیش‌فرض ۷.۰)
-    
+        water_ph: pH اندازه‌گیری‌شده آب منبع (پایه محاسبه)
+
     Returns:
-        Dict: شامل pH، وضعیت و توصیه
+        Dict: شامل ph (نقطه میانی تخمین)، ph_min/ph_max (بازه محتمل)،
+            نسبت آمونیوم/نیترات، وضعیت، و توصیه‌ها.
     """
     if water_ph is None:
         water_ph = 7.0
-    
-    ph_shift = 0.0
-    element_contributions = {}
-    active_elements = []
-    
-    for element, value in concentrations.items():
-        if value is None or value == 0:
-            continue
-        
-        if element not in ACIDITY_COEFFICIENTS:
-            continue
-        
-        # تبدیل به MEQ اگر PPM باشد
-        if unit == "ppm":
-            meq_value = ppm_to_meq(value, element)
-        else:
-            meq_value = value
-        
-        coefficient = ACIDITY_COEFFICIENTS.get(element, 0)
-        contribution = meq_value * coefficient
-        ph_shift += contribution
-        
-        element_contributions[element] = {
-            'meq': round(meq_value, 4),
-            'coefficient': coefficient,
-            'contribution': round(contribution, 4)
-        }
-        active_elements.append(element)
-    
-    # pH نهایی (محدود به بازه ۰-۱۴)
-    ph = water_ph + ph_shift
-    ph = max(0, min(14, ph))
-    
-    # تعیین وضعیت pH
-    status_info = _get_ph_status(ph)
-    
+
+    no3_ppm = concentrations.get('N-NO3', 0) or 0
+    nh4_ppm = concentrations.get('N-NH4', 0) or 0
+    total_n = no3_ppm + nh4_ppm
+
+    nh4_ratio = (nh4_ppm / total_n) if total_n > 0 else 0.0
+
+    # ============================================================
+    # تخمین جهت و اندازه تغییر pH نسبت به آب پایه
+    # ============================================================
+    # بر اساس ادبیات هیدروپونیک: هر ۱۰٪ افزایش نسبت NH4/کل‌N، معمولاً با
+    # گذر زمان ~0.3-0.5 واحد pH محیط ریشه را کاهش می‌دهد (رطوبت خاک/بستر
+    # کشت). برای محلول تازه در مخزن (نه بعد از جذب گیاه)، این افت هنوز
+    # اتفاق نیفتاده، بنابراین تخمین اینجا "گرایش مورد انتظار پس از مصرف"
+    # است، نه pH لحظه‌ای مخزن (که در عمل معمولاً خیلی نزدیک pH آب+کود
+    # خام است، پیش از جذب گیاه).
+    ph_shift_estimate = -1.4 * nh4_ratio  # هر چه NH4 بیشتر، افت بیشتر
+
+    # عدم قطعیت تخمین (بازه اطمینان) - چون این یک مدل تجربی ساده‌شده است
+    uncertainty = 0.4 if total_n > 0 else 0.25
+
+    ph_point = water_ph + ph_shift_estimate
+    ph_point = max(0, min(14, ph_point))
+    ph_min = max(0, ph_point - uncertainty)
+    ph_max = min(14, ph_point + uncertainty)
+
+    # تعیین وضعیت pH بر اساس نقطه میانی
+    status_info = _get_ph_status(ph_point)
+
+    # هشدار اختصاصی نسبت آمونیوم
+    nh4_warning = None
+    if nh4_ratio >= NH4_RATIO_CRITICAL_THRESHOLD:
+        nh4_warning = (
+            f'⚠️ نسبت نیتروژن آمونیومی ({nh4_ratio*100:.0f}٪ از کل نیتروژن) بسیار بالا است. '
+            f'خطر جدی افت شدید pH محیط ریشه و آسیب به ریشه در گیاهان حساس.'
+        )
+    elif nh4_ratio >= NH4_RATIO_WARNING_THRESHOLD:
+        nh4_warning = (
+            f'نسبت نیتروژن آمونیومی ({nh4_ratio*100:.0f}٪ از کل نیتروژن) نسبتاً بالا است. '
+            f'ممکن است در طول زمان pH محیط ریشه را کاهش دهد.'
+        )
+
     return {
-        'ph': round(ph, 2),
-        'ph_shift': round(ph_shift, 2),
+        'ph': round(ph_point, 2),
+        'ph_min': round(ph_min, 2),
+        'ph_max': round(ph_max, 2),
+        'is_estimate': True,
+        'nh4_ratio_percent': round(nh4_ratio * 100, 1),
+        'ph_shift_estimate': round(ph_shift_estimate, 2),
         'water_ph': water_ph,
         'status': status_info['status'],
         'status_label': status_info['label'],
         'color': status_info['color'],
         'recommendation': status_info['recommendation'],
-        'contributions': element_contributions,
-        'active_elements': active_elements,
+        'nh4_warning': nh4_warning,
+        'disclaimer': (
+            'این یک تخمین بر اساس نسبت آمونیوم/نیترات است، نه اندازه‌گیری دقیق شیمیایی. '
+            'برای اطمینان کامل، pH محلول نهایی را با pH‑متر کالیبره‌شده بسنجید.'
+        ),
         'range_min': status_info.get('range_min', 0),
         'range_max': status_info.get('range_max', 0)
     }
@@ -726,3 +780,5 @@ def validate_concentrations(
         'element_count': len(concentrations),
         'valid_elements': len([v for v in concentrations.values() if v is not None and v >= 0])
     }
+
+
