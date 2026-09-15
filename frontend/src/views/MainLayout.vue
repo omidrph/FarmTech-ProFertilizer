@@ -122,10 +122,7 @@
 
         <!-- Interpretation Sub Tab -->
         <div v-else-if="activeSubTab === 'interpretation'">
-          <InterpretationTab
-            v-model:interpretationResult="interpretationResult"
-            @generate="generateInterpretation"
-          />
+          <InterpretationTab />
         </div>
 
         <!-- Fertilizer DB Sub Tab -->
@@ -204,7 +201,6 @@ import { useFertilizerStore } from '@/store/modules/fertilizerStore';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useAppStore } from '@/store/modules/appStore';
 import { useApi } from '@/composables/useApi';
-import { useCalculations } from '@/composables/useCalculations';
 
 // Layout Components
 import AppHeader from '@/components/layout/AppHeader.vue';
@@ -233,7 +229,6 @@ const fertilizerStore = useFertilizerStore();
 const calcStore = useCalcStore();
 const appStore = useAppStore();
 const { isLoading, error: apiError, checkConnection, clearError } = useApi();
-const { generateInterpretation: generateInterpretationFromAPI } = useCalculations();
 
 // ===== State =====
 const activeTab = ref('home');
@@ -242,7 +237,6 @@ const activeEducationSubTab = ref('quick-start');
 const isProfileModalOpen = ref(false);
 const headerHeight = ref(56);
 const analysisUnit = ref('ppm');
-const interpretationResult = ref<any>(null);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
 
@@ -348,19 +342,6 @@ const handleNewReport = async () => {
   showToast('گزارش جدید ایجاد شد', 'success');
 };
 
-const generateInterpretation = async () => {
-  if (!calcStore.currentReportId) {
-    alert('لطفاً ابتدا محاسبات را در بخش "محاسبه کود" ذخیره کنید');
-    return;
-  }
-  const result = await generateInterpretationFromAPI(calcStore.currentReportId);
-  if (result) {
-    interpretationResult.value = result;
-  } else {
-    alert('خطا در تولید تفسیر');
-  }
-};
-
 const clearErrors = () => {
   clearError();
   fertilizerStore.clearError();
@@ -433,3 +414,5 @@ onUnmounted(() => {
   transform: translate(-50%, 10px);
 }
 </style>
+
+

@@ -17,7 +17,6 @@ from app.schemas import (
     PrecipitationCheckResponse,
     OptimizationLogResponse,
     CalculationResponse,
-    InterpretationResponse,
     PHAdjustmentResponse
 )
 
@@ -32,7 +31,6 @@ from .ph_adjustment import calculate_ph_adjustment_endpoint
 from .precipitation import check_precipitation_endpoint
 from .history import get_optimization_history_endpoint
 from .crud_calculations import create_calculation, get_calculation, update_calculation
-from .interpretation import calculate_and_interpret
 
 # ===== ایجاد Router =====
 calculations_router = APIRouter(prefix="/calculations", tags=["Calculations"])
@@ -63,6 +61,7 @@ calculations_router.get("/{report_id}", response_model=CalculationResponse)(get_
 calculations_router.put("/{calc_id}", response_model=CalculationResponse)(update_calculation)
 
 # ---- مسیر تفسیر ----
-calculations_router.post("/{report_id}/calculate", response_model=InterpretationResponse)(calculate_and_interpret)
+# 🆕 موقتاً حذف شد؛ طبق درخواست، این بخش بعداً با API هوش مصنوعی از نو
+# پیاده‌سازی خواهد شد. منطق rule-based قدیمی (interpretation.py) حذف شد.
 
 

@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue';
 import { apiService } from '@/services/apiService';
 import type { 
-    InterpretationResult, 
     OptimizationResponse,
     OptimizationOptions,
     IonBalance
@@ -110,37 +109,9 @@ export function useCalculations() {
         }
     }
 
-    /**
-     * تولید تفسیر از طریق API
-     * تمام منطق محاسباتی در بک‌اند انجام می‌شود
-     */
-    async function generateInterpretation(reportId: string): Promise<InterpretationResult | null> {
-        isCalculating.value = true;
-        try {
-            const result = await apiService.calculateInterpretation(reportId);
-
-            if (result) {
-                return {
-                    ionBalance: {
-                        cation: result.ion_balance.cation,
-                        anion: result.ion_balance.anion,
-                        isBalanced: result.ion_balance.is_balanced,
-                        message: result.ion_balance.message
-                    },
-                    elementStatus: result.element_status,
-                    waterQuality: result.water_quality,
-                    fertilizerRecommendation: result.fertilizer_recommendation,
-                    summary: result.summary
-                };
-            }
-            return null;
-        } catch (error) {
-            console.error('Error generating interpretation:', error);
-            return null;
-        } finally {
-            isCalculating.value = false;
-        }
-    }
+    // 🆕 تابع generateInterpretation حذف شد (طبق درخواست): بخش تفسیر
+    // موقتاً غیرفعال است و بعداً با یک سرویس هوش مصنوعی از نو پیاده‌سازی
+    // خواهد شد. endpoint متناظر آن در بک‌اند نیز حذف شده است.
 
     /**
      * تبدیل واحد از طریق API
@@ -255,7 +226,6 @@ export function useCalculations() {
         isCalculating,
         isOptimizing,
         optimizeFertilizers,
-        generateInterpretation,
         convertUnits,
         calculateIonBalance,
         calculateReservoir,
@@ -264,3 +234,5 @@ export function useCalculations() {
         getOptimizationHistory
     };
 }
+
+

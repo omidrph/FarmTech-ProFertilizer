@@ -103,14 +103,10 @@ from .optimization import (
 )
 
 # ============================================================
-# Export از interpretation.py
+# 🆕 حذف موقت بخش تفسیر (Interpretation) — طبق درخواست: این بخش قرار
+# است بعداً با API هوش مصنوعی از نو پیاده‌سازی شود. schema قدیمی و
+# rule-based آن (interpretation.py) حذف شد.
 # ============================================================
-from .interpretation import (
-    ElementStatusResponse,
-    WaterQualityResponse,
-    RecommendationResponse,
-    InterpretationResponse,
-)
 
 # ============================================================
 # Export از common.py
@@ -213,11 +209,7 @@ __all__ = [
     'PrecipitationRiskItem',
     'PrecipitationCheckResponse',
     
-    # Interpretation
-    'ElementStatusResponse',
-    'WaterQualityResponse',
-    'RecommendationResponse',
-    'InterpretationResponse',
+    # 🆕 بخش Interpretation موقتاً حذف شد (در انتظار بازطراحی با AI)
     
     # Common
     'IonBalanceRequest',

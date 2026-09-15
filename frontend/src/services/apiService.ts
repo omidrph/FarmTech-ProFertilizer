@@ -799,15 +799,10 @@ class ApiService {
         }
     }
 
-    async calculateInterpretation(reportId: string): Promise<any> {
-        try {
-            const response: AxiosResponse = await this.api.post(`/calculations/${reportId}/calculate`);
-            return response.data;
-        } catch (error) {
-            console.error('Error calculating interpretation:', error);
-            throw error;
-        }
-    }
+    // 🆕 calculateInterpretation حذف شد (طبق درخواست): بخش تفسیر موقتاً
+    // غیرفعال است و بعداً با یک سرویس هوش مصنوعی از نو پیاده‌سازی خواهد
+    // شد. endpoint متناظر آن (/calculations/{report_id}/calculate) نیز
+    // در بک‌اند حذف شده است.
 
     // ============================================================
     // Recipe APIs

@@ -302,10 +302,10 @@
           <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2 mb-1">
               <h4 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">تفسیر داده‌ها و دریافت گزارش</h4>
-              <span class="text-xs px-2 py-0.5 bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400 rounded-full">نهایی</span>
+              <span class="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">به‌زودی</span>
             </div>
             <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-              پس از تکمیل محاسبات، نرم‌افزار یک تفسیر کامل از وضعیت تغذیه گیاه و توصیه‌های کودی ارائه می‌دهد.
+              این بخش در حال بازطراحی است و به‌زودی با یک سرویس هوش مصنوعی جدید در دسترس قرار می‌گیرد.
             </p>
             <div class="mt-2 flex flex-wrap gap-2">
               <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">📍 مسیر: تب <strong class="text-gray-700 dark:text-gray-300">خانه</strong> → <strong class="text-gray-700 dark:text-gray-300">تفسیر داده‌ها</strong></span>
@@ -325,33 +325,10 @@
         </div>
         
         <div v-show="openSteps[5]" class="mt-3 sm:mt-4 mr-11 sm:mr-14 space-y-2 text-sm sm:text-base text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 pt-3 sm:pt-4">
-          <p>✅ <strong>مراحل دریافت تفسیر:</strong></p>
-          <ul class="list-disc list-inside space-y-1 mr-4">
-            <li>اطمینان حاصل کنید که آنالیز آب و عناصر هدف را وارد کرده‌اید</li>
-            <li>محاسبات کود را انجام داده باشید</li>
-            <li>روی دکمه <strong>"تولید تفسیر"</strong> کلیک کنید</li>
-            <li>برای تفسیر پیشرفته، روی <strong>"تفسیر با هوش مصنوعی"</strong> کلیک کنید</li>
-          </ul>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <span class="font-semibold text-gray-700 dark:text-gray-300">🔬 تعادل یونی</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">بررسی تعادل کاتیون و آنیون</p>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <span class="font-semibold text-gray-700 dark:text-gray-300">📊 وضعیت عناصر</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">کمبود، بیش‌بود یا سمیت</p>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <span class="font-semibold text-gray-700 dark:text-gray-300">💧 کیفیت آب</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">تأثیر شوری آب</p>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-              <span class="font-semibold text-gray-700 dark:text-gray-300">🧪 توصیه‌های کودی</span>
-              <p class="text-xs text-gray-500 dark:text-gray-400">راهکارهای اصلاحی</p>
-            </div>
-          </div>
-          <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 mt-2 text-green-700 dark:text-green-300 text-xs sm:text-sm">
-            🖨️ <strong>چاپ گزارش:</strong> با کلیک روی دکمه "چاپ گزارش" می‌توانید خروجی را پرینت بگیرید.
+          <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 text-amber-700 dark:text-amber-300 text-xs sm:text-sm">
+            🚧 بخش تفسیر هوشمند فعلاً غیرفعال است و به‌زودی با قابلیت‌های جدید بازمی‌گردد. تا آن زمان،
+            می‌توانید نتیجهٔ محاسبات (غلظت عناصر، EC، pH، تعادل یونی و دستورالعمل ساخت استوک) را
+            مستقیماً در تب <strong>«محاسبه کود»</strong> مشاهده کنید.
           </div>
         </div>
       </div>
@@ -407,3 +384,5 @@ code {
   cursor: pointer;
 }
 </style>
+
+

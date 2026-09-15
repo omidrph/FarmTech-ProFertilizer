@@ -206,26 +206,11 @@ export interface ElementStatus {
     message: string;
 }
 
-export interface InterpretationResult {
-    ionBalance: {
-        cation: number;
-        anion: number;
-        isBalanced: boolean;
-        message: string;
-    };
-    elementStatus: ElementStatus[];
-    waterQuality: {
-        salinity: number;
-        impact: string;
-        recommendation: string;
-    };
-    fertilizerRecommendation: {
-        issue: string;
-        suggestion: string;
-        priority: 'low' | 'medium' | 'high';
-    }[];
-    summary: string;
-}
+// 🆕 اینترفیس InterpretationResult حذف شد (طبق درخواست): بخش تفسیر
+// موقتاً غیرفعال است و بعداً با یک سرویس هوش مصنوعی از نو پیاده‌سازی
+// خواهد شد. ElementStatus بالا هم دیگر در جایی استفاده نمی‌شود، اما
+// برای کمترین ریسک، حذف نشده (یک type تعریف‌شدهٔ بدون استفاده کاملاً
+// بی‌ضرر است و در زمان build حذف می‌شود).
 
 // ============================================================
 // RECIPE TYPES
