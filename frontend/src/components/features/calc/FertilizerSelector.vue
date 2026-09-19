@@ -1,141 +1,243 @@
 <!-- frontend/src/components/features/calc/FertilizerSelector.vue -->
 <template>
-  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-    <div class="flex items-center justify-between mb-4">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+
+    <!-- ============================================================ -->
+    <!-- هدر -->
+    <!-- ============================================================ -->
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap">
       <div class="flex items-center gap-2">
-        <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-        </svg>
-        <h3 class="text-base font-semibold text-gray-900 dark:text-white">انتخاب کود</h3>
-      </div>
-      <div class="flex items-center gap-2">
-        <!-- 🆕 نمایش تعداد کودهای انتخاب شده -->
-        <span class="text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 px-2 py-0.5 rounded-full">
-          {{ selectedFertilizers.length }} از {{ userFertilizersList.length }}
+        <span class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+          <svg class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
         </span>
+        <div>
+          <h3 class="text-base font-semibold text-gray-900 dark:text-white">انتخاب کود</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            {{ selectedList.length }} کود انتخاب شده از {{ userFertilizers.length }} کود
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
         <button
-          @click="toggleSelectAll"
-          class="px-3 py-1.5 text-xs bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 rounded-lg hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors font-medium"
+          type="button"
+          @click="selectAll"
+          :disabled="availableList.length === 0"
+          class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          {{ isAllSelected ? 'لغو انتخاب همه' : 'انتخاب همه' }}
+          افزودن همه
+        </button>
+        <button
+          type="button"
+          @click="clearAll"
+          :disabled="selectedList.length === 0"
+          class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          پاک کردن
         </button>
       </div>
     </div>
 
-    <!-- جستجو -->
-    <div class="relative mb-4">
-      <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-      </svg>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="جستجوی نام کود یا برند..."
-        class="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-      />
-    </div>
+    <!-- ============================================================ -->
+    <!-- بدنه: دو ستون در دسکتاپ، تک‌ستون در موبایل -->
+    <!-- ============================================================ -->
+    <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-    <!-- آمار -->
-    <div class="flex items-center gap-3 mb-3 text-xs text-gray-500 dark:text-gray-400">
-      <span>تعداد کل کودهای شخصی: {{ userFertilizersList.length }}</span>
-      <span class="text-gray-300 dark:text-gray-600">|</span>
-      <span>کودهای معمولی: {{ normalFertilizersCount }}</span>
-      <span class="text-gray-300 dark:text-gray-600">|</span>
-      <span>اسیدها: {{ acidFertilizersCount }}</span>
-    </div>
-
-    <!-- لیست کودها -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[350px] overflow-y-auto custom-scrollbar p-1">
-      <div
-        v-for="fertilizer in filteredFertilizers"
-        :key="fertilizer.id"
-        @click="toggleSelection(fertilizer.id)"
-        class="relative cursor-pointer rounded-lg border-2 p-3 transition-all hover:shadow-md"
-        :class="selectedFertilizers.includes(fertilizer.id)
-          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-sm'
-          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 dark:hover:border-primary-700'"
+      <!-- ===================== ستون کودهای موجود ===================== -->
+      <section
+        class="flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30 overflow-hidden"
+        :class="dropTarget === 'available' ? 'ring-2 ring-primary-400' : ''"
+        @dragover.prevent="onDragOver('available')"
+        @dragleave="onDragLeave('available')"
+        @drop.prevent="onDrop('available')"
       >
-        <!-- Checkbox -->
-        <div class="absolute top-2 left-2">
-          <div
-            class="w-5 h-5 rounded border-2 flex items-center justify-center transition-all"
-            :class="selectedFertilizers.includes(fertilizer.id)
-              ? 'bg-primary-500 border-primary-500'
-              : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600'"
-          >
-            <svg
-              v-if="selectedFertilizers.includes(fertilizer.id)"
-              class="w-3 h-3 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+        <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">کودهای موجود</span>
+          <span class="text-[11px] text-gray-400">{{ filteredAvailable.length }} مورد</span>
+        </div>
+
+        <!-- جستجو -->
+        <div class="p-3 pb-2">
+          <div class="relative">
+            <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="جستجوی نام یا برند کود..."
+              class="w-full pr-9 pl-8 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+            />
+            <button
+              v-if="searchQuery"
+              type="button"
+              @click="searchQuery = ''"
+              class="absolute left-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              aria-label="پاک کردن جستجو"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
 
-        <div class="pr-6">
-          <p class="font-medium text-sm text-gray-900 dark:text-white truncate">
-            {{ fertilizer.name }}
-          </p>
-          <div class="flex items-center gap-2 mt-1 flex-wrap">
-            <span
-              class="text-[10px] px-1.5 py-0.5 rounded"
-              :class="fertilizer.isAcid
-                ? 'bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400'
-                : 'bg-success-100 dark:bg-success-900/30 text-success-700 dark:text-success-400'"
-            >
-              {{ fertilizer.isAcid ? 'اسید' : 'کود' }}
-            </span>
-            <span v-if="fertilizer.brand" class="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-              {{ fertilizer.brand }}
-            </span>
-            <span class="text-[10px] text-gray-500 dark:text-gray-400">
-              {{ Number(fertilizer.pricePerKg || 0).toLocaleString('fa-IR') }} تومان/kg
-            </span>
-            <span v-if="fertilizer.concentration && fertilizer.concentration < 100" class="text-[10px] text-warning-600 dark:text-warning-400 bg-warning-50 dark:bg-warning-900/30 px-1.5 py-0.5 rounded">
-              {{ fertilizer.concentration }}% خلوص
-            </span>
-          </div>
-          <div v-if="getMainElements(fertilizer).length > 0" class="flex flex-wrap gap-1 mt-2">
-            <span
-              v-for="el in getMainElements(fertilizer)"
-              :key="el.symbol"
-              class="text-[9px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded"
-            >
-              {{ el.symbol }}: {{ el.value }}%
-            </span>
+        <!-- لیست -->
+        <div class="px-3 pb-3 space-y-2 overflow-y-auto custom-scrollbar" style="max-height: 340px">
+          <article
+            v-for="fertilizer in filteredAvailable"
+            :key="fertilizer.id"
+            :draggable="isDesktop"
+            @dragstart="onDragStart(fertilizer.id, 'available', $event)"
+            @dragend="onDragEnd"
+            @click="addFertilizer(fertilizer.id)"
+            class="group relative rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 cursor-pointer hover:border-primary-400 hover:shadow-sm transition-all"
+            :class="draggingId === fertilizer.id ? 'opacity-40' : ''"
+          >
+            <div class="flex items-start gap-2">
+              <span
+                v-if="isDesktop"
+                class="mt-0.5 text-gray-300 dark:text-gray-600 group-hover:text-primary-400 transition-colors cursor-grab active:cursor-grabbing"
+                title="بکشید و رها کنید"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <circle cx="7" cy="5" r="1.3" /><circle cx="13" cy="5" r="1.3" />
+                  <circle cx="7" cy="10" r="1.3" /><circle cx="13" cy="10" r="1.3" />
+                  <circle cx="7" cy="15" r="1.3" /><circle cx="13" cy="15" r="1.3" />
+                </svg>
+              </span>
+
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ fertilizer.name }}</p>
+                <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <span
+                    class="text-[10px] px-1.5 py-0.5 rounded"
+                    :class="fertilizer.isAcid
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                  >
+                    {{ fertilizer.isAcid ? 'اسید' : 'کود' }}
+                  </span>
+                  <span v-if="fertilizer.brand" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    {{ fertilizer.brand }}
+                  </span>
+                  <span
+                    v-for="el in mainElements(fertilizer)"
+                    :key="el.symbol"
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400"
+                  >
+                    {{ el.symbol }} {{ el.value }}٪
+                  </span>
+                </div>
+              </div>
+
+              <span class="mt-0.5 w-6 h-6 rounded-md flex items-center justify-center text-gray-400 group-hover:bg-primary-500 group-hover:text-white transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                </svg>
+              </span>
+            </div>
+          </article>
+
+          <!-- خالی -->
+          <div v-if="filteredAvailable.length === 0" class="py-10 text-center">
+            <svg class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              {{ emptyAvailableTitle }}
+            </p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {{ emptyAvailableHint }}
+            </p>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- پیام خالی -->
-    <div v-if="filteredFertilizers.length === 0" class="text-center py-8">
-      <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-      </svg>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        {{ searchQuery ? 'هیچ کودی با این مشخصات یافت نشد' : 'هیچ کود شخصی در دسترس نیست' }}
-      </p>
-      <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-        {{ searchQuery ? 'عبارت جستجو را تغییر دهید' : 'لطفاً ابتدا کودهای خود را در بخش پایگاه داده کود اضافه کنید' }}
-      </p>
-    </div>
+      <!-- ===================== ستون کودهای انتخاب‌شده ===================== -->
+      <section
+        class="flex flex-col rounded-xl border-2 border-dashed transition-colors overflow-hidden"
+        :class="dropTarget === 'selected'
+          ? 'border-primary-500 bg-primary-50/60 dark:bg-primary-900/20'
+          : 'border-gray-200 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/30'"
+        @dragover.prevent="onDragOver('selected')"
+        @dragleave="onDragLeave('selected')"
+        @drop.prevent="onDrop('selected')"
+      >
+        <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span class="text-xs font-semibold text-gray-600 dark:text-gray-300">کودهای انتخاب‌شده</span>
+          <span class="text-[11px] text-gray-400">{{ selectedList.length }} مورد</span>
+        </div>
 
-    <!-- راهنمای انتخاب -->
-    <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 text-center text-xs text-gray-400 dark:text-gray-500">
-      با کلیک روی هر کود، آن را انتخاب یا لغو انتخاب کنید
-      <span class="block text-[10px] text-primary-400 mt-1">
-        پس از انتخاب، روی "بهینه‌سازی خودکار" کلیک کنید
-      </span>
+        <div class="p-3 space-y-2 overflow-y-auto custom-scrollbar" style="max-height: 396px">
+          <article
+            v-for="(fertilizer, index) in selectedList"
+            :key="fertilizer.id"
+            :draggable="isDesktop"
+            @dragstart="onDragStart(fertilizer.id, 'selected', $event)"
+            @dragend="onDragEnd"
+            @dragover.prevent="onItemDragOver(index)"
+            class="group relative rounded-lg border border-primary-200 dark:border-primary-900/50 bg-white dark:bg-gray-800 p-2.5 transition-all"
+            :class="[
+              draggingId === fertilizer.id ? 'opacity-40' : '',
+              hoverIndex === index && draggingFrom === 'selected' ? 'ring-2 ring-primary-400' : ''
+            ]"
+          >
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-md bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[11px] font-bold flex items-center justify-center flex-shrink-0">
+                {{ index + 1 }}
+              </span>
+
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ fertilizer.name }}</p>
+                <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span
+                    v-if="fertilizer.isAcid"
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                  >اسید</span>
+                  <span
+                    v-for="el in mainElements(fertilizer)"
+                    :key="el.symbol"
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                  >{{ el.symbol }} {{ el.value }}٪</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                @click.stop="removeFertilizer(fertilizer.id)"
+                class="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 hover:bg-rose-500 hover:text-white transition-colors flex-shrink-0"
+                aria-label="حذف"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </article>
+
+          <!-- حالت خالی / ناحیه رها کردن -->
+          <div v-if="selectedList.length === 0" class="py-12 text-center">
+            <svg class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+            </svg>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              {{ isDesktop ? 'کودها را اینجا رها کنید' : 'برای افزودن، روی کود بزنید' }}
+            </p>
+            <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              ترتیب انتخاب روی نتیجه اثری ندارد
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 
 // ===== Types =====
 interface Fertilizer {
@@ -149,114 +251,160 @@ interface Fertilizer {
   isSystemDefault: boolean;
 }
 
-// ===== Props =====
-interface Props {
+type Pane = 'available' | 'selected';
+
+// ===== Props / Emits =====
+const props = defineProps<{
   fertilizers: Fertilizer[];
   selectedFertilizers: string[];
-}
+}>();
 
-const props = defineProps<Props>();
-
-// ===== Emits =====
 const emit = defineEmits<{
   (e: 'update:selectedFertilizers', value: string[]): void;
 }>();
 
 // ===== State =====
 const searchQuery = ref('');
+const draggingId = ref<string | null>(null);
+const draggingFrom = ref<Pane | null>(null);
+const dropTarget = ref<Pane | null>(null);
+const hoverIndex = ref<number | null>(null);
+const isDesktop = ref(false);
+
+let mediaQuery: MediaQueryList | null = null;
+const syncViewport = () => {
+  isDesktop.value = !!mediaQuery?.matches;
+};
+
+onMounted(() => {
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    mediaQuery = window.matchMedia('(min-width: 1024px)');
+    syncViewport();
+    mediaQuery.addEventListener?.('change', syncViewport);
+  }
+});
+
+onBeforeUnmount(() => {
+  mediaQuery?.removeEventListener?.('change', syncViewport);
+});
 
 // ===== Computed =====
+const userFertilizers = computed(() => props.fertilizers.filter((f) => !f.isSystemDefault));
 
-/**
- * فقط کودهای شخصی کاربر (isSystemDefault === false)
- */
-const userFertilizersList = computed(() => {
-  return props.fertilizers.filter((f: Fertilizer) => !f.isSystemDefault);
+const selectedList = computed(() =>
+  props.selectedFertilizers
+    .map((id) => userFertilizers.value.find((f) => f.id === id))
+    .filter(Boolean) as Fertilizer[]
+);
+
+const availableList = computed(() =>
+  userFertilizers.value.filter((f) => !props.selectedFertilizers.includes(f.id))
+);
+
+const filteredAvailable = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return availableList.value;
+  return availableList.value.filter(
+    (f) => f.name.toLowerCase().includes(query) || (f.brand || '').toLowerCase().includes(query)
+  );
 });
 
-/**
- * تعداد کودهای معمولی (غیر اسید)
- */
-const normalFertilizersCount = computed(() => {
-  return userFertilizersList.value.filter((f: Fertilizer) => !f.isAcid).length;
+const emptyAvailableTitle = computed(() => {
+  if (searchQuery.value) return 'کودی با این عبارت پیدا نشد';
+  if (userFertilizers.value.length === 0) return 'هنوز کود شخصی ثبت نکرده‌اید';
+  return 'همه کودها انتخاب شده‌اند';
 });
 
-/**
- * تعداد اسیدها
- */
-const acidFertilizersCount = computed(() => {
-  return userFertilizersList.value.filter((f: Fertilizer) => f.isAcid).length;
+const emptyAvailableHint = computed(() => {
+  if (searchQuery.value) return 'عبارت جستجو را تغییر دهید';
+  if (userFertilizers.value.length === 0) return 'ابتدا از بخش پایگاه داده کود، کودهای خود را اضافه کنید';
+  return '';
 });
 
-/**
- * فیلتر شده بر اساس جستجو
- */
-const filteredFertilizers = computed(() => {
-  let result = userFertilizersList.value;
-  
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.trim().toLowerCase();
-    result = result.filter((f: Fertilizer) =>
-      f.name.toLowerCase().includes(query) ||
-      (f.brand && f.brand.toLowerCase().includes(query))
-    );
-  }
-  
-  return result;
-});
-
-/**
- * آیا همه کودهای شخصی انتخاب شده‌اند؟
- */
-const isAllSelected = computed(() => {
-  return userFertilizersList.value.length > 0 && 
-         props.selectedFertilizers.length === userFertilizersList.value.length;
-});
-
-// ===== Methods =====
-
-/**
- * دریافت عناصر اصلی یک کود (حداکثر 3 عنصر با بیشترین درصد)
- */
-const getMainElements = (fertilizer: Fertilizer): Array<{ symbol: string; value: number }> => {
+// ===== Helpers =====
+const mainElements = (fertilizer: Fertilizer): Array<{ symbol: string; value: number }> => {
   if (!fertilizer.elements) return [];
-  
-  const entries = Object.entries(fertilizer.elements)
-    .filter(([_, value]) => value && value > 0)
-    .map(([symbol, value]) => ({ symbol, value }))
+  return Object.entries(fertilizer.elements)
+    .filter(([, value]) => Number(value) > 0)
+    .map(([symbol, value]) => ({ symbol, value: Number(value) }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 3);
-  
-  return entries;
 };
 
-/**
- * انتخاب/عدم انتخاب یک کود
- * با هر کلیک، لیست انتخاب‌ها به‌روزرسانی می‌شود
- */
-const toggleSelection = (id: string) => {
-  const current = [...props.selectedFertilizers];
-  const index = current.indexOf(id);
-  
-  if (index === -1) {
-    current.push(id);
-  } else {
-    current.splice(index, 1);
+const commit = (ids: string[]) => emit('update:selectedFertilizers', ids);
+
+// ===== Actions =====
+const addFertilizer = (id: string) => {
+  if (props.selectedFertilizers.includes(id)) return;
+  commit([...props.selectedFertilizers, id]);
+};
+
+const removeFertilizer = (id: string) => {
+  commit(props.selectedFertilizers.filter((item) => item !== id));
+};
+
+const selectAll = () => {
+  commit(userFertilizers.value.map((f) => f.id));
+};
+
+const clearAll = () => commit([]);
+
+// ===== Drag & Drop (فقط دسکتاپ) =====
+const onDragStart = (id: string, from: Pane, event: DragEvent) => {
+  if (!isDesktop.value) return;
+  draggingId.value = id;
+  draggingFrom.value = from;
+  event.dataTransfer?.setData('text/plain', id);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+};
+
+const onDragEnd = () => {
+  draggingId.value = null;
+  draggingFrom.value = null;
+  dropTarget.value = null;
+  hoverIndex.value = null;
+};
+
+const onDragOver = (pane: Pane) => {
+  if (!draggingId.value) return;
+  dropTarget.value = pane;
+};
+
+const onDragLeave = (pane: Pane) => {
+  if (dropTarget.value === pane) dropTarget.value = null;
+};
+
+const onItemDragOver = (index: number) => {
+  if (draggingFrom.value !== 'selected') return;
+  hoverIndex.value = index;
+};
+
+const onDrop = (pane: Pane) => {
+  const id = draggingId.value;
+  const from = draggingFrom.value;
+  const targetIndex = hoverIndex.value;
+  onDragEnd();
+
+  if (!id || !from) return;
+
+  if (pane === 'selected') {
+    if (from === 'available') {
+      addFertilizer(id);
+      return;
+    }
+    // جابه‌جایی ترتیب داخل ستون انتخاب‌شده‌ها
+    if (targetIndex === null) return;
+    const ids = [...props.selectedFertilizers];
+    const currentIndex = ids.indexOf(id);
+    if (currentIndex === -1 || currentIndex === targetIndex) return;
+    ids.splice(currentIndex, 1);
+    ids.splice(targetIndex, 0, id);
+    commit(ids);
+    return;
   }
-  
-  // ارسال لیست به‌روز شده به والد
-  emit('update:selectedFertilizers', current);
-};
 
-/**
- * انتخاب همه / لغو انتخاب همه
- */
-const toggleSelectAll = () => {
-  if (isAllSelected.value) {
-    emit('update:selectedFertilizers', []);
-  } else {
-    const allIds = userFertilizersList.value.map((f: Fertilizer) => f.id);
-    emit('update:selectedFertilizers', allIds);
+  if (pane === 'available' && from === 'selected') {
+    removeFertilizer(id);
   }
 };
 </script>
@@ -265,26 +413,17 @@ const toggleSelectAll = () => {
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+  background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+  background: #cbd5e1;
+  border-radius: 999px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: #94a3b8;
 }
-
-.dark .custom-scrollbar::-webkit-scrollbar-track {
-  background: #374151;
-}
-
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #4b5563;
 }
 </style>
