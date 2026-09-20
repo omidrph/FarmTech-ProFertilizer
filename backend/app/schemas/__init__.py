@@ -1,3 +1,4 @@
+
 # backend/app/schemas/__init__.py
 """
 ماژول طرح‌های Pydantic
@@ -92,14 +93,11 @@ from .optimization import (
     OptimizationFertilizerInput,
     OptimizationRequest,
     OptimizationResponse,
-    EcPhStatusResponse,
     OptimizationLogResponse,
     PrecipitationCheckRequest,
     PrecipitationRiskItem,
     PrecipitationCheckResponse,
     ManualWeightRecalculateRequest,
-    PHAdjustmentRequest,
-    PHAdjustmentResponse,
 )
 
 # ============================================================
@@ -200,11 +198,8 @@ __all__ = [
     'OptimizationFertilizerInput',
     'OptimizationRequest',
     'OptimizationResponse',
-    'EcPhStatusResponse',
     'OptimizationLogResponse',
     'ManualWeightRecalculateRequest',
-    'PHAdjustmentRequest',
-    'PHAdjustmentResponse',
     'PrecipitationCheckRequest',
     'PrecipitationRiskItem',
     'PrecipitationCheckResponse',
@@ -234,5 +229,9 @@ __all__ = [
     'validate_element_name',
     'validate_code',
 ]
+
+
+
+
 
 

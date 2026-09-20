@@ -1,3 +1,4 @@
+
 """
 Core Module - هسته اصلی محاسبات FarmTech
 ========================================
@@ -65,7 +66,6 @@ from .reservoir import (
     calculate_reservoir_data,
     check_reservoir_compatibility,
     RESERVOIR_RULES,
-    calculate_stock_instructions,
     check_nutrient_interactions,
     check_manual_fertilizer_selection,
 )
@@ -116,9 +116,12 @@ __all__ = [
     'calculate_reservoir_data',
     'check_reservoir_compatibility',
     'RESERVOIR_RULES',
-    'calculate_stock_instructions',
     'check_nutrient_interactions',
     'check_manual_fertilizer_selection',
 ]
+
+
+
+
 
 

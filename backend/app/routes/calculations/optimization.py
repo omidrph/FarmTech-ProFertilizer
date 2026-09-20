@@ -1,3 +1,4 @@
+
 # backend/app/routes/calculations/optimization.py
 """
 مسیر بهینه‌سازی خودکار فرمول کود
@@ -14,7 +15,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas import (
     OptimizationRequest, OptimizationResponse,
-    IonBalanceResponse, EcPhStatusResponse
+    IonBalanceResponse
 )
 import app.crud as crud
 from app.security import get_current_user
@@ -22,8 +23,6 @@ from app.core import (
     optimize_fertilizers as core_optimize_fertilizers,
     calculate_ec,
     calculate_ph,
-    get_ec_ph_status,
-    calculate_stock_instructions,
     check_nutrient_interactions,
     check_manual_fertilizer_selection,
     get_plant_ec_range,
@@ -134,69 +133,6 @@ def optimize_fertilizers_endpoint(
         except Exception as e:
             logger.warning(f"Could not compute stock_info: {e}")
 
-        # ============================================================
-        # 🆕 ذخیره final_values و reservoir_data در دیتابیس
-        # ============================================================
-        # ✅ رفع باگ مهم: قبلاً این بخش «آخرین گزارش کاربر» را حدس می‌زد و
-        # نتیجه بهینه‌سازی را روی آن می‌نوشت، حتی اگر کاربر در حال ویرایش
-        # گزارش دیگری بود. این می‌توانست باعث شود گزارش‌های قدیمی به‌طور
-        # ناخواسته تغییر کنند یا داده‌های گزارش جاری گم شوند. اکنون فقط
-        # وقتی ذخیره می‌کند که report_id صریحاً از فرانت‌اند ارسال شده و
-        # متعلق به همان کاربر باشد.
-        if request.report_id:
-            try:
-                report = crud.get_report_by_id(db, request.report_id)
-                if report and report.user_id == current_user.id:
-                    calculation = crud.get_calculation_by_report(db, report.id)
-
-                    calc_rows = []
-                    for fert_id, weight in result.get('weights', {}).items():
-                        if weight > 0:
-                            fert = next((f for f in fertilizers if f.get('id') == fert_id), None)
-                            if fert:
-                                cost = (weight / 1000) * fert.get('price_per_kg', 0)
-                                calc_rows.append({
-                                    'materialName': fert.get('name', ''),
-                                    'weight': weight,
-                                    'purity': fert.get('purity', 100),
-                                    'cost': cost,
-                                    'elements': fert.get('elements', {}),
-                                    'isAcid': fert.get('is_acid', False),
-                                    'fertilizerId': fert_id,
-                                    'isFixedRow': False
-                                })
-
-                    # 🆕 تنظیمات استوک هم داخل reservoir_data ذخیره می‌شود تا
-                    # با بارگذاری مجدد گزارش، «تنظیمات استوک» ناقص برنگردد.
-                    reservoir_data_to_save = dict(result.get('reservoir_data') or {'A': [], 'B': [], 'C': []})
-                    reservoir_data_to_save['settings'] = {
-                        'tank_volume': request.tank_volume,
-                        'stock_volume': request.stock_volume,
-                        'injection_ratio': request.injection_ratio
-                    }
-
-                    from app.schemas import CalculationUpdate, CalculationCreate
-                    update_data = {
-                        'target_values': target_values,
-                        'final_values': result.get('concentrations', {}),
-                        'reservoir_data': reservoir_data_to_save,
-                        'calc_rows': calc_rows
-                    }
-
-                    if calculation:
-                        calc_update = CalculationUpdate(**update_data)
-                        crud.update_calculation(db, calculation.id, calc_update)
-                        logger.info(f"✅ Updated calculation {calculation.id} for report {report.id}")
-                    else:
-                        calc_create = CalculationCreate(**update_data)
-                        crud.create_calculation(db, calc_create, report.id)
-                        logger.info(f"✅ Created calculation for report {report.id}")
-                else:
-                    logger.warning(f"report_id {request.report_id} not found or not owned by user {current_user.id}; skipping auto-save")
-            except Exception as e:
-                logger.warning(f"Could not save optimization result to database: {e}")
-                traceback.print_exc()
-        
         # ۳. اعتبارسنجی نتایج
         validation = validate_optimization_result(result)
         if not validation['is_valid']:
@@ -239,16 +175,10 @@ def optimize_fertilizers_endpoint(
         ec_result = calculate_ec(concentrations, unit="ppm", water_ec=water_ec)
         
         # محاسبه pH (تخمین بر مبنای نسبت آمونیوم/نیترات + pH آب کاربر)
+        # 🆕 این عدد دیگر در پاسخ به کاربر نمایش داده نمی‌شود (به تب
+        # اختصاصی pH منتقل می‌شود)؛ فقط برای هشدارهای شیمیایی زیر لازم است.
         water_ph = water_values.get('pH', 7.0) if water_values else 7.0
         ph_result = calculate_ph(concentrations, unit="ppm", water_ph=water_ph)
-        
-        # وضعیت ترکیبی
-        ec_ph_status = get_ec_ph_status(
-            ec=ec_result['ec'],
-            ph=ph_result['ph'],
-            water_ec=water_ec,
-            water_ph=water_ph
-        )
 
         # 🆕 هشدار اختصاصی نسبت آمونیوم اضافه می‌شود به هشدارهای کلی نتیجه
         if ph_result.get('nh4_warning'):
@@ -299,33 +229,95 @@ def optimize_fertilizers_endpoint(
         # حذف موارد تکراری با حفظ ترتیب
         result['warnings'] = list(dict.fromkeys(result.get('warnings', [])))
 
-        # 🆕 دستورالعمل ساخت استوک برای هر کود (ویژگی اصلی درخواستی):
-        # برای هر کود با وزن مثبت، حجم آب پیشنهادی سطل + هشدار حلالیت
-        stock_instructions = calculate_stock_instructions(
-            fertilizers=fertilizers,
-            weights=result.get('weights', {}),
-            reservoir_data=result.get('reservoir_data', {'A': [], 'B': [], 'C': []}),
-            default_bucket_volume=request.stock_volume
-        )
-        
-        # ساخت EcPhStatusResponse
-        ec_ph_response = EcPhStatusResponse(
-            status=ec_ph_status['status'],
-            status_label=ec_ph_status['status_label'],
-            color=ec_ph_status['color'],
-            message=ec_ph_status['message'],
-            issues=ec_ph_status['issues'],
-            recommendations=ec_ph_status['recommendations'],
-            ec=ec_ph_status['ec'],
-            ph=ec_ph_status['ph'],
-            water_ec=ec_ph_status.get('water_ec'),
-            water_ph=ec_ph_status.get('water_ph'),
-            ec_status=ec_ph_status.get('ec_status', ''),
-            ec_label=ec_ph_status.get('ec_label', ''),
-            ph_status=ec_ph_status.get('ph_status', ''),
-            ph_label=ec_ph_status.get('ph_label', '')
-        )
-        
+        # ============================================================
+        # 🆕 ذخیره کامل وضعیت صفحه محاسبه کود در دیتابیس
+        # ============================================================
+        # ✅ رفع باگ مهم قبلی: فقط target_values/final_values/reservoir_data/
+        # calc_rows ذخیره می‌شد. با بازکردن دوبارهٔ گزارش، کودهای انتخابی،
+        # حالت بهینه‌سازی (دقیق‌ترین/کمترین کود/کم‌هزینه‌ترین)، تعادل یونی
+        # خودکار، EC، هشدارها و ... همه گم می‌شدند و کاربر مجبور بود دوباره
+        # روی «محاسبه» بزند. حالا کل این وضعیت در یک بار ذخیره می‌شود تا
+        # صفحه بدون محاسبهٔ مجدد، دقیقاً به همان حالت قبلی برگردد.
+        # فقط وقتی ذخیره می‌کند که report_id صریحاً از فرانت‌اند ارسال شده
+        # و متعلق به همان کاربر باشد (حدس‌زدن آخرین گزارش کاربر عمداً حذف
+        # شده تا نتیجه هرگز روی گزارش اشتباه نوشته نشود).
+        if request.report_id:
+            try:
+                report = crud.get_report_by_id(db, request.report_id)
+                if report and report.user_id == current_user.id:
+                    calculation = crud.get_calculation_by_report(db, report.id)
+
+                    calc_rows = []
+                    for fert_id, weight in result.get('weights', {}).items():
+                        if weight > 0:
+                            fert = next((f for f in fertilizers if f.get('id') == fert_id), None)
+                            if fert:
+                                cost = (weight / 1000) * fert.get('price_per_kg', 0)
+                                calc_rows.append({
+                                    'materialName': fert.get('name', ''),
+                                    'weight': weight,
+                                    'purity': fert.get('purity', 100),
+                                    'cost': cost,
+                                    'elements': fert.get('elements', {}),
+                                    'isAcid': fert.get('is_acid', False),
+                                    'fertilizerId': fert_id,
+                                    'isFixedRow': False
+                                })
+
+                    # تنظیمات استوک هم داخل reservoir_data ذخیره می‌شود تا
+                    # با بارگذاری مجدد گزارش، «تنظیمات استوک» ناقص برنگردد.
+                    reservoir_data_to_save = dict(result.get('reservoir_data') or {'A': [], 'B': [], 'C': []})
+                    reservoir_data_to_save['settings'] = {
+                        'tank_volume': request.tank_volume,
+                        'stock_volume': request.stock_volume,
+                        'injection_ratio': request.injection_ratio
+                    }
+
+                    # 🆕 کل پاسخ بهینه‌سازی (بدون pH که دیگر بخشی از این
+                    # صفحه نیست) برای بازیابی کامل نتیجه بدون محاسبه مجدد
+                    optimization_result_to_save = {
+                        'weights': result.get('weights', {}),
+                        'concentrations': result.get('concentrations', {}),
+                        'residual_error': result.get('residual_error'),
+                        'cost_total': result.get('cost_total'),
+                        'ion_balance': result.get('ion_balance'),
+                        'target_achievement': result.get('target_achievement'),
+                        'warnings': result.get('warnings', []),
+                        'suggestions': result.get('suggestions', []),
+                        'iterations': result.get('iterations'),
+                        'convergence_time_ms': result.get('convergence_time_ms'),
+                        'is_converged': result.get('is_converged'),
+                        'summary': result.get('summary'),
+                        'ec': ec_result['ec'],
+                        'ec_status': ec_result['status_label'],
+                        'stock_info': stock_info
+                    }
+
+                    from app.schemas import CalculationUpdate, CalculationCreate
+                    update_data = {
+                        'target_values': target_values,
+                        'final_values': result.get('concentrations', {}),
+                        'reservoir_data': reservoir_data_to_save,
+                        'calc_rows': calc_rows,
+                        'selected_fertilizer_ids': [f['id'] for f in fertilizers],
+                        'optimization_options': options,
+                        'optimization_result': optimization_result_to_save
+                    }
+
+                    if calculation:
+                        calc_update = CalculationUpdate(**update_data)
+                        crud.update_calculation(db, calculation.id, calc_update)
+                        logger.info(f"✅ Updated calculation {calculation.id} for report {report.id}")
+                    else:
+                        calc_create = CalculationCreate(**update_data)
+                        crud.create_calculation(db, calc_create, report.id)
+                        logger.info(f"✅ Created calculation for report {report.id}")
+                else:
+                    logger.warning(f"report_id {request.report_id} not found or not owned by user {current_user.id}; skipping auto-save")
+            except Exception as e:
+                logger.warning(f"Could not save optimization result to database: {e}")
+                traceback.print_exc()
+
         # ۶. ساخت پاسخ
         response = OptimizationResponse(
             weights=result['weights'],
@@ -346,26 +338,17 @@ def optimize_fertilizers_endpoint(
             convergence_time_ms=result['convergence_time_ms'],
             is_converged=result['is_converged'],
             summary=result['summary'],
-            # 🆕 فیلدهای EC و pH
+            # 🆕 فیلد EC (pH دیگر در این پاسخ نمایش داده نمی‌شود)
             ec=ec_result['ec'],
-            ph=ph_result['ph'],
             ec_status=ec_result['status_label'],
-            ph_status=ph_result['status_label'],
-            ec_ph_status=ec_ph_response,
-            ph_min=ph_result.get('ph_min'),
-            ph_max=ph_result.get('ph_max'),
-            ph_is_estimate=ph_result.get('is_estimate', True),
-            ph_disclaimer=ph_result.get('disclaimer'),
-            nh4_ratio_percent=ph_result.get('nh4_ratio_percent'),
-            stock_info=stock_info,
-            stock_instructions=stock_instructions
+            stock_info=stock_info
         )
         
         logger.info(f"✅ Optimization completed in {response.convergence_time_ms:.2f}ms")
         logger.info(f"   Residual error: {response.residual_error:.4f}")
         logger.info(f"   Total cost: {response.cost_total:,.0f} تومان")
         logger.info(f"   Iterations: {response.iterations}")
-        logger.info(f"   🆕 EC: {response.ec} dS/m | pH: {response.ph}")
+        logger.info(f"   🆕 EC: {response.ec} dS/m")
         
         return response
         
@@ -378,5 +361,9 @@ def optimize_fertilizers_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در بهینه‌سازی: {str(e)}"
         )
+
+
+
+
 
 

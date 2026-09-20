@@ -1,3 +1,4 @@
+
 # backend/app/crud/calculation.py
 """
 عملیات CRUD برای مدل Calculation (محاسبات)
@@ -27,7 +28,11 @@ def create_calculation(db: Session, calc_data: CalculationCreate, report_id: int
             final_values=calc_data.final_values or {},
             reservoir_data=calc_data.reservoir_data or {},
             calc_rows=calc_data.calc_rows or [],
-            interpretation=calc_data.interpretation
+            interpretation=calc_data.interpretation,
+            # 🆕 برای بازیابی کامل صفحه محاسبه کود بدون محاسبه مجدد
+            selected_fertilizer_ids=calc_data.selected_fertilizer_ids or [],
+            optimization_options=calc_data.optimization_options or {},
+            optimization_result=calc_data.optimization_result or {}
         )
         
         db.add(db_calculation)
@@ -101,3 +106,6 @@ def delete_calculation(db: Session, calc_id: int) -> bool:
         db.rollback()
         logger.error(f"Error deleting calculation: {e}")
         raise e
+
+
+

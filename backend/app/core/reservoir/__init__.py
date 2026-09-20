@@ -1,3 +1,4 @@
+
 """
 ماژول مدیریت مخازن A, B, C
 ===========================
@@ -20,10 +21,6 @@ from .compatibility import (
     check_manual_fertilizer_selection,
 )
 
-from .stock_instructions import (
-    calculate_stock_instructions
-)
-
 __all__ = [
     'calculate_reservoir_data',
     'RESERVOIR_RULES',
@@ -31,7 +28,10 @@ __all__ = [
     'get_compatibility_warnings',
     'check_nutrient_interactions',
     'check_manual_fertilizer_selection',
-    'calculate_stock_instructions',
 ]
+
+
+
+
 
 

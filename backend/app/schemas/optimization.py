@@ -1,7 +1,8 @@
+
 # backend/app/schemas/optimization.py
 """
 طرح‌های مربوط به بهینه‌سازی (Optimization)
-شامل: OptimizationRequest, OptimizationResponse, OptimizationOptions, EcPhStatusResponse, etc.
+شامل: OptimizationRequest, OptimizationResponse, OptimizationOptions, etc.
 """
 
 from typing import Optional, List, Dict, Any
@@ -81,24 +82,6 @@ class OptimizationRequest(BaseModel):
     )
 
 
-class EcPhStatusResponse(BaseModel):
-    """وضعیت ترکیبی EC و pH"""
-    status: str = Field(..., description="وضعیت کلی: optimal, warning, critical")
-    status_label: str = Field(..., description="برچسب وضعیت")
-    color: str = Field(..., description="رنگ: success, warning, danger")
-    message: str = Field(..., description="پیام وضعیت")
-    issues: List[str] = Field(default_factory=list, description="لیست مشکلات")
-    recommendations: List[str] = Field(default_factory=list, description="لیست توصیه‌ها")
-    ec: float = Field(..., description="مقدار EC")
-    ph: float = Field(..., description="مقدار pH")
-    water_ec: Optional[float] = Field(None, description="EC آب")
-    water_ph: Optional[float] = Field(None, description="pH آب")
-    ec_status: str = Field("", description="وضعیت EC")
-    ec_label: str = Field("", description="برچسب EC")
-    ph_status: str = Field("", description="وضعیت pH")
-    ph_label: str = Field("", description="برچسب pH")
-
-
 class OptimizationResponse(BaseModel):
     """پاسخ بهینه‌سازی"""
     
@@ -116,28 +99,17 @@ class OptimizationResponse(BaseModel):
     is_converged: bool = Field(True, description="آیا الگوریتم به جواب رسید؟")
     summary: str = Field(..., description="خلاصه نتیجه به‌صورت متنی")
     ec: float = Field(0.0, description="EC نهایی (dS/m)")
-    ph: float = Field(7.0, description="pH نهایی")
     ec_status: str = Field("", description="وضعیت EC (مطلوب, کم, بالا, بحرانی)")
-    ph_status: str = Field("", description="وضعیت pH (مطلوب, اسیدی, قلیایی, بحرانی)")
-    ec_ph_status: EcPhStatusResponse = Field(..., description="وضعیت ترکیبی EC و pH")
-    # 🆕 pH یک تخمین است نه اندازه‌گیری دقیق؛ بازه محتمل + توضیح صریح
-    ph_min: Optional[float] = Field(None, description="حد پایین بازه تخمین pH")
-    ph_max: Optional[float] = Field(None, description="حد بالای بازه تخمین pH")
-    ph_is_estimate: bool = Field(True, description="pH یک تخمین است، نه اندازه‌گیری دقیق")
-    ph_disclaimer: Optional[str] = Field(None, description="توضیح محدودیت مدل تخمین pH")
-    nh4_ratio_percent: Optional[float] = Field(None, description="درصد نیتروژن آمونیومی از کل نیتروژن")
+    # 🆕 pH و دستورالعمل ساخت استوک از این پاسخ حذف شدند (تب اختصاصی pH
+    # و بازطراحی این بخش در آینده جداگانه انجام می‌شود). محاسبه داخلی pH
+    # همچنان برای هشدارهای شیمیایی (رسوب، تداخل تغذیه‌ای) در سمت سرور
+    # استفاده می‌شود، فقط دیگر به کاربر نمایش داده نمی‌شود.
     stock_info: Optional[Dict[str, Any]] = Field(
         None,
         description="🆕 اطلاعات مخزن/استوک برای این نتیجه: شامل tank_volume, "
                     "stock_volume, injection_ratio, total_stock_liters, "
                     "buckets_needed, weight_per_bucket (وزن هر کود اگر در "
                     "چند سطل استوک تقسیم شود)."
-    )
-    # 🆕 دستورالعمل ساخت استوک به‌تفکیک هر کود (ویژگی اصلی درخواستی)
-    stock_instructions: List[Dict[str, Any]] = Field(
-        default_factory=list,
-        description="برای هر کود: وزن، حجم آب پیشنهادی سطل، غلظت استوک، "
-                    "مخزن مقصد (A/B/C) و متن دستورالعمل فارسی"
     )
 
 
@@ -152,38 +124,11 @@ class ManualWeightRecalculateRequest(BaseModel):
     water_values: Optional[Dict[str, float]] = Field(default_factory=dict, description="عناصر موجود در آب")
     tank_volume: float = Field(1000.0, ge=1, description="حجم مخزن اصلی (لیتر) - همان مبنایی که weights روی آن حساب شده")
     stock_volume: float = Field(100.0, ge=1, description="حجم پیش‌فرض سطل استوک (لیتر) برای محاسبه دستورالعمل")
-
-
-class PHAdjustmentRequest(BaseModel):
-    """
-    🆕 درخواست «ماشین‌حساب اصلاح pH»: بر اساس pH واقعی اندازه‌گیری‌شده با
-    دستگاه (نه تخمین نرم‌افزار)، pH هدف، قلیائیت آب و حجم مخزن، مقدار
-    اسید یا باز لازم را محاسبه می‌کند.
-    """
-    current_ph: float = Field(..., ge=0, le=14, description="pH فعلی اندازه‌گیری‌شده با دستگاه")
-    target_ph: float = Field(6.0, ge=0, le=14, description="pH هدف")
-    alkalinity_ppm_caco3: float = Field(..., ge=0, description="قلیائیت آب (ppm CaCO3)")
-    tank_volume: float = Field(1000.0, gt=0, description="حجم مخزن اصلی (لیتر)")
-    acid_or_base_type: str = Field("HNO3", description="نوع اسید/باز: HNO3, H3PO4, H2SO4, KOH")
-    product_concentration_percent: float = Field(100.0, gt=0, le=100, description="درصد خلوص محصول تجاری")
-    product_price_per_kg: Optional[float] = Field(None, ge=0, description="قیمت هر کیلوگرم محصول (برای نمایش هزینه تخمینی)")
-
-
-class PHAdjustmentResponse(BaseModel):
-    """پاسخ ماشین‌حساب اصلاح pH"""
-    needs_acid: bool
-    needs_base: bool
-    ph_current: float
-    ph_target: float
-    ph_difference: float
-    alkalinity_ppm_caco3: float
-    product_type: str
-    product_name: str
-    grams_needed: float
-    estimated_cost: Optional[float] = None
-    type_mismatch_warning: Optional[str] = None
-    method: str
-    safety_instruction: str
+    report_id: Optional[int] = Field(
+        None,
+        description="🆕 شناسه گزارش فعلی (اختیاری). اگر ارسال شود، وزن ویرایش‌شده "
+                    "و نتیجه به‌روزشده روی همین گزارش ذخیره می‌شود."
+    )
 
 
 class OptimizationLogResponse(BaseModel):
@@ -235,5 +180,9 @@ class PrecipitationCheckResponse(BaseModel):
     is_safe: bool = Field(..., description="آیا ترکیب ایمن است؟")
     risks: List[PrecipitationRiskItem] = Field(default_factory=list, description="خطرات احتمالی")
     suggestions: List[str] = Field(default_factory=list, description="پیشنهادات اصلاحی")
+
+
+
+
 
 

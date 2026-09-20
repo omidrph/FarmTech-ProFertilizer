@@ -1,3 +1,4 @@
+
 // frontend/src/services/apiService.ts
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 import type {
@@ -355,6 +356,9 @@ class ApiService {
         target_values: Record<string, number>;
         water_values?: Record<string, number>;
         tank_volume: number;
+        stock_volume?: number;
+        // 🆕 اگر ارسال شود، وزن ویرایش‌شده روی همین گزارش ذخیره می‌شود
+        report_id?: number | null;
     }): Promise<OptimizationResponse> {
         try {
             const response: AxiosResponse<OptimizationResponse> = await this.api.post(
@@ -364,42 +368,6 @@ class ApiService {
             return response.data;
         } catch (error) {
             console.error('Error recalculating manual weights:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * 🆕 ماشین‌حساب اصلاح pH: محاسبه دوز اسید/باز لازم بر اساس pH واقعی
-     * اندازه‌گیری‌شده با دستگاه، pH هدف، قلیائیت آب و حجم مخزن.
-     */
-    async calculatePHAdjustment(data: {
-        current_ph: number;
-        target_ph: number;
-        alkalinity_ppm_caco3: number;
-        tank_volume: number;
-        acid_or_base_type: string;
-        product_concentration_percent: number;
-        product_price_per_kg?: number;
-    }): Promise<{
-        needs_acid: boolean;
-        needs_base: boolean;
-        ph_current: number;
-        ph_target: number;
-        ph_difference: number;
-        alkalinity_ppm_caco3: number;
-        product_type: string;
-        product_name: string;
-        grams_needed: number;
-        estimated_cost: number | null;
-        type_mismatch_warning: string | null;
-        method: string;
-        safety_instruction: string;
-    }> {
-        try {
-            const response = await this.api.post('/calculations/ph-adjustment', data);
-            return response.data;
-        } catch (error) {
-            console.error('Error calculating pH adjustment:', error);
             throw error;
         }
     }
@@ -901,5 +869,9 @@ class ApiService {
 
 export const apiService = new ApiService();
 export default apiService;
+
+
+
+
 
 

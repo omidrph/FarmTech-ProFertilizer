@@ -1,3 +1,4 @@
+
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
@@ -267,6 +268,14 @@ class Calculation(Base):
     reservoir_data = Column(JSON, nullable=True)
     calc_rows = Column(JSON, nullable=True)
     interpretation = Column(Text, nullable=True)
+    # 🆕 برای بازیابی کامل صفحه محاسبه کود بدون نیاز به محاسبه مجدد:
+    # کودهای انتخاب‌شده، حالت بهینه‌سازی انتخاب‌شده و کل نتیجه محاسبه
+    # (وزن‌ها، EC، تعادل یونی، هزینه، هشدارها و ...). قبلاً هیچ‌کدام از
+    # این‌ها ذخیره نمی‌شد و باز کردن دوباره گزارش نیاز به کلیک مجدد روی
+    # «محاسبه» داشت.
+    selected_fertilizer_ids = Column(JSON, nullable=True)
+    optimization_options = Column(JSON, nullable=True)
+    optimization_result = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     report = relationship("Report", back_populates="calculation")
@@ -355,3 +364,6 @@ class OptimizationLog(Base):
     
     def __repr__(self):
         return f"<OptimizationLog {self.id}>"
+
+
+

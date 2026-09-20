@@ -1,3 +1,4 @@
+
 # backend/app/routes/calculations/router.py
 """
 Router اصلی ماژول محاسبات
@@ -16,8 +17,7 @@ from app.schemas import (
     OptimizationResponse,
     PrecipitationCheckResponse,
     OptimizationLogResponse,
-    CalculationResponse,
-    PHAdjustmentResponse
+    CalculationResponse
 )
 
 from .home_summary import get_home_summary
@@ -27,7 +27,6 @@ from .reservoir import api_calculate_reservoir
 from .convert_unit import api_convert_unit
 from .optimization import optimize_fertilizers_endpoint
 from .recalculate import recalculate_manual_weights
-from .ph_adjustment import calculate_ph_adjustment_endpoint
 from .precipitation import check_precipitation_endpoint
 from .history import get_optimization_history_endpoint
 from .crud_calculations import create_calculation, get_calculation, update_calculation
@@ -51,8 +50,6 @@ calculations_router.post("/optimize", response_model=OptimizationResponse)(optim
 # 🆕 محاسبه مجدد پس از ویرایش دستی وزن یک کود در جدول نتیجه
 calculations_router.post("/recalculate-manual", response_model=OptimizationResponse)(recalculate_manual_weights)
 calculations_router.post("/check-precipitation", response_model=PrecipitationCheckResponse)(check_precipitation_endpoint)
-# 🆕 ماشین‌حساب اصلاح pH (بر مبنای pH واقعی اندازه‌گیری‌شده + قلیائیت آب)
-calculations_router.post("/ph-adjustment", response_model=PHAdjustmentResponse)(calculate_ph_adjustment_endpoint)
 calculations_router.get("/optimization-history", response_model=List[OptimizationLogResponse])(get_optimization_history_endpoint)
 
 # ---- مسیرهای CRUD ----
@@ -63,5 +60,9 @@ calculations_router.put("/{calc_id}", response_model=CalculationResponse)(update
 # ---- مسیر تفسیر ----
 # 🆕 موقتاً حذف شد؛ طبق درخواست، این بخش بعداً با API هوش مصنوعی از نو
 # پیاده‌سازی خواهد شد. منطق rule-based قدیمی (interpretation.py) حذف شد.
+
+
+
+
 
 

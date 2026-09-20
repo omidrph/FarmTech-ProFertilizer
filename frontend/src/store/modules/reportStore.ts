@@ -1,3 +1,4 @@
+
 // frontend/src/store/modules/reportStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -182,7 +183,7 @@ export const useReportStore = defineStore('report', () => {
             // نمی‌شدند و با بازکردن گزارش قدیمی همیشه مقدار پیش‌فرض نشان
             // داده می‌شد. حالا این تنظیمات از داخل reservoir_data.settings
             // بازیابی می‌شوند.
-            const savedSettings = (reservoirData as any)?.settings;
+            const savedSettings = (calculation.reservoir_data as any)?.settings;
             if (savedSettings) {
               calcStore.setStockSettings({
                 tankVolume: savedSettings.tank_volume,
@@ -190,6 +191,31 @@ export const useReportStore = defineStore('report', () => {
                 injectionRatio: savedSettings.injection_ratio
               });
             }
+          }
+
+          // ============================================================
+          // 🆕 بازیابی کامل وضعیت صفحه محاسبه کود (رفع باگ اصلی):
+          // قبلاً فقط calc_rows/reservoir_data برمی‌گشت و کاربر مجبور بود
+          // برای دیدن نتیجه، دوباره روی «محاسبه» بزند. حالا کودهای
+          // انتخاب‌شده، حالت بهینه‌سازی، و کل نتیجه محاسبه (وزن‌ها، EC،
+          // تعادل یونی، هزینه، هشدارها) هم بازیابی می‌شوند.
+          // ============================================================
+          const anyCalc = calculation as any;
+          if (Array.isArray(anyCalc.selected_fertilizer_ids) && anyCalc.selected_fertilizer_ids.length > 0) {
+            calcStore.setRestoredSelection(anyCalc.selected_fertilizer_ids);
+          }
+          if (anyCalc.optimization_options) {
+            calcStore.setRestoredOptimizationOptions(anyCalc.optimization_options);
+          }
+          if (anyCalc.optimization_result && Object.keys(anyCalc.optimization_result).length > 0) {
+            const reservoirForResult = (typeof anyCalc.reservoir_data === 'object' && anyCalc.reservoir_data)
+              ? anyCalc.reservoir_data
+              : { A: [], B: [], C: [] };
+            calcStore.restoreOptimizationResult({
+              ...anyCalc.optimization_result,
+              reservoir_data: reservoirForResult
+            });
+            console.log('🧮 Optimization result restored from saved report');
           }
           
           console.log('🧮 Calculation data loaded');
@@ -404,5 +430,9 @@ export const useReportStore = defineStore('report', () => {
 });
 
 export default useReportStore;
+
+
+
+
 
 

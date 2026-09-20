@@ -1,3 +1,4 @@
+
 // frontend/src/store/modules/calcStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -40,6 +41,34 @@ export const useCalcStore = defineStore('calc', () => {
     const lastFertilizersUsed = ref<any[]>([]);
     const lastWaterValuesUsed = ref<Record<string, number>>({});
     const lastTargetValuesUsed = ref<Record<string, number>>({});
+
+    // ============================================================
+    // 🆕 وضعیت بازیابی‌شده از گزارش (برای بازکردن گزارش قبلی بدون نیاز
+    // به کلیک دوباره روی «محاسبه»). قبلاً فقط calc_rows/reservoir_data
+    // بازیابی می‌شد؛ کودهای انتخاب‌شده، حالت بهینه‌سازی، و نتیجه کامل
+    // بهینه‌سازی (weights به‌ازای هر کود، EC، تعادل یونی، هشدارها) هرگز
+    // ذخیره/بازیابی نمی‌شدند.
+    // ============================================================
+    const restoredSelectedFertilizerIds = ref<string[]>([]);
+    const restoredOptimizationOptions = ref<Record<string, any> | null>(null);
+
+    function setRestoredSelection(ids: string[]) {
+        restoredSelectedFertilizerIds.value = Array.isArray(ids) ? ids : [];
+    }
+
+    function setRestoredOptimizationOptions(options: Record<string, any> | null | undefined) {
+        restoredOptimizationOptions.value = options && Object.keys(options).length > 0 ? options : null;
+    }
+
+    /**
+     * 🆕 بازیابی کامل نتیجه بهینه‌سازی ذخیره‌شده (بدون نیاز به فراخوانی
+     * دوباره /optimize). ورودی، ترکیبی از optimization_result ذخیره‌شده
+     * و reservoir_data مربوط به همان محاسبه است.
+     */
+    function restoreOptimizationResult(raw: any) {
+        if (!raw || Object.keys(raw).length === 0) return;
+        optimizationResult.value = normalizeOptimizationResult(raw);
+    }
 
     // ============================================================
     // 🆕 تنظیمات استوک (حجم مخزن اصلی، حجم سطل استوک، نسبت تزریق)
@@ -489,6 +518,8 @@ export const useCalcStore = defineStore('calc', () => {
             const currentWeights: Record<string, number> = { ...optimizationResult.value.weights };
             currentWeights[fertilizerId] = Math.max(0, newWeightGrams);
 
+            const reportStore = useReportStore();
+
             const rawResult = await apiService.recalculateManualWeights({
                 fertilizers: lastFertilizersUsed.value.map(f => ({
                     id: f.id,
@@ -502,8 +533,11 @@ export const useCalcStore = defineStore('calc', () => {
                 weights: currentWeights,
                 target_values: lastTargetValuesUsed.value,
                 water_values: lastWaterValuesUsed.value,
-                tank_volume: stockSettings.value.tankVolume
-            });
+                tank_volume: stockSettings.value.tankVolume,
+                stock_volume: stockSettings.value.stockVolume,
+                // 🆕 بدون این، ویرایش دستی وزن هرگز در گزارش ذخیره نمی‌شد
+                report_id: reportStore.currentReportId ? Number(reportStore.currentReportId) : null
+            } as any);
 
             const result = normalizeOptimizationResult(rawResult);
             optimizationResult.value = result;
@@ -537,7 +571,6 @@ export const useCalcStore = defineStore('calc', () => {
             }
 
             // ذخیره خودکار در گزارش جاری (رفع باگ «ذخیره ناقص»)
-            const reportStore = useReportStore();
             if (reportStore.currentReportId) {
                 await reportStore.saveCurrentReport();
             }
@@ -593,23 +626,7 @@ export const useCalcStore = defineStore('calc', () => {
                 is_converged: item.is_successful || false,
                 summary: '',
                 ec: 0,
-                ph: 7.0,
-                ec_status: '',
-                ph_status: '',
-                ec_ph_status: {
-                    status: 'optimal',
-                    status_label: 'مطلوب',
-                    color: 'success',
-                    message: '',
-                    issues: [],
-                    recommendations: [],
-                    ec: 0,
-                    ph: 7.0,
-                    ec_status: '',
-                    ec_label: '',
-                    ph_status: '',
-                    ph_label: ''
-                }
+                ec_status: ''
             }));
             
             optimizationHistory.value = formattedHistory;
@@ -623,6 +640,9 @@ export const useCalcStore = defineStore('calc', () => {
     function clearOptimizationResult() {
         optimizationResult.value = null;
         lastOptimizationError.value = null;
+        // 🆕
+        restoredSelectedFertilizerIds.value = [];
+        restoredOptimizationOptions.value = null;
     }
 
     function resetCalculation() {
@@ -643,7 +663,10 @@ export const useCalcStore = defineStore('calc', () => {
         lastWaterValuesUsed.value = {};
         lastTargetValuesUsed.value = {};
         stockSettings.value = { tankVolume: 5000, stockVolume: 25, injectionRatio: 100 };
-        
+        // 🆕
+        restoredSelectedFertilizerIds.value = [];
+        restoredOptimizationOptions.value = null;
+
         console.log('🔄 calcStore reset complete');
     }
 
@@ -681,7 +704,8 @@ export const useCalcStore = defineStore('calc', () => {
         optimizationHistory,
         lastOptimizationError,
         stockSettings,
-        
+        restoredSelectedFertilizerIds,
+        restoredOptimizationOptions,
         // Getters
         elementTotals,
         hasErrors,
@@ -717,10 +741,17 @@ export const useCalcStore = defineStore('calc', () => {
         setCalculationRows,
         setReservoirData,
         setStockSettings,
+        setRestoredSelection,
+        setRestoredOptimizationOptions,
+        restoreOptimizationResult,
         recalculateManualWeight
     };
 });
 
 export default useCalcStore;
+
+
+
+
 
 

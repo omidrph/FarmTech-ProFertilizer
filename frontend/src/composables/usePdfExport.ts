@@ -109,7 +109,6 @@ export function usePdfExport() {
         const accuracy = Math.max(0, 100 - (Number(result.residual_error) || 0) * 100);
         const items = [
             { label: 'EC نهایی', value: num(result.ec, 2), unit: 'dS/m', note: result.ec_status || '' },
-            { label: 'pH تخمینی', value: num(result.ph, 2), unit: '', note: result.ph_status || '' },
             { label: 'دقت رسیدن به هدف', value: num(accuracy, 1), unit: '٪', note: result.is_converged ? 'همگرا' : 'همگرا نشد' },
             { label: 'هزینه کل', value: money(result.cost_total), unit: 'تومان', note: '' }
         ];
@@ -252,32 +251,6 @@ export function usePdfExport() {
         </section>`;
     }
 
-    function buildInstructions(result: OptimizationResponse): string {
-        const instructions = result.stock_instructions || [];
-        if (instructions.length === 0) return '';
-
-        const items = instructions
-            .map(
-                (inst: any, index: number) => `
-            <li>
-                <span class="step-index">${index + 1}</span>
-                <div>
-                    <strong>${esc(inst.fertilizer_name)}</strong>
-                    <span class="tank tank-${esc(inst.reservoir)}">مخزن ${esc(inst.reservoir)}</span>
-                    <span class="step-weight">${num(inst.weight_grams, 0)} گرم در ${esc(inst.recommended_bucket_liters)} لیتر آب</span>
-                    ${inst.warning ? `<em class="step-warn">${esc(inst.warning)}</em>` : ''}
-                </div>
-            </li>`
-            )
-            .join('');
-
-        return `
-        <section class="block avoid-break">
-            <h2>ترتیب ساخت استوک</h2>
-            <ol class="steps">${items}</ol>
-        </section>`;
-    }
-
     function buildTankMap(result: OptimizationResponse, fertilizers: any[]): Record<string, string> {
         const map: Record<string, string> = {};
         const data: any = result.reservoir_data;
@@ -373,7 +346,7 @@ body {
 .meta-label { color: #6b7280; font-size: 10px; }
 .meta-value { font-weight: 700; font-size: 10px; }
 
-.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
 .kpi {
     border: 1px solid #e5e7eb;
     border-top: 3px solid #2563eb;
@@ -437,17 +410,6 @@ body {
 .note-warn { background: #fffbeb; border-right: 3px solid #f59e0b; color: #92400e; }
 .note-info { background: #eff6ff; border-right: 3px solid #2563eb; color: #1e40af; }
 
-.steps { list-style: none; margin: 0; padding: 0; }
-.steps li { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px dashed #e5e7eb; }
-.step-index {
-    flex: 0 0 auto;
-    width: 18px; height: 18px; border-radius: 50%;
-    background: #2563eb; color: #fff;
-    font-size: 9px; display: flex; align-items: center; justify-content: center;
-}
-.step-weight { display: block; font-size: 10px; color: #374151; }
-.step-warn { display: block; font-size: 9px; color: #b45309; }
-
 .doc-footer {
     margin-top: 18px;
     padding-top: 8px;
@@ -463,7 +425,6 @@ body {
 ${buildHeader(meta)}
 ${buildKpis(payload.result)}
 ${buildFertilizerTable(payload)}
-${buildInstructions(payload.result)}
 ${buildElementsTable(payload)}
 ${buildIonBalance(payload.result)}
 ${buildNotes(payload.result)}

@@ -1,3 +1,4 @@
+
 # backend/app/crud/base.py
 """
 کلاس پایه و توابع مشترک برای ماژول CRUD
@@ -133,5 +134,44 @@ def process_calculation_data(calc: Any) -> Any:
             calc.calc_rows = []
     else:
         calc.calc_rows = []
-    
+
+    # 🆕 پردازش selected_fertilizer_ids
+    if calc.selected_fertilizer_ids is not None:
+        if isinstance(calc.selected_fertilizer_ids, str):
+            try:
+                calc.selected_fertilizer_ids = json.loads(calc.selected_fertilizer_ids)
+            except json.JSONDecodeError:
+                calc.selected_fertilizer_ids = []
+        elif not isinstance(calc.selected_fertilizer_ids, list):
+            calc.selected_fertilizer_ids = []
+    else:
+        calc.selected_fertilizer_ids = []
+
+    # 🆕 پردازش optimization_options
+    if calc.optimization_options is not None:
+        if isinstance(calc.optimization_options, str):
+            try:
+                calc.optimization_options = json.loads(calc.optimization_options)
+            except json.JSONDecodeError:
+                calc.optimization_options = {}
+        elif not isinstance(calc.optimization_options, dict):
+            calc.optimization_options = {}
+    else:
+        calc.optimization_options = {}
+
+    # 🆕 پردازش optimization_result (کل نتیجه محاسبه، برای بازیابی بدون محاسبه مجدد)
+    if calc.optimization_result is not None:
+        if isinstance(calc.optimization_result, str):
+            try:
+                calc.optimization_result = json.loads(calc.optimization_result)
+            except json.JSONDecodeError:
+                calc.optimization_result = {}
+        elif not isinstance(calc.optimization_result, dict):
+            calc.optimization_result = {}
+    else:
+        calc.optimization_result = {}
+
     return calc
+
+
+

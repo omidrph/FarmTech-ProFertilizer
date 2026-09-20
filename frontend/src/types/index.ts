@@ -1,3 +1,4 @@
+
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -293,37 +294,6 @@ export interface OptimizationRequest {
     injection_ratio?: number;
 }
 
-export interface EcPhStatus {
-    status: 'optimal' | 'warning' | 'critical';
-    status_label: string;
-    color: 'success' | 'warning' | 'danger';
-    message: string;
-    issues: string[];
-    recommendations: string[];
-    ec: number;
-    ph: number;
-    water_ec?: number;
-    water_ph?: number;
-    ec_status: string;
-    ec_label: string;
-    ph_status: string;
-    ph_label: string;
-}
-
-// 🆕 دستورالعمل ساخت استوک برای یک کود (ویژگی اصلی درخواستی)
-export interface StockInstruction {
-    fertilizer_id: string;
-    fertilizer_name: string;
-    weight_grams: number;
-    reservoir: 'A' | 'B' | 'C';
-    is_acid: boolean;
-    recommended_bucket_liters: number;
-    stock_concentration_g_per_l: number;
-    solubility_g_per_l: number | null;
-    warning: string | null;
-    instruction_text: string;
-}
-
 export interface OptimizationResponse {
     weights: Record<string, number>;
     concentrations: Record<string, number>;
@@ -339,17 +309,9 @@ export interface OptimizationResponse {
     is_converged: boolean;
     summary: string;
     ec: number;
-    ph: number;
     ec_status: string;
-    ph_status: string;
-    ec_ph_status: EcPhStatus;
-    // 🆕 pH یک تخمین است، نه اندازه‌گیری دقیق - بازه محتمل + توضیح
-    ph_min?: number;
-    ph_max?: number;
-    ph_is_estimate?: boolean;
-    ph_disclaimer?: string;
-    nh4_ratio_percent?: number;
-    // 🆕 اطلاعات مخزن/استوک و دستورالعمل ساخت استوک به‌تفکیک هر کود
+    // 🆕 pH و دستورالعمل ساخت استوک عمداً از این پاسخ حذف شده‌اند؛ pH در
+    // یک تب اختصاصی جداگانه ارائه خواهد شد.
     stock_info?: {
         tank_volume: number;
         stock_volume?: number;
@@ -359,7 +321,6 @@ export interface OptimizationResponse {
         weight_per_bucket?: Record<string, number>;
         manual_edit?: boolean;
     };
-    stock_instructions?: StockInstruction[];
 }
 
 export interface PrecipitationRiskItem {
@@ -513,5 +474,9 @@ export interface User {
     updated_at?: string;
     full_name: string;
 }
+
+
+
+
 
 

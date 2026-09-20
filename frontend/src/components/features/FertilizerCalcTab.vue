@@ -3,31 +3,26 @@
   ============================================================
   صفحه محاسبه کود (بازطراحی‌شده)
   ------------------------------------------------------------
-  ساختار جدید: ویزارد سه‌مرحله‌ای
+  ساختار: ویزارد سه‌مرحله‌ای
     ۱) تنظیمات مخزن و استوک
     ۲) انتخاب کود و حالت بهینه‌سازی
     ۳) نتیجه و خروجی PDF
-  تغییرات مهم نسبت به نسخه قبل:
-    • حذف کامل ماشین‌حساب pH (به‌جای آن تفسیر و آموزش pH در نتیجه)
-    • حذف خروجی CSV و جایگزینی با خروجی PDF حرفه‌ای
-    • «تعادل یونی خودکار» به‌صورت پیش‌فرض خاموش
-    • حالت بهینه‌سازی به‌صورت تک‌انتخابی (منطبق با رفتار واقعی بک‌اند)
   ============================================================
 -->
 <template>
-  <div class="pb-24">
+  <div>
 
     <!-- ============================================================ -->
     <!-- نوار مراحل -->
     <!-- ============================================================ -->
     <nav class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4">
-      <ol class="flex items-center gap-1 sm:gap-2">
-        <li v-for="(step, index) in steps" :key="step.id" class="flex items-center flex-1 min-w-0">
+      <ol class="flex items-start gap-1 sm:gap-2">
+        <li v-for="(step, index) in steps" :key="step.id" class="flex items-start flex-1 min-w-0">
           <button
             type="button"
             @click="goToStep(step.id)"
             :disabled="!isStepReachable(step.id)"
-            class="flex items-center gap-2 min-w-0 flex-1 text-right rounded-lg px-2 py-1.5 transition-colors disabled:cursor-not-allowed"
+            class="flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-2 min-w-0 flex-1 text-center sm:text-right rounded-lg px-1 sm:px-2 py-1.5 transition-colors disabled:cursor-not-allowed"
             :class="currentStep === step.id ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:hover:bg-transparent'"
           >
             <span
@@ -39,28 +34,33 @@
               </svg>
               <template v-else>{{ index + 1 }}</template>
             </span>
-            <span class="min-w-0 hidden sm:block">
+            <span class="min-w-0">
               <span
-                class="block text-sm font-semibold truncate"
+                class="block text-[11px] sm:text-sm font-semibold truncate leading-tight"
                 :class="currentStep === step.id ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'"
               >{{ step.title }}</span>
-              <span class="block text-[11px] text-gray-400 truncate">{{ step.subtitle }}</span>
+              <span class="hidden sm:block text-[11px] text-gray-400 truncate">{{ step.subtitle }}</span>
             </span>
           </button>
 
           <span
             v-if="index < steps.length - 1"
-            class="h-0.5 flex-1 mx-1 sm:mx-2 rounded-full transition-colors"
+            class="h-0.5 flex-1 mx-1 sm:mx-2 mt-3.5 sm:mt-4 rounded-full transition-colors"
             :class="isStepDone(step.id) ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'"
           ></span>
         </li>
       </ol>
 
-      <!-- عنوان مرحله در موبایل -->
-      <p class="sm:hidden mt-2 text-sm font-semibold text-primary-700 dark:text-primary-400">
-        {{ activeStepMeta.title }}
-        <span class="block text-[11px] font-normal text-gray-400">{{ activeStepMeta.subtitle }}</span>
-      </p>
+      <!-- عنوان کامل مرحله جاری (هم موبایل، هم برای وضوح بیشتر) -->
+      <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <p class="text-sm font-bold text-primary-700 dark:text-primary-400 truncate">{{ activeStepMeta.title }}</p>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ activeStepMeta.subtitle }}</p>
+        </div>
+        <span class="flex-shrink-0 text-[11px] font-medium text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-full px-2 py-0.5">
+          مرحله {{ currentStep }} از {{ steps.length }}
+        </span>
+      </div>
     </nav>
 
     <!-- ============================================================ -->
@@ -103,7 +103,7 @@
           </div>
         </section>
 
-        <!-- تنظیمات استوک (بدون تغییر) -->
+        <!-- تنظیمات استوک (بدون تغییر در منطق، فقط ظاهر موبایل بهبود یافته) -->
         <StockSettings
           :main-tank-volume="mainTankVolume"
           :stock-volume="stockVolume"
@@ -199,6 +199,7 @@
           :target-values="targetStore.targetElements"
           :tank-volume="mainTankVolume"
           @update-weight="handleWeightEdit"
+          @go-to-selection="goToStep(2)"
         />
 
         <div v-else class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-10 text-center">
@@ -222,10 +223,15 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- نوار اقدام چسبان -->
+    <!-- فاصله برای این‌که نوار اقدام شناور، محتوا را نپوشاند -->
     <!-- ============================================================ -->
-    <div class="sticky bottom-0 z-30 mt-4 -mx-2 sm:mx-0">
-      <div class="bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 sm:rounded-xl shadow-lg px-3 sm:px-4 py-3 flex items-center gap-2 flex-wrap">
+    <div aria-hidden="true" style="height: 88px"></div>
+
+    <!-- ============================================================ -->
+    <!-- نوار اقدام شناور (Floating) -->
+    <!-- ============================================================ -->
+    <div class="fixed inset-x-0 bottom-3 sm:bottom-4 z-30 px-3 sm:px-4 flex justify-center pointer-events-none">
+      <div class="w-full max-w-3xl pointer-events-auto bg-white/95 dark:bg-gray-800/95 backdrop-blur border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl px-3 sm:px-4 py-2.5 sm:py-3 flex items-center gap-2 flex-wrap" style="padding-bottom: max(0.625rem, env(safe-area-inset-bottom))">
 
         <!-- قبلی -->
         <button
@@ -243,16 +249,19 @@
         <div class="flex-1"></div>
 
         <!-- بازنشانی -->
-        <button
-          type="button"
-          @click="showResetConfirm = true"
-          class="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          <span class="hidden sm:inline">بازنشانی</span>
-        </button>
+        <div class="flex flex-col items-center">
+          <button
+            type="button"
+            @click="showResetConfirm = true"
+            class="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+            </svg>
+            <span class="hidden sm:inline">بازنشانی</span>
+          </button>
+          <span class="hidden sm:block text-[10px] text-gray-400 -mt-0.5">پاک‌کردن کامل</span>
+        </div>
 
         <!-- مرحله ۱ -->
         <button
@@ -288,29 +297,35 @@
 
         <!-- مرحله ۳ -->
         <template v-else>
-          <button
-            type="button"
-            @click="handleOptimize"
-            :disabled="isOptimizing || !canOptimize"
-            class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span class="hidden sm:inline">محاسبه مجدد</span>
-          </button>
+          <div class="flex flex-col items-center">
+            <button
+              type="button"
+              @click="handleOptimize"
+              :disabled="isOptimizing || !canOptimize"
+              class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              <span class="hidden sm:inline">محاسبه مجدد</span>
+            </button>
+            <span class="hidden sm:block text-[10px] text-gray-400 -mt-0.5">با تنظیمات فعلی</span>
+          </div>
 
-          <button
-            type="button"
-            @click="handleExportPdf"
-            :disabled="!hasOptimizationResult || isExporting"
-            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
-          </button>
+          <div class="flex flex-col items-center">
+            <button
+              type="button"
+              @click="handleExportPdf"
+              :disabled="!hasOptimizationResult || isExporting"
+              class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
+            </button>
+            <span class="hidden sm:block text-[10px] text-gray-400 -mt-0.5">گزارش آماده چاپ</span>
+          </div>
         </template>
       </div>
     </div>
@@ -350,7 +365,7 @@
       <Transition name="fade">
         <div
           v-if="toastMessage"
-          class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[320] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 max-w-[92vw]"
+          class="fixed bottom-24 sm:bottom-20 left-1/2 -translate-x-1/2 z-[320] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 max-w-[92vw]"
           :class="toastType === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
         >
           <svg v-if="toastType === 'success'" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,7 +382,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
@@ -438,7 +453,7 @@ const toastType = ref<'success' | 'error'>('success');
 const showResetConfirm = ref(false);
 const showAdvanced = ref(false);
 
-// 🆕 پیش‌فرض خاموش (درخواست کاربر)
+// پیش‌فرض خاموش
 const autoBalanceEnabled = ref(false);
 
 type OptimizationMode = 'accurate' | 'fewer' | 'cheapest';
@@ -462,6 +477,14 @@ const hasWaterAnalysis = computed(() =>
   Object.values(waterStore.waterValues || {}).some((value) => Number(value) > 0)
 );
 
+// 🆕 پیش‌نیاز چهارم: کاربر باید حداقل یک کود شخصی در پایگاه‌داده کود
+// ثبت کرده باشد؛ بدون آن، مرحله «انتخاب کود» چیزی برای انتخاب ندارد.
+const hasUserFertilizers = computed(() =>
+  props.fertilizers.some((f: any) => !f.isSystemDefault)
+);
+
+// پیش‌نیازها: کود انتخابی از این لیست حذف شد (در همان مرحله انتخاب کود
+// به‌طور واضح نمایش داده می‌شود و تکرارش اینجا لازم نیست)
 const prerequisites = computed(() => [
   {
     key: 'targets',
@@ -476,12 +499,10 @@ const prerequisites = computed(() => [
     hint: hasWaterAnalysis.value ? 'ثبت شده است' : 'اختیاری، ولی دقت محاسبه را بالا می‌برد'
   },
   {
-    key: 'fertilizers',
-    title: 'کودهای انتخاب‌شده',
-    done: localSelectedFertilizers.value.length > 0,
-    hint: localSelectedFertilizers.value.length > 0
-      ? `${localSelectedFertilizers.value.length} کود انتخاب شده`
-      : 'در مرحله بعد حداقل یک کود انتخاب کنید'
+    key: 'fertilizer-db',
+    title: 'پایگاه‌داده کود',
+    done: hasUserFertilizers.value,
+    hint: hasUserFertilizers.value ? 'ثبت شده است' : 'از تب «پایگاه‌داده کود» حداقل یک کود اضافه کنید'
   },
   {
     key: 'stock',
@@ -508,6 +529,63 @@ watch(
   { deep: true }
 );
 
+// ===== اسکرول به بالا هنگام باز شدن تب / تغییر مرحله =====
+const scrollToTop = () => {
+  if (typeof window === 'undefined') return;
+  window.scrollTo({ top: 0, behavior: 'auto' });
+};
+
+onMounted(() => {
+  if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual';
+  }
+  nextTick(scrollToTop);
+
+  // 🆕 اگر گزارش بازشده از قبل نتیجه ذخیره‌شده دارد، بدون نیاز به کلیک
+  // دوباره روی «محاسبه»، همان وضعیت بازیابی و مستقیم مرحله ۳ نمایش
+  // داده می‌شود.
+  syncRestoredState();
+
+  window.addEventListener('report-changed', syncRestoredState);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('report-changed', syncRestoredState);
+});
+
+// 🆕 همگام‌سازی کودهای انتخاب‌شده، حالت بهینه‌سازی و مرحله جاری از روی
+// وضعیت بازیابی‌شدهٔ calcStore (پس از بارگذاری یک گزارش قدیمی)
+const syncRestoredState = () => {
+  if (calcStore.restoredSelectedFertilizerIds.length > 0) {
+    const restored = [...calcStore.restoredSelectedFertilizerIds];
+    const same =
+      restored.length === localSelectedFertilizers.value.length &&
+      restored.every((id) => localSelectedFertilizers.value.includes(id));
+    if (!same) {
+      handleSelectionChange(restored);
+    }
+  }
+
+  const restoredOptions = calcStore.restoredOptimizationOptions;
+  if (restoredOptions) {
+    if (restoredOptions.prefer_fewer_fertilizers) {
+      optimizationMode.value = 'fewer';
+      if (restoredOptions.max_fertilizers_count) {
+        maxFertilizersCount.value = restoredOptions.max_fertilizers_count;
+      }
+    } else if (restoredOptions.prefer_cheapest) {
+      optimizationMode.value = 'cheapest';
+    } else {
+      optimizationMode.value = 'accurate';
+    }
+    autoBalanceEnabled.value = !!restoredOptions.auto_balance;
+  }
+
+  if (hasOptimizationResult.value && currentStep.value !== 3) {
+    goToStep(3);
+  }
+};
+
 // ===== ناوبری مراحل =====
 const isStepDone = (step: StepId): boolean => {
   if (step === 1) return currentStep.value > 1;
@@ -530,9 +608,7 @@ const goToStep = (step: number) => {
   const target = step as StepId;
   if (!isStepReachable(target)) return;
   currentStep.value = target;
-  nextTick(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  nextTick(scrollToTop);
 };
 
 // ===== اقدامات =====
