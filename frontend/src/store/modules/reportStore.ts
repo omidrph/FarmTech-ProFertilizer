@@ -1,4 +1,3 @@
-
 // frontend/src/store/modules/reportStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -6,6 +5,7 @@ import { apiService } from '@/services/apiService';
 import { useTargetStore } from './targetStore';
 import { useWaterStore } from './waterStore';
 import { useCalcStore } from './calcStore';
+import { useFertilizerStore } from './fertilizerStore';
 
 export interface ReportData {
   id: number | null;
@@ -201,6 +201,12 @@ export const useReportStore = defineStore('report', () => {
           // تعادل یونی، هزینه، هشدارها) هم بازیابی می‌شوند.
           // ============================================================
           const anyCalc = calculation as any;
+          console.log('🔍 [تشخیص] calculation خام از سرور:', {
+            has_selected_fertilizer_ids: Array.isArray(anyCalc.selected_fertilizer_ids),
+            selected_fertilizer_ids_length: Array.isArray(anyCalc.selected_fertilizer_ids) ? anyCalc.selected_fertilizer_ids.length : 'N/A',
+            has_optimization_result: !!anyCalc.optimization_result,
+            optimization_result_keys: anyCalc.optimization_result ? Object.keys(anyCalc.optimization_result) : []
+          });
           if (Array.isArray(anyCalc.selected_fertilizer_ids) && anyCalc.selected_fertilizer_ids.length > 0) {
             calcStore.setRestoredSelection(anyCalc.selected_fertilizer_ids);
           }
@@ -251,6 +257,7 @@ export const useReportStore = defineStore('report', () => {
       const targetStore = useTargetStore();
       const waterStore = useWaterStore();
       const calcStore = useCalcStore();
+      const fertilizerStore = useFertilizerStore();
       
       const reportPayload = {
         report_name: reportData.value.reportName || `گزارش ${reportData.value.date}`,
@@ -320,7 +327,14 @@ export const useReportStore = defineStore('report', () => {
         final_values: calcStore.getFinalConcentrations(),
         reservoir_data: reservoirDataWithSettings,
         calc_rows: calcStore.calculationRows,
-        interpretation: null
+        interpretation: null,
+        // 🆕 رفع باگ اصلی «کودهای انتخابی ذخیره نمی‌شوند»: این مسیر
+        // ذخیره (مستقل از محاسبه) قبلاً این فیلدها را اصلاً نمی‌فرستاد؛
+        // چون هر دو مسیر روی همان رکورد calculation می‌نویسند، اگر این
+        // تابع بعد از محاسبه دوباره اجرا می‌شد، نتیجهٔ درست را با خالی
+        // بازنویسی می‌کرد.
+        selected_fertilizer_ids: fertilizerStore.selectedFertilizerIds,
+        optimization_result: calcStore.optimizationResult || undefined
       };
       
       try {
@@ -430,9 +444,3 @@ export const useReportStore = defineStore('report', () => {
 });
 
 export default useReportStore;
-
-
-
-
-
-
