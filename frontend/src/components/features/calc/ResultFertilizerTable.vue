@@ -33,27 +33,32 @@
       </div>
 
       <!-- دسکتاپ -->
-      <table class="w-full text-sm hidden sm:table">
+      <table class="w-full text-sm hidden sm:table" style="table-layout: fixed">
+        <colgroup>
+          <col />
+          <col style="width: 132px" />
+          <col style="width: 132px" />
+        </colgroup>
         <thead>
           <tr class="bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-600 dark:text-gray-300">
             <th class="px-3 py-2 text-right font-semibold">نام کود</th>
-            <th class="px-3 py-2 text-center font-semibold">{{ weightColumnLabel }}</th>
-            <th class="px-3 py-2 text-center font-semibold">هزینه (تومان)</th>
+            <th class="px-3 py-2 text-left font-semibold">{{ weightColumnLabel }}</th>
+            <th class="px-3 py-2 text-left font-semibold">هزینه (تومان)</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
           <tr v-for="item in group.items" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-            <td class="px-3 py-2 text-right">
+            <td class="px-3 py-2 text-right truncate">
               <span class="font-medium text-gray-900 dark:text-white">{{ item.name }}</span>
               <span v-if="item.isAcid" class="mr-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">اسید</span>
             </td>
-            <td class="px-3 py-2 text-center">
+            <td class="px-3 py-2 text-left" dir="ltr">
               <input
                 v-if="activeMode === 'stock'"
                 type="number"
                 step="0.001"
                 min="0"
-                class="w-24 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0.5 outline-none transition-colors text-gray-900 dark:text-white font-semibold"
+                class="w-24 text-left tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0.5 outline-none transition-colors text-gray-900 dark:text-white font-semibold"
                 :value="displayWeight(item)"
                 @input="onWeightInput(item.id, $event)"
                 @change="onWeightCommit(item.id)"
@@ -63,7 +68,7 @@
                 {{ formatNumber(convertWeight(item.weight), 2) }}
               </span>
             </td>
-            <td class="px-3 py-2 text-center tabular-nums text-gray-700 dark:text-gray-300">
+            <td class="px-3 py-2 text-left tabular-nums text-gray-700 dark:text-gray-300" dir="ltr">
               {{ formatCurrency(item.cost) }}
             </td>
           </tr>

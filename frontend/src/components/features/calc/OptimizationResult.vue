@@ -60,29 +60,6 @@
     </ResultAccordion>
 
     <!-- ============================================================ -->
-    <!-- EC محلول -->
-    <!-- ============================================================ -->
-    <!-- 🆕 pH و آموزش مربوط به آن از این صفحه حذف شد؛ در آینده یک تب
-         مستقل برای pH و ماشین‌حساب آن ساخته خواهد شد. -->
-    <ResultAccordion
-      title="EC محلول"
-      subtitle="شوری نهایی محلول"
-      tone="neutral"
-    >
-      <template #icon>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h4l2-7 4 14 2-7h6" />
-        </svg>
-      </template>
-
-      <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-        <p class="text-xs text-gray-500 dark:text-gray-400">EC نهایی</p>
-        <p class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{{ toFixed(result.ec, 2) }} <span class="text-xs font-normal text-gray-400">dS/m</span></p>
-        <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">وضعیت: {{ result.ec_status || 'نامشخص' }} • محدوده متداول ۰٫۸ تا ۲٫۵</p>
-      </div>
-    </ResultAccordion>
-
-    <!-- ============================================================ -->
     <!-- تعادل یونی -->
     <!-- ============================================================ -->
     <ResultAccordion
@@ -146,7 +123,7 @@
         :warnings="warnings"
         :suggestions="suggestions"
         :is-converged="!!result.is_converged"
-        :residual-error="result.residual_error || 0"
+        :accuracy="accuracy"
         :unused-count="unusedCount"
         :bad-elements-count="badElementsCount"
         @go-to-selection="$emit('go-to-selection')"
@@ -209,11 +186,18 @@ const badElementsCount = computed(() => {
 const warnings = computed(() => result.value?.warnings || []);
 const suggestions = computed(() => result.value?.suggestions || []);
 
+// 🆕 دقت واقعی از میانگین target_achievement (نه residual_error خام)
+const accuracy = computed(() => {
+  const values = Object.values(result.value?.target_achievement || {});
+  if (values.length === 0) return 100;
+  const sum = values.reduce((total, value) => total + (Number(value) || 0), 0);
+  return Math.max(0, Math.min(100, sum / values.length));
+});
+
 const warningsTone = computed<'neutral' | 'warning' | 'danger'>(() => {
   const hasPrecipitation = warnings.value.some((text) => text.startsWith('خطر رسوب:'));
   if (hasPrecipitation) return 'danger';
-  const accuracy = Math.max(0, 100 - (Number(result.value?.residual_error) || 0) * 100);
-  if (!result.value?.is_converged || accuracy < 85 || badElementsCount.value > 0) return 'warning';
+  if (!result.value?.is_converged || accuracy.value < 85 || badElementsCount.value > 0) return 'warning';
   return 'neutral';
 });
 

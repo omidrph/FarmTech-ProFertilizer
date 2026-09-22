@@ -120,7 +120,7 @@ const props = defineProps<{
   warnings: string[];
   suggestions: string[];
   isConverged: boolean;
-  residualError: number;
+  accuracy: number;
   unusedCount: number;
   badElementsCount: number;
 }>();
@@ -162,7 +162,7 @@ const precipitationItems = computed(() => {
     });
 });
 
-const accuracy = computed(() => Math.max(0, 100 - (Number(props.residualError) || 0) * 100));
+const accuracy = computed(() => Math.max(0, Math.min(100, Number(props.accuracy) || 0)));
 
 const qualityIssues = computed(() => {
   const issues: string[] = [];

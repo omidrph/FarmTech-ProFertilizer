@@ -1,3 +1,4 @@
+
 """
 محاسبه تعادل یونی
 ================================
@@ -93,7 +94,11 @@ def calculate_ion_balance(
             details['missing_elements'].append(element)
     
     difference = abs(cation_total - anion_total)
-    is_balanced = difference < BALANCE_TOLERANCE
+    # 🆕 رفع باگ: cation_total/anion_total ممکن است numpy.float64 باشند؛
+    # مقایسه با آن‌ها numpy.bool_ برمی‌گرداند که در JSON قابل ذخیره نیست
+    # (باعث خطای «Object of type bool_ is not JSON serializable» و شکست
+    # کامل ذخیره‌سازی نتیجه می‌شد). با bool() به نوع بولین پایتون تبدیل می‌شود.
+    is_balanced = bool(difference < BALANCE_TOLERANCE)
     
     details['summary'] = {
         'total_cation_meq': cation_total,
@@ -108,7 +113,7 @@ def calculate_ion_balance(
         'missing_count': len(details['missing_elements'])
     }
     
-    return cation_total, anion_total, is_balanced, details
+    return float(cation_total), float(anion_total), is_balanced, details
 
 
 def _get_element_type(element: str) -> str:
@@ -780,5 +785,9 @@ def validate_concentrations(
         'element_count': len(concentrations),
         'valid_elements': len([v for v in concentrations.values() if v is not None and v >= 0])
     }
+
+
+
+
 
 

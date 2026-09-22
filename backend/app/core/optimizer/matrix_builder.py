@@ -1,3 +1,4 @@
+
 """
 ساخت ماتریس ضرایب برای بهینه‌سازی
 ================================
@@ -153,6 +154,60 @@ def build_optimization_matrix(
     return np.array(A), np.array(b), active_elements, fertilizer_names, stats
 
 
+def calculate_full_solution_concentrations(
+    weights: np.ndarray,
+    fertilizers: List[Dict[str, Any]],
+    water_values: Optional[Dict[str, float]] = None
+) -> Dict[str, float]:
+    """
+    🆕 غلظت نهایی «همه» عناصر موجود در کودهای انتخابی (نه فقط عناصر هدف).
+
+    رفع باگ مهم: تعادل یونی و EC قبلاً فقط بر مبنای عناصری محاسبه می‌شدند
+    که کاربر برایشان مقدار هدف وارد کرده بود (`active_elements` در
+    build_optimization_matrix). یعنی اگر کاربر مثلاً برای S یا Cl هدفی
+    تعیین نکرده بود، سولفات/کلراید موجود در همان کودهای انتخابی به‌طور
+    کامل از محاسبه آنیون حذف می‌شد — در حالی که آن یون‌ها واقعاً در
+    محلول حضور دارند. این تابع، برخلاف calculate_final_concentrations،
+    غلظت واقعی محلول را برای هر عنصری که در ترکیب درصدی کودهای انتخابی
+    وجود دارد محاسبه می‌کند و باید فقط برای EC و تعادل یونی (و بررسی
+    رسوب/pH که به شیمی کامل محلول وابسته‌اند) استفاده شود؛ برای بخش
+    «عناصر تأمین‌شده در برابر هدف» همچنان از calculate_final_concentrations
+    (محدود به عناصر هدف) استفاده کنید.
+
+    Args:
+        weights: وزن هر کود (همان مبنای build_optimization_matrix، یعنی
+            «گرم به ازای ۱۰۰۰ لیتر»، نه وزن مقیاس‌شده برای حجم مخزن)
+        fertilizers: لیست کودهای انتخابی (خام، قبل از prepare_fertilizer_data)
+        water_values: عناصر موجود در آب (اختیاری)
+
+    Returns:
+        Dict[str, float]: غلظت (ppm) هر عنصری که در حداقل یکی از کودهای
+            انتخابی درصد غیرصفر دارد.
+    """
+    water_values = water_values or {}
+    prepared_fertilizers = prepare_fertilizer_data(fertilizers)
+
+    all_present_elements: set = set()
+    for fert in prepared_fertilizers:
+        all_present_elements.update(
+            el for el, pct in (fert.get('elements') or {}).items() if pct and pct > 0
+        )
+    # عناصر موجود در آب هم باید حتی بدون کود لحاظ شوند
+    all_present_elements.update(water_values.keys())
+
+    full_concentrations: Dict[str, float] = {}
+    for element in all_present_elements:
+        contribution = 0.0
+        for i, fert in enumerate(prepared_fertilizers):
+            element_pct = fert['elements'].get(element, 0)
+            if not element_pct:
+                continue
+            contribution += weights[i] * (element_pct / 100) * fert['purity_factor']
+        full_concentrations[element] = contribution + water_values.get(element, 0)
+
+    return full_concentrations
+
+
 def apply_element_weights(
     A: np.ndarray,
     b: np.ndarray,
@@ -197,3 +252,6 @@ def apply_fixed_weights_constraints(
             fixed_weights[str(fert.get('id', ''))] = fixed_weight
     
     return fixed_weights
+
+
+

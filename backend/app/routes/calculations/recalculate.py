@@ -42,7 +42,7 @@ from app.core import (
     check_nutrient_interactions,
     ALL_ELEMENTS,
 )
-from app.core.optimizer.matrix_builder import prepare_fertilizer_data
+from app.core.optimizer.matrix_builder import prepare_fertilizer_data, calculate_full_solution_concentrations
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,15 @@ def recalculate_manual_weights(
             prepared, weights_per_1000L, water_values
         )
 
+        # 🆕 مثل مسیر optimize: تعادل یونی/EC/رسوب باید بر مبنای ترکیب
+        # شیمیایی کامل محلول باشند (نه فقط عناصر هدف)، وگرنه آنیون‌هایی
+        # مثل S/Cl که هدف ندارند دوباره ناقص محاسبه می‌شوند.
+        import numpy as np
+        weights_array = np.array([weights_per_1000L.get(f['id'], 0.0) for f in prepared])
+        full_concentrations = calculate_full_solution_concentrations(
+            weights_array, fertilizers, water_values
+        )
+
         # هزینه کل بر مبنای وزن واقعی
         cost_total = 0.0
         for fert in prepared:
@@ -126,11 +135,11 @@ def recalculate_manual_weights(
             cost_total += (w / 1000.0) * fert.get('price_per_kg', 0)
 
         # تعادل یونی
-        cation, anion, is_balanced, ion_details = calculate_ion_balance(final_concentrations, unit="ppm")
+        cation, anion, is_balanced, ion_details = calculate_ion_balance(full_concentrations, unit="ppm")
 
         # 🆕 تخمین pH پیش از بررسی رسوب (لازم برای [OH-] واقعی و کسر PO4³⁻ درست)
         water_ph_for_precip = water_values.get('pH', 7.0) if water_values else 7.0
-        prelim_ph_result = calculate_ph(final_concentrations, unit="ppm", water_ph=water_ph_for_precip)
+        prelim_ph_result = calculate_ph(full_concentrations, unit="ppm", water_ph=water_ph_for_precip)
         has_chelated_iron = any(
             fert.get('elements', {}).get('Fe', 0) > 0 and (
                 'کلات' in fert.get('name', '') or
@@ -183,7 +192,7 @@ def recalculate_manual_weights(
         # EC (pH دیگر بخشی از پاسخ این صفحه نیست؛ prelim_ph_result فقط
         # برای هشدارهای شیمیایی داخلی زیر استفاده می‌شود)
         water_ec = water_values.get('EC', 0) if water_values else 0
-        ec_result = calculate_ec(final_concentrations, unit="ppm", water_ec=water_ec)
+        ec_result = calculate_ec(full_concentrations, unit="ppm", water_ec=water_ec)
         ph_result = prelim_ph_result
 
         if ph_result.get('nh4_warning'):

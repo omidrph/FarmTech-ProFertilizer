@@ -1,3 +1,4 @@
+
 // frontend/src/store/modules/reportStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -444,3 +445,9 @@ export const useReportStore = defineStore('report', () => {
 });
 
 export default useReportStore;
+
+
+
+
+
+

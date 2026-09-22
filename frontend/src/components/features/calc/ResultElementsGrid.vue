@@ -1,68 +1,62 @@
 <!-- frontend/src/components/features/calc/ResultElementsGrid.vue -->
 <!--
-  بازطراحی نمایش «عناصر تأمین‌شده در برابر هدف»
+  بازطراحی «عناصر تأمین‌شده در برابر هدف» با نمودار دایره‌ای (رادیال).
   ------------------------------------------------------------
-  نسخه قبلی: هر عنصر یک کارت جدا و سه‌خطی بود → با ۸-۱۰ عنصر، این
-  بخش به‌تنهایی صدها پیکسل فضا می‌گرفت.
-  نسخه فعلی: هر عنصر فقط یک ردیف فشرده (~۳۶px)، در دو ستون روی
-  دسکتاپ، همچنان با نوار بولت-چارت (خط ثابت = هدف) و رنگ وضعیت،
-  بدون افت خوانایی.
+  منطق حلقه:
+    • حلقه داخلی (ضخیم) = رسیدن به هدف، حداکثر تا ۱۰۰٪ پر می‌شود.
+    • اگر غلظت واقعی از هدف بیشتر شود، حلقه داخلی کامل (سبز) می‌ماند و
+      یک حلقه نازک بیرونی، فقط به‌اندازه مقدار «اضافه»، با رنگ هشدار
+      دور آن کشیده می‌شود (شبیه دور دوم حلقه‌های فعالیت). این‌طوری
+      حلقه هیچ‌وقت «می‌شکند» و شکل همیشه یک‌دست می‌ماند.
+    • رنگ بر اساس فاصله از هدف: سبز (تا ۳٪)، کهربایی (تا ۱۰٪)، قرمز
+      (بیشتر).
 -->
 <template>
-  <div class="space-y-2">
+  <div class="space-y-3">
 
-    <!-- سوییچ واحد + راهنمای رنگ (یک خط جمع‌وجور) -->
-    <div class="flex items-center justify-between gap-2 flex-wrap">
-      <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-[11px]">
-        <button
-          v-for="mode in modes"
-          :key="mode.key"
-          type="button"
-          @click="activeMode = mode.key"
-          class="px-2.5 py-1 font-medium transition-colors"
-          :class="activeMode === mode.key
-            ? 'bg-primary-600 text-white'
-            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-        >{{ mode.label }}</button>
-      </div>
-
-      <div class="flex items-center gap-2 flex-wrap text-[10px] text-gray-400">
-        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i>دقیق</span>
-        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-amber-500 inline-block"></i>تا ۱۰٪</span>
-        <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-rose-500 inline-block"></i>بیشتر</span>
-      </div>
+    <!-- راهنمای رنگ -->
+    <div class="flex items-center gap-3 flex-wrap text-[11px] text-gray-400">
+      <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i>دقیق</span>
+      <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-amber-500 inline-block"></i>تا ۱۰٪ فاصله</span>
+      <span class="flex items-center gap-1"><i class="w-2 h-2 rounded-full bg-rose-500 inline-block"></i>بیشتر</span>
+      <span class="flex items-center gap-1 mr-auto"><i class="w-2.5 h-0.5 rounded-full bg-rose-400 inline-block"></i>حلقه نازک = بیش‌تأمین</span>
     </div>
 
-    <!-- ردیف‌های فشرده، دو ستونه در دسکتاپ -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+    <!-- شبکه حلقه‌ها -->
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2.5">
       <div
         v-for="row in rows"
         :key="row.element"
-        class="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 py-1.5"
+        class="flex flex-col items-center gap-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-2.5 px-1.5"
       >
-        <span class="text-xs font-bold text-gray-700 dark:text-gray-200 w-12 flex-shrink-0 truncate" :title="row.element">
-          {{ row.element }}
-        </span>
-
-        <div class="relative h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex-1 min-w-0">
-          <div
-            class="absolute top-0 right-0 h-full rounded-full transition-all duration-500"
-            :class="row.barClass"
-            :style="{ width: row.barWidth }"
-          ></div>
-          <div
-            class="absolute top-[-1px] h-[calc(100%+2px)] w-[2px] rounded-full bg-gray-600 dark:bg-gray-300"
-            :style="{ right: row.targetMarkerPosition }"
-            :title="'هدف: ' + row.targetDisplay"
-          ></div>
-        </div>
-
-        <span class="text-[10px] text-gray-400 tabular-nums flex-shrink-0 hidden sm:inline">
-          {{ row.actualDisplay }}
-        </span>
-        <span class="text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded flex-shrink-0 w-14 text-center" :class="row.chipClass">
-          {{ row.deviationLabel }}
-        </span>
+        <svg width="66" height="66" viewBox="0 0 66 66">
+          <!-- ریل خالی -->
+          <circle cx="33" cy="33" r="24" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="6" />
+          <!-- حلقه اصلی: تا ۱۰۰٪ هدف -->
+          <circle
+            cx="33" cy="33" r="24" fill="none" stroke-width="6" stroke-linecap="round"
+            :class="row.ringClass"
+            stroke="currentColor"
+            :stroke-dasharray="RING_CIRC"
+            :stroke-dashoffset="row.innerOffset"
+            transform="rotate(-90 33 33)"
+          />
+          <!-- حلقه بیرونی نازک: فقط برای بیش‌تأمین -->
+          <circle
+            v-if="row.overshootOffset !== null"
+            cx="33" cy="33" r="30" fill="none" stroke-width="3" stroke-linecap="round"
+            class="stroke-rose-500"
+            stroke="currentColor"
+            :stroke-dasharray="OUTER_CIRC"
+            :stroke-dashoffset="row.overshootOffset"
+            transform="rotate(-90 33 33)"
+          />
+          <text x="33" y="31" text-anchor="middle" class="fill-gray-900 dark:fill-white" style="font-size:9px;font-weight:700">{{ row.element }}</text>
+          <text x="33" y="42" text-anchor="middle" :class="row.textClass" style="font-size:10px;font-weight:600">{{ row.percentLabel }}</text>
+        </svg>
+        <p class="text-[10px] text-gray-400 tabular-nums leading-tight text-center">
+          {{ row.actualDisplay }} <span class="text-gray-300 dark:text-gray-600">/</span> {{ row.targetDisplay }}
+        </p>
       </div>
     </div>
 
@@ -73,77 +67,53 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps<{
   targetValues: Record<string, number>;
   concentrations: Record<string, number>;
 }>();
 
-// ===== واحد نمایش =====
-type Mode = 'relative' | 'ppm';
-const modes: Array<{ key: Mode; label: string }> = [
-  { key: 'relative', label: 'نسبت به هدف (٪)' },
-  { key: 'ppm', label: 'غلظت مطلق (ppm)' }
-];
-const activeMode = ref<Mode>('relative');
+// محیط دایره برای شعاع 24 (حلقه اصلی) و 30 (حلقه بیرونی اضافه)
+const RING_CIRC = 2 * Math.PI * 24; // ≈ 150.8
+const OUTER_CIRC = 2 * Math.PI * 30; // ≈ 188.5
+// یک دور کامل حلقه بیرونی معادل «۵۰٪ اضافه بر هدف» در نظر گرفته می‌شود
+// تا بیش‌تأمین‌های خیلی زیاد هم در یک دور قابل نمایش بمانند.
+const OVERSHOOT_FULL_AT = 0.5;
 
 const rows = computed(() => {
   const entries = Object.entries(props.targetValues || {}).filter(([, target]) => Number(target) > 0);
 
-  const ppmCeiling = entries.reduce((max, [element, targetRaw]) => {
-    const target = Number(targetRaw);
-    const actual = Number(props.concentrations?.[element] || 0);
-    return Math.max(max, target, actual);
-  }, 0) || 1;
-
   return entries.map(([element, targetRaw]) => {
     const target = Number(targetRaw);
     const actual = Number(props.concentrations?.[element] || 0);
-    const ratio = (actual / target) * 100;
-    const deviation = ratio - 100;
-    const absDeviation = Math.abs(deviation);
+    const ratio = actual / target; // 1 = دقیقاً روی هدف
+    const deviationPct = (ratio - 1) * 100;
+    const absDeviation = Math.abs(deviationPct);
 
     const level = absDeviation <= 3 ? 'ok' : absDeviation <= 10 ? 'warn' : 'bad';
-    const barClass = level === 'ok' ? 'bg-emerald-500' : level === 'warn' ? 'bg-amber-500' : 'bg-rose-500';
-    const chipClass =
-      level === 'ok'
-        ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-        : level === 'warn'
-          ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-          : 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400';
+    const ringClass = level === 'ok' ? 'stroke-emerald-500' : level === 'warn' ? 'stroke-amber-500' : 'stroke-rose-500';
+    const textClass =
+      level === 'ok' ? 'fill-emerald-600' : level === 'warn' ? 'fill-amber-600' : 'fill-rose-600';
 
-    const sign = deviation > 0 ? '+' : '';
-    const deviationLabel = absDeviation < 0.5 ? 'دقیق' : `${sign}${deviation.toFixed(0)}٪`;
+    const innerRatio = Math.min(ratio, 1);
+    const innerOffset = RING_CIRC * (1 - innerRatio);
 
-    let barWidth: string;
-    let targetMarkerPosition: string;
-    let targetDisplay: string;
-    let actualDisplay: string;
-
-    if (activeMode.value === 'relative') {
-      const SCALE = 150;
-      barWidth = `${Math.min(Math.max(ratio, 0), SCALE) / SCALE * 100}%`;
-      targetMarkerPosition = `${100 - (100 / SCALE) * 100}%`;
-      targetDisplay = '۱۰۰٪';
-      actualDisplay = `${ratio.toFixed(0)}٪`;
-    } else {
-      const ceiling = ppmCeiling * 1.15;
-      barWidth = `${Math.min(Math.max(actual, 0), ceiling) / ceiling * 100}%`;
-      targetMarkerPosition = `${100 - Math.min(target, ceiling) / ceiling * 100}%`;
-      targetDisplay = `${target.toFixed(1)} ppm`;
-      actualDisplay = `${actual.toFixed(1)} ppm`;
+    let overshootOffset: number | null = null;
+    if (ratio > 1) {
+      const overshootFraction = Math.min((ratio - 1) / OVERSHOOT_FULL_AT, 1);
+      overshootOffset = OUTER_CIRC * (1 - overshootFraction);
     }
 
     return {
       element,
-      targetDisplay,
-      actualDisplay,
-      deviationLabel,
-      barWidth,
-      targetMarkerPosition,
-      barClass,
-      chipClass
+      ringClass,
+      textClass,
+      innerOffset,
+      overshootOffset,
+      percentLabel: `${Math.round(ratio * 100)}٪`,
+      targetDisplay: target.toFixed(0),
+      actualDisplay: actual.toFixed(0)
     };
   });
 });
@@ -152,5 +122,8 @@ const rows = computed(() => {
 <style scoped>
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+circle {
+  transition: stroke-dashoffset 0.6s ease;
 }
 </style>
