@@ -1,3 +1,4 @@
+
 <!-- frontend/src/views/MainLayout.vue -->
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200 flex flex-col">
@@ -75,12 +76,14 @@
       <div v-if="activeTab === 'home'" class="space-y-4 sm:space-y-6">
         
         <!-- Report Header -->
+        <!-- 🆕 بزرگ فقط در تب خانه و وقتی هنوز گزارشی باز نشده -->
         <ReportHeader
           v-model:reportName="reportStore.reportData.reportName"
           v-model:plantName="reportStore.reportData.plantName"
           v-model:season="reportStore.reportData.season"
           v-model:growthStage="reportStore.reportData.growthStage"
           v-model:reportDate="reportStore.reportData.date"
+          :large="activeSubTab === 'home' && !reportStore.hasActiveReport"
         />
 
         <!-- Home Sub Tab -->
@@ -416,3 +419,7 @@ onUnmounted(() => {
 </style>
 
 
+
+
+
+================================================================================

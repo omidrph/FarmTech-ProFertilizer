@@ -1,3 +1,4 @@
+
 <template>
 <div class="space-y-6">
 <!-- ============================================================ -->
@@ -182,7 +183,7 @@ class="text-[10px] bg-transparent border-none focus:ring-0 cursor-pointer text-p
 type="number"
 :value="getDisplayValue('waste', el)"
 @input="updateWastewaterValue(el, $event)"
-step="0.01"
+step="0.0001"
 min="0"
 class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300"
 placeholder="۰"
@@ -203,7 +204,7 @@ placeholder="۰"
 type="number"
 :value="getDisplayValue('water', el)"
 @input="updateWaterValue(el, $event)"
-step="0.01"
+step="0.0001"
 min="0"
 class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300"
 placeholder="۰"
@@ -536,7 +537,7 @@ const waterVal = (waterStore.waterValues as any)[element] || 0;
 const wasteVal = (waterStore.wastewaterValues as any)[element] || 0;
 const finalPpm = (waterVal * waterPct) + (wasteVal * wastePct);
 const converted = convertToDisplay(finalPpm, element, currentUnit.value);
-return converted.toFixed(2);
+return converted.toFixed(4);
 };
 
 /**
@@ -739,3 +740,7 @@ loadWaterTemplates();
 </style>
 
 
+
+
+
+================================================================================

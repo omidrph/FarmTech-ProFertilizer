@@ -1,4 +1,4 @@
-```vue
+
 <!-- frontend/src/components/features/HomeTab.vue -->
 <template>
   <div class="space-y-4 sm:space-y-6">
@@ -13,45 +13,70 @@
       @retry="loadDashboardData"
     />
 
-    <!-- Empty State - No Report -->
-    <HomeEmptyState 
-      v-else-if="!hasActiveReport" 
-      type="no-report"
-    />
+    <!-- Empty State - No Report: خودِ ReportHeader بزرگ در MainLayout آموزش لازم را نشان می‌دهد -->
 
-    <!-- Empty State - No Data -->
-    <HomeEmptyState 
-      v-else-if="!hasAnyData" 
-      type="no-data"
-    />
+    <!-- گزارش هست ولی هنوز محاسبه نشده: چک‌لیست + گزارش‌های اخیر -->
+    <template v-else-if="hasActiveReport && !hasCalculatedData">
+      <HomeEmptyState type="no-data" />
+      <div v-if="recentReports.length > 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mt-4">
+        <p class="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">گزارش‌های اخیر</p>
+        <div class="space-y-1.5">
+          <button
+            v-for="r in recentReports"
+            :key="r.id"
+            type="button"
+            @click="openReport(r.id)"
+            class="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-right hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+          >
+            <span class="text-sm text-gray-700 dark:text-gray-200 truncate">{{ r.report_name || 'بدون نام' }}</span>
+            <span class="text-[11px] text-gray-400 flex-shrink-0">{{ r.plant_name || '' }}</span>
+          </button>
+        </div>
+      </div>
+    </template>
 
-    <!-- Full Dashboard -->
-    <template v-else>
-      <!-- بخش 1: کارت‌های خلاصه آماری -->
-      <HomeStatsCards
-        :ion-balance="ionBalance"
-        :ion-balance-status="ionBalanceStatus"
-        :active-elements-count="activeElementsCount"
-        :active-reservoirs-count="activeReservoirsCount"
+    <!-- Full Dashboard: سامری بالا، جزئیات داخل آکاردئون جمع‌شده -->
+    <template v-else-if="hasCalculatedData">
+      <!-- 🆕 خلاصه دایره‌ای (همیشه باز، اولویت اول) -->
+      <HomeSummaryGauges
+        :target-achievement="calcStore.optimizationResult?.target_achievement || {}"
+        :ec="calcStore.optimizationResult?.ec || 0"
         :total-cost="totalCost"
       />
 
-      <!-- بخش 2: جدول مقایسه عناصر -->
-      <HomeElementsTable
-        :elements-data="elementComparisonData"
-        :target-unit="targetUnit"
-      />
+      <!-- 🆕 خط خلاصه گزارش -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-2 flex-wrap">
+        <span class="text-sm text-gray-700 dark:text-gray-200 truncate">
+          {{ reportStore.reportData.reportName || 'بدون نام' }}
+          <span v-if="reportStore.reportData.plantName" class="text-gray-400"> • {{ reportStore.reportData.plantName }}</span>
+        </span>
+        <span
+          class="text-[11px] px-2 py-0.5 rounded-full font-medium"
+          :class="ionBalance.isBalanced ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'"
+        >{{ ionBalance.isBalanced ? 'تعادل یونی مطلوب' : 'تعادل یونی نامتعادل' }}</span>
+      </div>
 
-      <!-- بخش 3: کارت‌های مخازن -->
-      <HomeReservoirCards
-        :reservoir-data="reservoirData"
-        :total-weight="totalReservoirWeight"
-      />
+      <!-- 🆕 جزئیات بیشتر: پیش‌فرض بسته تا صفحه شلوغ نباشد -->
+      <ResultAccordion title="جزئیات بیشتر" subtitle="آمار کامل، عناصر، مخازن و توصیه‌ها" tone="neutral">
+        <template #icon>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </template>
 
-      <!-- بخش 4: توصیه‌ها -->
-      <HomeRecommendations
-        :recommendations="recommendations"
-      />
+        <div class="space-y-4">
+          <HomeStatsCards
+            :ion-balance="ionBalance"
+            :ion-balance-status="ionBalanceStatus"
+            :active-elements-count="activeElementsCount"
+            :active-reservoirs-count="activeReservoirsCount"
+            :total-cost="totalCost"
+          />
+          <HomeElementsTable :elements-data="elementComparisonData" :target-unit="targetUnit" />
+          <HomeReservoirCards :reservoir-data="reservoirData" :total-weight="totalReservoirWeight" />
+          <HomeRecommendations :recommendations="recommendations" />
+        </div>
+      </ResultAccordion>
     </template>
   </div>
 </template>
@@ -62,6 +87,7 @@ import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
 import { useCalcStore } from '@/store/modules/calcStore';
+import ResultAccordion from './calc/ResultAccordion.vue';
 import { apiService } from '@/services/apiService';
 
 // ===== Sub-Components =====
@@ -70,6 +96,7 @@ import HomeStatsCards from './home/HomeStatsCards.vue';
 import HomeElementsTable from './home/HomeElementsTable.vue';
 import HomeReservoirCards from './home/HomeReservoirCards.vue';
 import HomeRecommendations from './home/HomeRecommendations.vue';
+import HomeSummaryGauges from './home/HomeSummaryGauges.vue';
 
 // ============================================================
 // Props
@@ -119,22 +146,17 @@ const ELEMENTS = [
 // ============================================================
 const hasActiveReport = computed(() => reportStore.hasActiveReport);
 
-const hasAnyData = computed(() => {
-  const hasTargets = Object.values(targetStore.targetElements).some(
-    v => v && v > 0
-  );
+// 🆕 رفع باگ: قبلاً با هر مقدار جزئی (فقط یک عنصر هدف یا آب) کل داشبورد
+// پر از اعداد صفر/نامرتبط نشان داده می‌شد. حالا فقط بعد از یک محاسبه
+// واقعی (دکمه «محاسبه») داشبورد کامل نشان داده می‌شود.
+const hasCalculatedData = computed(() => calcStore.optimizationResult !== null);
 
-  const hasWater =
-    Object.values(waterStore.waterValues).some(v => v && v > 0) ||
-    Object.values(waterStore.wastewaterValues).some(v => v && v > 0) ||
-    waterStore.waterMixData.waterSalinity > 0;
+// 🆕 چند گزارش اخیر برای دسترسی سریع، وقتی هنوز محاسبه‌ای انجام نشده
+const recentReports = computed(() => (reportStore.reports || []).slice(0, 5));
 
-  const hasCalc =
-    calcStore.calculationRows.length > 0 ||
-    calcStore.optimizationResult !== null;
-
-  return hasTargets || hasWater || hasCalc;
-});
+const openReport = (id: number) => {
+  reportStore.loadReport(id);
+};
 
 const ionBalance = computed(() => targetStore.ionBalance);
 
@@ -485,4 +507,4 @@ onUnmounted(() => {
   );
 });
 </script>
-```
+

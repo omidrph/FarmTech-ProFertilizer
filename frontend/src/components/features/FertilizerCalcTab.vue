@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/FertilizerCalcTab.vue -->
 <!--
   ============================================================
@@ -16,14 +17,16 @@
     <!-- نوار مراحل -->
     <!-- ============================================================ -->
     <nav class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4">
-      <ol class="flex items-start gap-1 sm:gap-2">
+      <ol class="flex items-stretch gap-1.5 sm:gap-2">
         <li v-for="(step, index) in steps" :key="step.id" class="flex items-start flex-1 min-w-0">
           <button
             type="button"
             @click="goToStep(step.id)"
             :disabled="!isStepReachable(step.id)"
-            class="flex flex-col sm:flex-row items-center sm:items-center gap-1 sm:gap-2 min-w-0 flex-1 text-center sm:text-right rounded-lg px-1 sm:px-2 py-1.5 transition-colors disabled:cursor-not-allowed"
-            :class="currentStep === step.id ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:hover:bg-transparent'"
+            class="flex flex-col sm:flex-row items-center sm:items-center justify-center sm:justify-start gap-1 sm:gap-2 min-w-0 w-full text-center sm:text-right rounded-lg border px-2 py-2 sm:py-2.5 min-h-[52px] transition-colors disabled:cursor-not-allowed"
+            :class="currentStep === step.id
+              ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 shadow-sm'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:hover:bg-white dark:disabled:hover:bg-gray-800'"
           >
             <span
               class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors"
@@ -39,7 +42,8 @@
                 class="block text-[11px] sm:text-sm font-semibold truncate leading-tight"
                 :class="currentStep === step.id ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'"
               >{{ step.title }}</span>
-              <span class="block text-[11px] text-gray-400 truncate">{{ step.subtitle }}</span>
+              <!-- 🆕 توضیح ریز هر مرحله فقط در دسکتاپ نمایش داده می‌شود -->
+              <span class="hidden sm:block text-[11px] text-gray-400 truncate">{{ step.subtitle }}</span>
             </span>
           </button>
 
@@ -417,7 +421,6 @@ const steps: Array<{ id: StepId; title: string; subtitle: string }> = [
 ];
 
 const currentStep = ref<StepId>(1);
-const activeStepMeta = computed(() => steps.find((step) => step.id === currentStep.value) || steps[0]);
 
 // ===== State =====
 const localSelectedFertilizers = ref<string[]>([...props.selectedFertilizers]);
@@ -726,3 +729,7 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   opacity: 0;
 }
 </style>
+
+
+
+================================================================================

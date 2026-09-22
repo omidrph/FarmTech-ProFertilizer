@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/target/TargetElementsTab.vue -->
 <template>
   <div class="space-y-6">
@@ -115,7 +116,7 @@
                   type="number"
                   :value="getDisplayValue(element)"
                   @input="updateElementValue(element, $event)"
-                  step="0.001"
+                  step="0.0001"
                   min="0"
                   class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300"
                   placeholder="۰"
@@ -629,3 +630,6 @@ onMounted(() => {
   }
 }
 </style>
+
+
+================================================================================

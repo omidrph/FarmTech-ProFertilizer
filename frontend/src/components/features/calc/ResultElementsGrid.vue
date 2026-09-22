@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/ResultElementsGrid.vue -->
 <!--
   بازطراحی «عناصر تأمین‌شده در برابر هدف» با نمودار دایره‌ای (رادیال).
@@ -111,9 +112,9 @@ const rows = computed(() => {
       textClass,
       innerOffset,
       overshootOffset,
-      percentLabel: `${Math.round(ratio * 100)}٪`,
-      targetDisplay: target.toFixed(0),
-      actualDisplay: actual.toFixed(0)
+      percentLabel: `${(ratio * 100).toFixed(1)}٪`,
+      targetDisplay: target.toFixed(2),
+      actualDisplay: actual.toFixed(2)
     };
   });
 });
@@ -127,3 +128,7 @@ circle {
   transition: stroke-dashoffset 0.6s ease;
 }
 </style>
+
+
+
+================================================================================
