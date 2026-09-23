@@ -190,8 +190,8 @@ placeholder="۰"
 />
 </td>
 </tr>
-<!-- ردیف آب -->
-<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+<!-- ردیف آب تازه؛ در استفاده ۱۰۰٪ پساب نمایش داده نمی‌شود -->
+<tr v-if="showFreshWaterRow" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
 <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm">
 <div class="flex items-center gap-2">
 <span class="w-2 h-2 rounded-full bg-blue-500"></span>
@@ -244,7 +244,8 @@ placeholder="۰"
 </div>
 
 <!-- لیست قالب‌ها -->
-<div v-if="waterTemplates.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+<div v-if="waterTemplates.length > 0" class="max-h-[320px] overflow-y-auto custom-scrollbar pl-1 pr-1">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 <div
 v-for="template in waterTemplates"
 :key="template.id"
@@ -305,6 +306,9 @@ title="حذف"
 </svg>
 <p class="text-gray-500 dark:text-gray-400 text-sm">هنوز قالبی ذخیره نشده است</p>
 <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">با کلیک روی دکمه "ذخیره قالب جدید" شروع کنید</p>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -464,6 +468,12 @@ return (waterPercentage.value || 0) + (wastewaterPercentage.value || 0);
 const showWastewaterRow = computed(() => {
 if (wastewaterPercentage.value > 0) return true;
 return Object.values(waterStore.wastewaterValues).some(v => v > 0);
+});
+
+const showFreshWaterRow = computed(() => {
+if (wastewaterPercentage.value >= 100) return false;
+if (waterPercentage.value <= 0) return false;
+return true;
 });
 
 // ===== Helper Functions for Unit Conversion =====
@@ -663,6 +673,10 @@ showSaveTemplateModal.value = false;
 
 const saveWaterTemplate = async () => {
 if (!templateForm.value.name) return;
+if (waterTemplates.value.length >= 6) {
+showToast('ظرفیت قالب‌های آنالیز آب تکمیل شده است', 'error');
+return;
+}
 isSavingTemplate.value = true;
 try {
 await apiService.post('/water-templates', {
@@ -744,3 +758,5 @@ loadWaterTemplates();
 
 
 ================================================================================
+
+

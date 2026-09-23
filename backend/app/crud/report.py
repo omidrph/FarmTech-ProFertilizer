@@ -5,6 +5,7 @@
 
 from typing import Optional, List
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 import logging
 
 from app.models import Report
@@ -20,6 +21,9 @@ logger = logging.getLogger(__name__)
 def create_report(db: Session, report_data: ReportCreate, user_id: int) -> Report:
     """ایجاد گزارش جدید"""
     try:
+        existing_count = db.query(Report).filter(Report.user_id == user_id).count()
+        if existing_count >= 250:
+            raise ValueError("ظرفیت ۲۵۰ گزارش برای این حساب تکمیل شده است.")
         db_report = Report(
             user_id=user_id,
             report_name=report_data.report_name,
@@ -58,7 +62,10 @@ def get_reports_by_user(
 ) -> List[Report]:
     """دریافت گزارش‌های یک کاربر"""
     try:
-        return db.query(Report).filter(Report.user_id == user_id).offset(skip).limit(limit).all()
+        return (db.query(Report)
+                .filter(Report.user_id == user_id)
+                .order_by(desc(Report.created_at))
+                .offset(skip).limit(limit).all())
     except Exception as e:
         logger.error(f"Error getting reports by user: {e}")
         return []
@@ -105,3 +112,4 @@ def delete_report(db: Session, report_id: int) -> bool:
         db.rollback()
         logger.error(f"Error deleting report: {e}")
         raise e
+

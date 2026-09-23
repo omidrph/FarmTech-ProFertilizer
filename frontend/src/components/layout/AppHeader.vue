@@ -174,10 +174,10 @@
     <!-- Modal Open Report -->
     <Teleport to="body">
       <Transition name="modal">
-        <div v-if="showOpenModal" class="fixed inset-0 z-[100] overflow-y-auto" role="dialog" aria-modal="true">
+        <div v-if="showOpenModal" class="fixed inset-0 z-[100] overflow-hidden" role="dialog" aria-modal="true">
           <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity" @click="closeOpenModal"></div>
-          <div class="flex min-h-full items-center justify-center p-0 sm:p-4">
-            <div class="relative w-full h-full sm:h-auto sm:max-w-2xl sm:my-8 bg-white dark:bg-gray-800 sm:rounded-2xl shadow-2xl overflow-hidden">
+          <div class="h-full flex items-center justify-center p-2 sm:p-4">
+            <div class="relative w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
               <!-- Header -->
               <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-6 py-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
@@ -209,7 +209,7 @@
               </div>
 
               <!-- Reports List -->
-              <div class="max-h-[500px] overflow-y-auto custom-scrollbar">
+              <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                 <div v-if="reportStore.isLoading" class="flex items-center justify-center py-12">
                   <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                   <span class="mr-2 text-gray-600 dark:text-gray-400">در حال بارگذاری...</span>
@@ -286,7 +286,7 @@
               <!-- Footer -->
               <div class="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ filteredReports.length }} گزارش</span>
-                <button @click="closeOpenModal" class="px-4 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm">بستن</button>
+
               </div>
             </div>
           </div>
@@ -493,8 +493,8 @@ const handleSaveReport = async (event?: MouseEvent) => {
   }
   closeFileMenu();
   
-  if (!reportStore.reportData.reportName && !reportStore.reportData.plantName) {
-    showToast('لطفاً ابتدا اطلاعات گزارش را وارد کنید', 'error');
+  if (!reportStore.isReportComplete) {
+    showToast('لطفاً همه مشخصات گزارش را کامل کنید', 'error');
     return;
   }
   
@@ -748,3 +748,5 @@ watch(mobileMenuOpen, (newVal) => {
 
 
 ================================================================================
+
+

@@ -385,6 +385,20 @@ class ApiService {
         }
     }
 
+    async getOptimizationHistoryCount(report_id?: number): Promise<number> {
+        try {
+            let url = '/calculations/optimization-history/count';
+            if (report_id) {
+                url += `?report_id=${report_id}`;
+            }
+            const response: AxiosResponse<{ count: number }> = await this.api.get(url);
+            return Number(response.data?.count || 0);
+        } catch (error) {
+            console.error('Error fetching optimization history count:', error);
+            throw error;
+        }
+    }
+
     async getOptimizationHistory(skip: number = 0, limit: number = 50, report_id?: number): Promise<OptimizationLogResponse[]> {
         try {
             let url = `/calculations/optimization-history?skip=${skip}&limit=${limit}`;
@@ -869,6 +883,8 @@ class ApiService {
 
 export const apiService = new ApiService();
 export default apiService;
+
+
 
 
 

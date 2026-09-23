@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 def create_water_template(db: Session, template_data: WaterAnalysisTemplateCreate, user_id: int) -> WaterAnalysisTemplate:
     """ایجاد قالب آنالیز آب جدید"""
     try:
+        template_count = db.query(WaterAnalysisTemplate).filter(
+            WaterAnalysisTemplate.user_id == user_id
+        ).count()
+        if template_count >= 6:
+            raise ValueError("ظرفیت ۶ قالب آنالیز آب برای این حساب تکمیل شده است.")
         db_template = WaterAnalysisTemplate(
             user_id=user_id,
             name=template_data.name,
@@ -101,3 +106,4 @@ def delete_water_template(db: Session, template_id: int) -> bool:
         db.rollback()
         logger.error(f"Error deleting water template: {e}")
         raise e
+

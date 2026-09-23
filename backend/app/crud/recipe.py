@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 def create_recipe(db: Session, recipe_data: RecipeCreate, user_id: Optional[int] = None, is_system: bool = False) -> Recipe:
     """ایجاد رسپی جدید"""
     try:
+        if not is_system and user_id is not None:
+            personal_count = db.query(Recipe).filter(
+                Recipe.user_id == user_id,
+                Recipe.is_system == False
+            ).count()
+            if personal_count >= 35:
+                raise ValueError("ظرفیت ۳۵ رسپی شخصی برای این حساب تکمیل شده است.")
         db_recipe = Recipe(
             name=recipe_data.name,
             description=recipe_data.description,
@@ -152,3 +159,4 @@ def apply_recipe_to_targets(db: Session, recipe_id: int, user_id: int) -> Option
     except Exception as e:
         logger.error(f"Error applying recipe: {e}")
         return None
+

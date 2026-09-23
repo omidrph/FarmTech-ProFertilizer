@@ -10,13 +10,13 @@
     />
 
     <!-- Sub Navigation (تب‌های صفحه اصلی) - استایل کاملاً یکسان با هدر -->
-    <nav v-if="activeTab === 'home'" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky z-40" :style="{ top: headerHeight + 'px' }">
+    <nav v-if="activeTab === 'home' && reportStore.hasActiveReport" class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky z-40" :style="{ top: headerHeight + 'px' }">
       <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
         <div class="flex items-center gap-1 overflow-x-auto py-1 scrollbar-hide snap-x snap-mandatory">
           <button
             v-for="subTab in subTabs"
             :key="subTab.id"
-            @click="activeSubTab = subTab.id"
+            @click="selectSubTab(subTab.id)"
             class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group whitespace-nowrap snap-start flex-shrink-0"
             :class="activeSubTab === subTab.id
               ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' 
@@ -83,7 +83,8 @@
           v-model:season="reportStore.reportData.season"
           v-model:growthStage="reportStore.reportData.growthStage"
           v-model:reportDate="reportStore.reportData.date"
-          :large="activeSubTab === 'home' && !reportStore.hasActiveReport"
+          :is-saving="reportStore.isSaving"
+          @save="handleSaveReport"
         />
 
         <!-- Home Sub Tab -->
@@ -345,6 +346,32 @@ const handleNewReport = async () => {
   showToast('گزارش جدید ایجاد شد', 'success');
 };
 
+const handleSaveReport = async () => {
+  if (!reportStore.isReportComplete) {
+    showToast('لطفاً همه مشخصات گزارش را کامل کنید', 'error');
+    return;
+  }
+
+  const success = await reportStore.saveCurrentReport();
+  if (success) {
+    activeSubTab.value = 'home';
+    await nextTick();
+    showToast('گزارش با موفقیت ثبت شد', 'success');
+    await reportStore.loadReports();
+  } else {
+    showToast(reportStore.error || 'خطا در ذخیره گزارش', 'error');
+  }
+};
+
+const selectSubTab = (tabId: string) => {
+  if (!reportStore.hasActiveReport) {
+    activeSubTab.value = 'home';
+    showToast('ابتدا یک گزارش کامل ایجاد و ذخیره کنید', 'error');
+    return;
+  }
+  activeSubTab.value = tabId;
+};
+
 const clearErrors = () => {
   clearError();
   fertilizerStore.clearError();
@@ -373,6 +400,7 @@ onMounted(async () => {
   window.addEventListener('resize', updateHeaderHeight);
   window.addEventListener('open-profile-modal', openProfileModalHandler);
   await loadData();
+  await reportStore.loadReports();
 });
 
 onUnmounted(() => {
@@ -423,3 +451,5 @@ onUnmounted(() => {
 
 
 ================================================================================
+
+

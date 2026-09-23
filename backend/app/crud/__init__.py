@@ -93,6 +93,7 @@ from .water_template import (
 from .optimization_log import (
     save_optimization_log,
     get_optimization_history,
+    count_optimization_history,
     get_optimization_log_by_id,
     delete_optimization_log,
 )
@@ -168,6 +169,7 @@ __all__ = [
     # Optimization Log
     'save_optimization_log',
     'get_optimization_history',
+    'count_optimization_history',
     'get_optimization_log_by_id',
     'delete_optimization_log',
     
@@ -176,3 +178,4 @@ __all__ = [
     'safe_json_dumps',
     'process_calculation_data',
 ]
+

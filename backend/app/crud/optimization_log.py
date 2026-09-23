@@ -136,3 +136,20 @@ def delete_optimization_log(db: Session, log_id: int) -> bool:
         db.rollback()
         logger.error(f"Error deleting optimization log: {e}")
         raise e
+
+
+
+def count_optimization_history(
+    db: Session,
+    user_id: int,
+    report_id: Optional[int] = None
+) -> int:
+    """تعداد دقیق محاسبات/بهینه‌سازی‌های ثبت‌شده برای کاربر."""
+    try:
+        query = db.query(OptimizationLog).filter(OptimizationLog.user_id == user_id)
+        if report_id is not None:
+            query = query.filter(OptimizationLog.report_id == report_id)
+        return query.count()
+    except Exception as e:
+        logger.error(f"Error counting optimization history: {e}")
+        return 0

@@ -31,8 +31,13 @@ def create_water_template(
 ):
     """ایجاد قالب آنالیز آب جدید"""
     try:
-        template = crud.create_water_template(db, template_data, current_user.id)
+        try:
+            template = crud.create_water_template(db, template_data, current_user.id)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
         return template
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in create_water_template: {e}")
         raise HTTPException(
@@ -43,7 +48,7 @@ def create_water_template(
 @water_templates_router.get("/", response_model=List[WaterAnalysisTemplateResponse])
 def get_water_templates(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=6),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -149,3 +154,4 @@ def delete_water_template(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در حذف قالب: {str(e)}"
         )
+

@@ -3,7 +3,7 @@
     <Transition name="modal">
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-[100] overflow-y-auto"
+        class="fixed inset-0 z-[100] overflow-hidden"
         role="dialog"
         aria-modal="true"
       >
@@ -92,7 +92,7 @@
               </div>
 
               <!-- Tab Content -->
-              <div class="max-h-[calc(100vh-320px)] sm:max-h-[500px] overflow-y-auto custom-scrollbar">
+              <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
 
                 <!-- Profile Tab -->
                 <div v-if="activeTab === 'profile'" class="p-6">
@@ -380,7 +380,7 @@
                   </div>
 
                   <!-- لیست گزارش‌ها -->
-                  <div v-if="reports.length > 0" class="space-y-2">
+                  <div v-if="reports.length > 0" class="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1">
                     <div
                       v-for="report in reports"
                       :key="report.id"
@@ -670,9 +670,10 @@ const loadUserData = async () => {
 
 const loadStats = async () => {
   try {
-    const [reportsData, fertilizers] = await Promise.all([
+    const [reportsData, fertilizers, calculationsCount] = await Promise.all([
       apiService.getReports().catch(() => []),
-      apiService.getFertilizers().catch(() => [])
+      apiService.getFertilizers().catch(() => []),
+      apiService.getOptimizationHistoryCount().catch(() => 0)
     ]);
 
     reports.value = Array.isArray(reportsData) ? reportsData : [];
@@ -680,7 +681,7 @@ const loadStats = async () => {
     stats.fertilizers = Array.isArray(fertilizers)
       ? fertilizers.filter((f: any) => !f.is_system_default).length
       : 0;
-    stats.calculations = 0;
+    stats.calculations = Number(calculationsCount || 0);
 
     if (currentUser.value?.created_at) {
       const createdDate = new Date(currentUser.value.created_at);
@@ -931,4 +932,10 @@ onMounted(() => {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+.dark .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
 </style>
+

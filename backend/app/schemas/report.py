@@ -10,11 +10,11 @@ from pydantic import BaseModel, Field
 
 class ReportCreate(BaseModel):
     """طرح ایجاد گزارش جدید"""
-    report_name: Optional[str] = Field(None, max_length=100)
-    plant_name: Optional[str] = Field(None, max_length=50)
-    season: Optional[str] = Field(None, max_length=20)
-    growth_stage: Optional[str] = Field(None, max_length=50)
-    report_date: Optional[str] = Field(None, description="تاریخ شمسی")
+    report_name: str = Field(..., min_length=1, max_length=100)
+    plant_name: str = Field(..., min_length=1, max_length=50)
+    season: str = Field(..., min_length=1, max_length=20)
+    growth_stage: str = Field(..., min_length=1, max_length=50)
+    report_date: str = Field(..., min_length=1, description="تاریخ شمسی")
 
 
 class ReportUpdate(BaseModel):
@@ -40,3 +40,4 @@ class ReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
+

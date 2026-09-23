@@ -246,8 +246,8 @@ export const useReportStore = defineStore('report', () => {
   }
 
   async function saveCurrentReport(): Promise<boolean> {
-    if (!hasActiveReport.value && !reportData.value.reportName) {
-      error.value = 'لطفاً ابتدا اطلاعات گزارش را وارد کنید';
+    if (!isReportComplete.value) {
+      error.value = 'لطفاً همه مشخصات گزارش را کامل کنید';
       return false;
     }
     
@@ -445,6 +445,8 @@ export const useReportStore = defineStore('report', () => {
 });
 
 export default useReportStore;
+
+
 
 
 

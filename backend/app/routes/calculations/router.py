@@ -28,7 +28,7 @@ from .convert_unit import api_convert_unit
 from .optimization import optimize_fertilizers_endpoint
 from .recalculate import recalculate_manual_weights
 from .precipitation import check_precipitation_endpoint
-from .history import get_optimization_history_endpoint
+from .history import get_optimization_history_endpoint, count_optimization_history_endpoint
 from .crud_calculations import create_calculation, get_calculation, update_calculation
 
 # ===== ایجاد Router =====
@@ -51,6 +51,7 @@ calculations_router.post("/optimize", response_model=OptimizationResponse)(optim
 calculations_router.post("/recalculate-manual", response_model=OptimizationResponse)(recalculate_manual_weights)
 calculations_router.post("/check-precipitation", response_model=PrecipitationCheckResponse)(check_precipitation_endpoint)
 calculations_router.get("/optimization-history", response_model=List[OptimizationLogResponse])(get_optimization_history_endpoint)
+calculations_router.get("/optimization-history/count")(count_optimization_history_endpoint)
 
 # ---- مسیرهای CRUD ----
 calculations_router.post("/{report_id}", response_model=CalculationResponse)(create_calculation)
@@ -60,6 +61,8 @@ calculations_router.put("/{calc_id}", response_model=CalculationResponse)(update
 # ---- مسیر تفسیر ----
 # 🆕 موقتاً حذف شد؛ طبق درخواست، این بخش بعداً با API هوش مصنوعی از نو
 # پیاده‌سازی خواهد شد. منطق rule-based قدیمی (interpretation.py) حذف شد.
+
+
 
 
 

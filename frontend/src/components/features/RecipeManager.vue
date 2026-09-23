@@ -55,7 +55,8 @@
         </div>
 
         <!-- لیست رسپی‌های سیستمی -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-else class="max-h-[520px] overflow-y-auto custom-scrollbar pl-1 pr-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="recipe in systemRecipes"
             :key="recipe.id"
@@ -154,6 +155,9 @@
         </div>
       </div>
 
+          </div>
+        </div>
+
       <!-- ============================================================ -->
       <!-- محتوای تب شخصی -->
       <!-- ============================================================ -->
@@ -207,7 +211,8 @@
         </div>
 
         <!-- لیست رسپی‌های شخصی -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div v-else class="max-h-[520px] overflow-y-auto custom-scrollbar pl-1 pr-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             v-for="recipe in userRecipes"
             :key="recipe.id"
@@ -321,6 +326,9 @@
     <!-- ============================================================ -->
     <!-- مودال ایجاد/ویرایش رسپی -->
     <!-- ============================================================ -->
+          </div>
+        </div>
+
     <Teleport to="body">
       <div
         v-if="showModal"
@@ -539,6 +547,7 @@ const systemRecipes = computed(() => recipeStore.systemRecipes);
 const userRecipes = computed(() => recipeStore.userRecipes);
 const isLoading = computed(() => recipeStore.isLoading);
 const error = computed(() => recipeStore.error);
+const PERSONAL_RECIPE_LIMIT = 35;
 
 // ===== State =====
 const activeTab = ref<'system' | 'personal'>('system');
@@ -605,6 +614,10 @@ const resetForm = () => {
 };
 
 const openCreateModal = () => {
+  if (userRecipes.value.length >= PERSONAL_RECIPE_LIMIT) {
+    showToast('ظرفیت رسپی‌های شخصی تکمیل شده است.', 'error');
+    return;
+  }
   resetForm();
   showModal.value = true;
 };
@@ -664,6 +677,10 @@ const saveRecipe = async () => {
         showToast('رسپی با موفقیت به‌روزرسانی شد', 'success');
       }
     } else {
+      if (userRecipes.value.length >= PERSONAL_RECIPE_LIMIT) {
+        showToast('ظرفیت رسپی‌های شخصی تکمیل شده است.', 'error');
+        return;
+      }
       result = await recipeStore.createRecipe(data);
       if (result) {
         showToast('رسپی با موفقیت ایجاد شد', 'success');
@@ -697,6 +714,10 @@ const applyRecipe = async (id: number) => {
 };
 
 const copyRecipe = async (id: number) => {
+  if (userRecipes.value.length >= PERSONAL_RECIPE_LIMIT) {
+    showToast('ظرفیت رسپی‌های شخصی تکمیل شده است.', 'error');
+    return;
+  }
   try {
     const result = await recipeStore.copySystemRecipe(id);
     if (result) {
@@ -807,4 +828,10 @@ onMounted(async () => {
 .group\/tooltip:hover .absolute {
   pointer-events: auto;
 }
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+.dark .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
 </style>
+

@@ -29,9 +29,14 @@ def create_report(
     """ایجاد گزارش جدید"""
     try:
         logger.info(f"Creating report for user {current_user.id}: {report_data.report_name}")
-        report = crud.create_report(db, report_data, current_user.id)
+        try:
+            report = crud.create_report(db, report_data, current_user.id)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
         logger.info(f"Report created successfully: {report.id}")
         return report
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating report: {e}")
         raise HTTPException(
@@ -42,7 +47,7 @@ def create_report(
 @reports_router.get("/", response_model=List[ReportResponse])
 def get_reports(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=250),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -147,3 +152,4 @@ def delete_report(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در حذف گزارش: {str(e)}"
         )
+

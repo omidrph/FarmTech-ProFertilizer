@@ -45,7 +45,7 @@ def get_all_recipes(
 @recipes_router.get("/system", response_model=List[RecipeResponse])
 def get_system_recipes(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=250),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -66,7 +66,7 @@ def get_system_recipes(
 @recipes_router.get("/user", response_model=List[RecipeResponse])
 def get_user_recipes(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=1000),
+    limit: int = Query(100, ge=1, le=250),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -128,8 +128,13 @@ def create_recipe(
 ):
     """ایجاد رسپی شخصی جدید"""
     try:
-        recipe = crud.create_recipe(db, recipe_data, current_user.id, is_system=False)
+        try:
+            recipe = crud.create_recipe(db, recipe_data, current_user.id, is_system=False)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
         return recipe
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in create_recipe: {e}")
         raise HTTPException(
@@ -305,8 +310,11 @@ def copy_system_recipe(
             is_system=False
         )
         
-        new_recipe = crud.create_recipe(db, new_recipe_data, current_user.id, is_system=False)
-        
+        try:
+            new_recipe = crud.create_recipe(db, new_recipe_data, current_user.id, is_system=False)
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
         return {
             "message": f"رسپی '{recipe.name}' با موفقیت کپی شد",
             "success": True,
@@ -320,3 +328,4 @@ def copy_system_recipe(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در کپی رسپی: {str(e)}"
         )
+

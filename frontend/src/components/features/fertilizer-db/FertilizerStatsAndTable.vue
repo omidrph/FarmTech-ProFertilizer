@@ -166,7 +166,8 @@
       <!-- دسکتاپ: جدول -->
       <!-- ============================================================ -->
       <div class="hidden sm:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="max-h-[520px] overflow-y-auto custom-scrollbar">
+          <div class="overflow-x-auto">
           <table class="w-full text-sm border-collapse">
             <thead>
               <tr class="bg-gray-50 dark:bg-gray-700/50">
@@ -306,13 +307,15 @@
               </tr>
             </tbody>
           </table>
+          </div>
+        </div>
         </div>
       </div>
 
       <!-- ============================================================ -->
       <!-- موبایل: کارت‌ها -->
       <!-- ============================================================ -->
-      <div class="sm:hidden space-y-3">
+      <div class="sm:hidden max-h-[520px] overflow-y-auto custom-scrollbar space-y-3 pr-1">
         <div
           v-for="fertilizer in filteredFertilizers"
           :key="fertilizer.id"
@@ -951,3 +954,4 @@ const clearTable = () => {
   background: #4b5563;
 }
 </style>
+

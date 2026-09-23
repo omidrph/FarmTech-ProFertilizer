@@ -13,7 +13,39 @@
       @retry="loadDashboardData"
     />
 
-    <!-- Empty State - No Report: خودِ ReportHeader بزرگ در MainLayout آموزش لازم را نشان می‌دهد -->
+    <!-- گزارش‌های اخیر در خانه؛ وقتی هنوز گزارشی ثبت نشده فقط همین بخش نمایش داده می‌شود -->
+    <template v-else-if="!hasActiveReport">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white">گزارش‌های اخیر</h3>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">گزارش‌های ذخیره‌شده را سریع باز کنید.</p>
+          </div>
+          <span class="text-xs text-gray-400 dark:text-gray-500">{{ recentReports.length }} مورد</span>
+        </div>
+
+        <div v-if="recentReports.length" class="space-y-2">
+          <button
+            v-for="r in recentReports"
+            :key="r.id"
+            type="button"
+            @click="openReport(r.id)"
+            class="w-full flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-primary-50/40 dark:hover:bg-primary-900/10 transition-colors text-right"
+          >
+            <span class="min-w-0">
+              <span class="block text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ r.report_name || 'بدون نام' }}</span>
+              <span class="block text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{{ [r.plant_name, r.season, r.growth_stage].filter(Boolean).join(' • ') }}</span>
+            </span>
+            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-5-5 5 5-5 5"/>
+            </svg>
+          </button>
+        </div>
+        <div v-else class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          هنوز گزارشی ذخیره نشده است.
+        </div>
+      </div>
+    </template>
 
     <!-- گزارش هست ولی هنوز محاسبه نشده: چک‌لیست + گزارش‌های اخیر -->
     <template v-else-if="hasActiveReport && !hasCalculatedData">
@@ -35,43 +67,51 @@
       </div>
     </template>
 
-    <!-- Full Dashboard: سامری بالا، جزئیات داخل آکاردئون جمع‌شده -->
+    <!-- داشبورد نتیجه محاسبه: خلوت، خلاصه و بصری -->
     <template v-else-if="hasCalculatedData">
-      <!-- 🆕 خلاصه دایره‌ای (همیشه باز، اولویت اول) -->
+      <div class="flex items-center justify-between gap-3 px-1 mb-1">
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">{{ reportStore.reportData.reportName || 'نتیجه محاسبه' }}</h1>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+            {{ [reportStore.reportData.plantName, reportStore.reportData.season, reportStore.reportData.growthStage].filter(Boolean).join(' • ') || 'خلاصه وضعیت فرمول تغذیه' }}
+          </p>
+        </div>
+        <span class="flex-shrink-0 text-[11px] px-2.5 py-1 rounded-full font-medium" :class="ionBalance.isBalanced ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'">
+          {{ ionBalance.isBalanced ? 'تعادل یونی مطلوب' : 'نیازمند بررسی' }}
+        </span>
+      </div>
+
       <HomeSummaryGauges
         :target-achievement="calcStore.optimizationResult?.target_achievement || {}"
         :ec="calcStore.optimizationResult?.ec || 0"
         :total-cost="totalCost"
+        :ion-balanced="ionBalance.isBalanced"
       />
 
-      <!-- 🆕 خط خلاصه گزارش -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between gap-2 flex-wrap">
-        <span class="text-sm text-gray-700 dark:text-gray-200 truncate">
-          {{ reportStore.reportData.reportName || 'بدون نام' }}
-          <span v-if="reportStore.reportData.plantName" class="text-gray-400"> • {{ reportStore.reportData.plantName }}</span>
-        </span>
-        <span
-          class="text-[11px] px-2 py-0.5 rounded-full font-medium"
-          :class="ionBalance.isBalanced ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'"
-        >{{ ionBalance.isBalanced ? 'تعادل یونی مطلوب' : 'تعادل یونی نامتعادل' }}</span>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-center">
+          <div class="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{{ activeElementsCount }}</div>
+          <div class="text-[10px] text-gray-500 dark:text-gray-400">عنصر هدف</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-center">
+          <div class="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{{ activeReservoirsCount }}</div>
+          <div class="text-[10px] text-gray-500 dark:text-gray-400">مخزن فعال</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-center">
+          <div class="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{{ fertilizerCount }}</div>
+          <div class="text-[10px] text-gray-500 dark:text-gray-400">کود پیشنهادی</div>
+        </div>
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-center">
+          <div class="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{{ totalReservoirWeight.toFixed(0) }}</div>
+          <div class="text-[10px] text-gray-500 dark:text-gray-400">گرم کل کود</div>
+        </div>
       </div>
 
-      <!-- 🆕 جزئیات بیشتر: پیش‌فرض بسته تا صفحه شلوغ نباشد -->
-      <ResultAccordion title="جزئیات بیشتر" subtitle="آمار کامل، عناصر، مخازن و توصیه‌ها" tone="neutral">
+      <ResultAccordion title="جزئیات نتیجه" subtitle="عناصر، مخازن و توصیه‌ها" tone="neutral">
         <template #icon>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
         </template>
-
         <div class="space-y-4">
-          <HomeStatsCards
-            :ion-balance="ionBalance"
-            :ion-balance-status="ionBalanceStatus"
-            :active-elements-count="activeElementsCount"
-            :active-reservoirs-count="activeReservoirsCount"
-            :total-cost="totalCost"
-          />
           <HomeElementsTable :elements-data="elementComparisonData" :target-unit="targetUnit" />
           <HomeReservoirCards :reservoir-data="reservoirData" :total-weight="totalReservoirWeight" />
           <HomeRecommendations :recommendations="recommendations" />
@@ -152,7 +192,7 @@ const hasActiveReport = computed(() => reportStore.hasActiveReport);
 const hasCalculatedData = computed(() => calcStore.optimizationResult !== null);
 
 // 🆕 چند گزارش اخیر برای دسترسی سریع، وقتی هنوز محاسبه‌ای انجام نشده
-const recentReports = computed(() => (reportStore.reports || []).slice(0, 5));
+const recentReports = computed(() => (reportStore.reports || []).slice(0, 3));
 
 const openReport = (id: number) => {
   reportStore.loadReport(id);
@@ -224,6 +264,8 @@ const totalReservoirWeight = computed(() => {
 });
 
 const totalCost = computed(() => calcStore.totalCost || 0);
+
+const fertilizerCount = computed(() => Object.values(calcStore.optimizationResult?.weights || {}).filter((value: any) => Number(value) > 0).length);
 
 const elementComparisonData = computed(() => {
   return ELEMENTS.map(element => {
@@ -507,4 +549,6 @@ onUnmounted(() => {
   );
 });
 </script>
+
+
 
