@@ -4,12 +4,12 @@
   نمودار دایره‌ای بزرگ «دقت رسیدن به هدف» + وضعیت فرمول + شاخص‌های کلیدی + دکمه‌های اصلی
 -->
 <template>
-  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
-    <div class="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+    <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
 
-      <!-- نمودار دایره‌ای بزرگ -->
-      <div class="relative w-[150px] h-[150px] flex-shrink-0">
-        <svg width="150" height="150" viewBox="0 0 150 150" role="img" :aria-label="`دقت ${accuracyText} درصد`">
+      <!-- نمودار دایره‌ای بزرگ (روی موبایل کمی کوچک‌تر) -->
+      <div class="relative w-[128px] h-[128px] sm:w-[150px] sm:h-[150px] flex-shrink-0">
+        <svg viewBox="0 0 150 150" class="w-full h-full" role="img" :aria-label="`دقت ${accuracyText} درصد`">
           <circle cx="75" cy="75" r="62" fill="none" stroke-width="12" class="stroke-gray-100 dark:stroke-gray-700" />
           <circle
             cx="75" cy="75" r="62" fill="none" stroke-width="12" stroke-linecap="round"
@@ -21,52 +21,54 @@
           />
         </svg>
         <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="text-3xl font-bold tabular-nums leading-tight" :class="ringColor">{{ accuracyText }}٪</span>
-          <span class="text-xs text-gray-500 dark:text-gray-400">دقت هدف</span>
+          <span class="text-[26px] sm:text-3xl font-bold tabular-nums leading-tight" :class="ringColor">{{ accuracyText }}٪</span>
+          <span class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">دقت هدف</span>
         </div>
       </div>
 
       <!-- وضعیت و شاخص‌ها -->
-      <div class="flex-1 min-w-0 w-full text-center sm:text-right">
-        <div class="flex items-center justify-center sm:justify-start gap-2">
-          <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white" :class="badgeClass">
-            <svg v-if="tone === 'good'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="flex-1 min-w-0 w-full">
+        <div class="flex items-start justify-center sm:justify-start gap-2">
+          <span class="w-6 h-6 sm:w-7 sm:h-7 mt-0.5 rounded-full flex items-center justify-center flex-shrink-0 text-white" :class="badgeClass">
+            <svg v-if="tone === 'good'" class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
             </svg>
-            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg v-else class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01" />
             </svg>
           </span>
-          <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ title }}</h3>
+          <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-7 text-center sm:text-right">{{ title }}</h3>
         </div>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
+        <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center sm:text-right leading-5">{{ subtitle }}</p>
 
-        <div class="mt-4 grid grid-cols-3 gap-3 text-center sm:text-right">
-          <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">EC نهایی</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums" :class="ecOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'">
+        <!-- شاخص‌ها: موبایل = لیست ردیفی، دسکتاپ = سه ستون -->
+        <dl class="mt-4 rounded-xl bg-gray-50 dark:bg-gray-700/30 divide-y divide-gray-200/70 dark:divide-gray-600/50 sm:bg-transparent sm:dark:bg-transparent sm:divide-y-0 sm:rounded-none sm:grid sm:grid-cols-3 sm:gap-4">
+          <div class="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:px-0 sm:py-0">
+            <dt class="text-xs text-gray-500 dark:text-gray-400">EC نهایی</dt>
+            <dd class="sm:mt-0.5 text-base sm:text-lg font-bold tabular-nums whitespace-nowrap" :class="ecOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'">
               {{ ecText }} <span class="text-[11px] font-normal text-gray-400">dS/m</span>
-            </p>
+            </dd>
           </div>
-          <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">هزینه فرمول</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+          <div class="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:px-0 sm:py-0">
+            <dt class="text-xs text-gray-500 dark:text-gray-400">هزینه فرمول</dt>
+            <dd class="sm:mt-0.5 text-base sm:text-lg font-bold tabular-nums whitespace-nowrap text-gray-900 dark:text-white">
               {{ costText }} <span class="text-[11px] font-normal text-gray-400">تومان</span>
-            </p>
+            </dd>
           </div>
-          <div>
-            <p class="text-xs text-gray-500 dark:text-gray-400">کودهای فرمول</p>
-            <p class="mt-0.5 text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+          <div class="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:px-0 sm:py-0">
+            <dt class="text-xs text-gray-500 dark:text-gray-400">کودهای فرمول</dt>
+            <dd class="sm:mt-0.5 text-base sm:text-lg font-bold tabular-nums whitespace-nowrap text-gray-900 dark:text-white">
               {{ fertilizersCount.toLocaleString('fa-IR') }} <span class="text-[11px] font-normal text-gray-400">کود</span>
-            </p>
+            </dd>
           </div>
-        </div>
+        </dl>
 
-        <div class="mt-5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+        <!-- دکمه‌ها: موبایل = زیر هم و تمام‌عرض، دسکتاپ = کنار هم -->
+        <div class="mt-4 sm:mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-2">
           <button
             type="button"
             @click="emit('view-details')"
-            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors"
           >
             مشاهده نتیجه کامل
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +79,7 @@
             type="button"
             @click="emit('export-pdf')"
             :disabled="isExporting"
-            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3M12 3v7" />
