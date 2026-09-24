@@ -2,7 +2,7 @@
 <!--
   کارت اصلی صفحه خانه: نمای کلی وضعیت فرمول
   ------------------------------------------------------------
-  - نوار وضعیت بالای کارت با یک جمله خلاصه + آخرین به‌روزرسانی
+  - نوار وضعیت بالای کارت با یک جمله خلاصه
   - نمودار دایره‌ای بزرگ «دقت رسیدن به هدف»
   - سه شاخص کلیدی (EC، هزینه، تعداد کود)
   - دو دکمه اصلی
@@ -60,12 +60,18 @@
 
         <!-- محتوا -->
         <div class="flex-1 min-w-0 w-full">
-          <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-7 text-center sm:text-right">
-            {{ title }}
-          </h3>
-          <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center sm:text-right leading-5">
-            {{ subtitle }}
-          </p>
+          <!-- خلاصه وضعیت عناصر: جایگزین متن تکراری -->
+          <div class="rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 px-3.5 py-3">
+            <p class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1 mb-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              خلاصه وضعیت عناصر
+            </p>
+            <p class="text-sm font-medium text-gray-800 dark:text-gray-100 leading-6">
+              {{ summaryText }}
+            </p>
+          </div>
 
           <!-- شاخص‌ها -->
           <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
@@ -158,8 +164,13 @@ const props = withDefaults(
     fertilizersCount: number;
     isExporting: boolean;
     lastUpdatedText?: string;
+    /** 🆕 متن خلاصه وضعیت عناصر برای جایگزینی متن تکراری قبلی */
+    summaryText?: string;
   }>(),
-  { lastUpdatedText: '' }
+  {
+    lastUpdatedText: '',
+    summaryText: ''
+  }
 );
 
 const emit = defineEmits<{

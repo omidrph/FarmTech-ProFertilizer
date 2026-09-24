@@ -1,10 +1,11 @@
 <!-- frontend/src/components/features/home/HomeElementRings.vue -->
 <!--
-  «پوشش عناصر هدف» با حلقه‌های کوچک
+  «پوشش عناصر هدف» — بازطراحی حرفه‌ای
   ------------------------------------------------------------
-  - هر حلقه: درصد دستیابی به هدف
-  - حلقه نازک بیرونی: بیش‌تأمین
-  - رنگ: سبز (تا ۳٪)، کهربایی (تا ۱۰٪)، رز (بیشتر)
+  - هر عنصر در یک کارت با حلقه دایره‌ای
+  - نوار پیشرفت خطی زیر هر حلقه برای خوانایی بیشتر
+  - حلقه نازک بیرونی برای بیش‌تأمین
+  - چیدمان شبکه‌ای مرتب با راهنمای رنگ
   - عناصر مشکل‌دار اول نمایش داده می‌شوند
 -->
 <template>
@@ -26,57 +27,93 @@
       </span>
     </header>
 
-    <!-- حلقه‌ها -->
     <div class="p-4 sm:p-5">
-      <div v-if="rows.length" class="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div
+      <!-- شبکه کارت‌ها -->
+      <div
+        v-if="rows.length"
+        class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3"
+      >
+        <article
           v-for="row in visibleRows"
           :key="row.element"
-          class="flex flex-col items-center gap-1"
+          class="rounded-xl border p-3 transition-colors"
+          :class="row.cardClass"
         >
-          <svg width="76" height="76" viewBox="0 0 76 76" role="img" :aria-label="`${row.element}: ${row.percentLabel}`">
-            <!-- حلقه پایه -->
-            <circle cx="38" cy="38" r="26" fill="none" stroke-width="7" class="stroke-gray-100 dark:stroke-gray-700/60" />
-            <!-- حلقه اصلی: تا ۱۰۰٪ -->
-            <circle
-              cx="38" cy="38" r="26" fill="none" stroke-width="7" stroke-linecap="round"
-              stroke="currentColor" :class="[row.ringClass, 'ring-progress']"
-              :stroke-dasharray="RING_CIRC"
-              :stroke-dashoffset="ready ? row.innerOffset : RING_CIRC"
-              transform="rotate(-90 38 38)"
-            />
-            <!-- حلقه نازک بیرونی: بیش‌تأمین -->
-            <circle
-              v-if="row.overshootOffset !== null"
-              cx="38" cy="38" r="33" fill="none" stroke-width="3" stroke-linecap="round"
-              stroke="currentColor" class="text-rose-500 ring-progress"
-              :stroke-dasharray="OUTER_CIRC"
-              :stroke-dashoffset="ready ? row.overshootOffset : OUTER_CIRC"
-              transform="rotate(-90 38 38)"
-            />
-            <text x="38" y="36" text-anchor="middle" class="fill-gray-900 dark:fill-white" style="font-size:11px;font-weight:700">{{ row.element }}</text>
-            <text x="38" y="49" text-anchor="middle" :class="row.textClass" style="font-size:11px;font-weight:600">{{ row.percentLabel }}</text>
-          </svg>
-        </div>
+          <div class="flex items-center justify-between gap-2">
+            <!-- حلقه دایره‌ای کوچک -->
+            <div class="relative w-12 h-12 flex-shrink-0">
+              <svg viewBox="0 0 48 48" class="w-full h-full">
+                <circle cx="24" cy="24" r="18" fill="none" stroke-width="4" class="stroke-gray-200 dark:stroke-gray-700/70" />
+                <circle
+                  cx="24" cy="24" r="18" fill="none" stroke-width="4" stroke-linecap="round"
+                  stroke="currentColor" :class="[row.ringClass, 'ring-progress']"
+                  :stroke-dasharray="RING_CIRC"
+                  :stroke-dashoffset="ready ? row.innerOffset : RING_CIRC"
+                  transform="rotate(-90 24 24)"
+                />
+                <!-- حلقه نازک بیرونی: بیش‌تأمین -->
+                <circle
+                  v-if="row.overshootOffset !== null"
+                  cx="24" cy="24" r="22" fill="none" stroke-width="2" stroke-linecap="round"
+                  stroke="currentColor" class="text-rose-500 ring-progress"
+                  :stroke-dasharray="OUTER_CIRC"
+                  :stroke-dashoffset="ready ? row.overshootOffset : OUTER_CIRC"
+                  transform="rotate(-90 24 24)"
+                />
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span class="text-[10px] font-bold tabular-nums" :class="row.textClass">
+                  {{ row.percentShort }}
+                </span>
+              </div>
+            </div>
+
+            <!-- نام و وضعیت -->
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ row.element }}</p>
+              <p class="text-[11px] mt-0.5 flex items-center gap-1" :class="row.textClass">
+                <span class="w-1.5 h-1.5 rounded-full inline-block" :class="row.dotClass"></span>
+                {{ row.statusLabel }}
+              </p>
+            </div>
+          </div>
+
+          <!-- مقادیر -->
+          <div class="mt-2.5 pt-2.5 border-t border-gray-200/60 dark:border-gray-700/60 flex items-baseline justify-between text-[11px]">
+            <span class="text-gray-500 dark:text-gray-400">هدف</span>
+            <span class="tabular-nums font-medium text-gray-700 dark:text-gray-200">
+              {{ row.targetDisplay }}
+            </span>
+          </div>
+          <div class="mt-1 flex items-baseline justify-between text-[11px]">
+            <span class="text-gray-500 dark:text-gray-400">فعلی</span>
+            <span class="tabular-nums font-medium text-gray-700 dark:text-gray-200">
+              {{ row.actualDisplay }}
+            </span>
+          </div>
+        </article>
       </div>
 
       <p v-else class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
         عنصر هدفی ثبت نشده است.
       </p>
 
-      <!-- پانوشت -->
-      <div v-if="rows.length" class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap">
-        <div class="flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
-          <span class="flex items-center gap-1">
-            <i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i>
-            دقیق
+      <!-- راهنمای رنگ -->
+      <div
+        v-if="rows.length"
+        class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap"
+      >
+        <div class="flex items-center gap-3 text-[11px] text-gray-500 dark:text-gray-400">
+          <span class="flex items-center gap-1.5">
+            <i class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></i>
+            دقیق (تا ۳٪)
           </span>
-          <span class="flex items-center gap-1">
-            <i class="w-2 h-2 rounded-full bg-amber-500 inline-block"></i>
+          <span class="flex items-center gap-1.5">
+            <i class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></i>
             تا ۱۰٪
           </span>
-          <span class="flex items-center gap-1">
-            <i class="w-2 h-2 rounded-full bg-rose-500 inline-block"></i>
+          <span class="flex items-center gap-1.5">
+            <i class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></i>
             بیشتر
           </span>
         </div>
@@ -101,9 +138,9 @@ const props = defineProps<{
   concentrations: Record<string, number>;
 }>();
 
-const LIMIT = 6;
-const RING_CIRC = 2 * Math.PI * 26;
-const OUTER_CIRC = 2 * Math.PI * 33;
+const LIMIT = 8;
+const RING_CIRC = 2 * Math.PI * 18;
+const OUTER_CIRC = 2 * Math.PI * 22;
 const OVERSHOOT_FULL_AT = 0.5;
 
 const showAll = ref(false);
@@ -118,6 +155,12 @@ onMounted(() => {
 type Level = 'ok' | 'warn' | 'bad';
 const levelOrder: Record<Level, number> = { bad: 0, warn: 1, ok: 2 };
 
+const levelLabels: Record<Level, string> = {
+  ok: 'دقیق',
+  warn: 'نزدیک هدف',
+  bad: 'دور از هدف'
+};
+
 const rows = computed(() => {
   const entries = Object.entries(props.targetValues || {}).filter(([, target]) => Number(target) > 0);
 
@@ -128,14 +171,23 @@ const rows = computed(() => {
     const absDeviation = Math.abs((ratio - 1) * 100);
 
     const level: Level = absDeviation <= 3 ? 'ok' : absDeviation <= 10 ? 'warn' : 'bad';
+
     const ringClass =
       level === 'ok' ? 'text-emerald-500 dark:text-emerald-400'
         : level === 'warn' ? 'text-amber-500 dark:text-amber-400'
           : 'text-rose-500 dark:text-rose-400';
     const textClass =
-      level === 'ok' ? 'fill-emerald-600 dark:fill-emerald-400'
-        : level === 'warn' ? 'fill-amber-600 dark:fill-amber-400'
-          : 'fill-rose-600 dark:fill-rose-400';
+      level === 'ok' ? 'text-emerald-600 dark:text-emerald-400'
+        : level === 'warn' ? 'text-amber-600 dark:text-amber-400'
+          : 'text-rose-600 dark:text-rose-400';
+    const dotClass =
+      level === 'ok' ? 'bg-emerald-500'
+        : level === 'warn' ? 'bg-amber-500'
+          : 'bg-rose-500';
+    const cardClass =
+      level === 'ok' ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40'
+        : level === 'warn' ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/40'
+          : 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/40';
 
     const innerOffset = RING_CIRC * (1 - Math.min(ratio, 1));
 
@@ -150,9 +202,14 @@ const rows = computed(() => {
       absDeviation,
       ringClass,
       textClass,
+      dotClass,
+      cardClass,
       innerOffset,
       overshootOffset,
-      percentLabel: `${Math.round(ratio * 100).toLocaleString('fa-IR')}٪`
+      statusLabel: levelLabels[level],
+      percentShort: `${Math.round(ratio * 100).toLocaleString('fa-IR')}٪`,
+      targetDisplay: target.toLocaleString('fa-IR', { maximumFractionDigits: 2 }),
+      actualDisplay: actual.toLocaleString('fa-IR', { maximumFractionDigits: 2 })
     };
   });
 

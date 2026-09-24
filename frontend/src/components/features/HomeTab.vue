@@ -3,14 +3,10 @@
   ============================================================
   صفحه خانه (داشبورد وضعیت)
   ------------------------------------------------------------
-  فقط «وضعیت کلی» را نشان می‌دهد؛ جزئیات کامل در تب «محاسبه کود ← نتیجه» است.
-  این فایل فقط منطق و داده را دارد؛ ظاهر هر حالت در پوشه‌ی home/ است.
-
   سه حالت:
     ۱) گزارشی باز نیست        ← گزارش‌های اخیر
     ۲) گزارش باز، بدون محاسبه ← کارت «گام بعدی»
-    ۳) محاسبه انجام شده        ← داشبورد: کارت اصلی با نمودار دایره‌ای،
-                                 حلقه‌های عناصر، تعادل یونی، مخازن، هشدارها و اقدامات سریع
+    ۳) محاسبه انجام شده        ← داشبورد
   ============================================================
 -->
 <template>
@@ -70,6 +66,7 @@
         :fertilizers-count="fertilizerCount"
         :is-exporting="isExporting"
         :last-updated-text="lastUpdatedText"
+        :summary-text="heroSummaryText"
         @view-details="emit('navigate', 'fertilizer-calc')"
         @export-pdf="handleExportPdf"
       />
@@ -94,12 +91,11 @@
         <HomeAttentionList class="flex-1" :items="attentionItems" />
         <HomeQuickActions
           class="sm:mr-auto"
-          @recalculate="emit('navigate', 'fertilizer-calc')"
           @edit-targets="emit('navigate', 'target-elements')"
         />
       </div>
 
-      <!-- پیام کوتاه (مثلاً بعد از ساخت PDF) -->
+      <!-- پیام کوتاه -->
       <Transition name="home-toast">
         <div
           v-if="toastMessage"
@@ -159,10 +155,7 @@ const error = ref<string | null>(null);
 // Computed: وضعیت گزارش
 // ============================================================
 const hasActiveReport = computed(() => reportStore.hasActiveReport);
-
-// فقط بعد از یک محاسبه‌ی واقعی (دکمه «محاسبه») وضعیت کلی نمایش داده می‌شود
 const hasCalculatedData = computed(() => calcStore.optimizationResult !== null);
-
 const recentReports = computed(() => (reportStore.reports || []).slice(0, 3));
 
 const openReport = (id: number) => {
@@ -170,7 +163,7 @@ const openReport = (id: number) => {
 };
 
 // ============================================================
-// Computed: مراحل محاسبه کود (وقتی هنوز محاسبه‌ای نیست)
+// Computed: مراحل محاسبه کود
 // ============================================================
 const hasTargets = computed(() =>
   Object.values(targetStore.targetElements || {}).some(value => Number(value) > 0)
@@ -184,7 +177,6 @@ const userFertilizersCount = computed(
   () => (fertilizerStore.fertilizers || []).filter((f: any) => !f.isSystemDefault).length
 );
 
-// «رد کردن» مرحله‌ی اختیاری آنالیز آب؛ برای هر گزارش جداگانه و در همین نشست مرورگر نگه داشته می‌شود
 const waterSkipKey = () => `farmtech_water_step_skipped_${reportStore.currentReportId ?? 'none'}`;
 const readWaterSkipped = (): boolean => {
   try {
@@ -247,7 +239,6 @@ const steps = computed<HomeStepItem[]>(() => [
   }
 ]);
 
-// مرحله‌ی جاری: اولین مرحله‌ای که نه انجام شده و نه رد شده است
 const currentStepKey = computed<string | null>(
   () => steps.value.find(step => step.status === 'pending')?.key ?? null
 );
@@ -262,7 +253,7 @@ const skipStep = (key: string) => {
   try {
     sessionStorage.setItem(waterSkipKey(), '1');
   } catch {
-    // در حالت خصوصی مرورگر ممکن است ذخیره‌سازی در دسترس نباشد؛ فقط در حافظه می‌ماند
+    // در حالت خصوصی مرورگر ممکن است ذخیره‌سازی در دسترس نباشد
   }
 };
 
@@ -330,11 +321,45 @@ const fertilizerCount = computed(() =>
   Object.values(result.value?.weights || {}).filter(value => Number(value) > 0).length
 );
 
-// آخرین به‌روزرسانی: اگر گزارش تازه بارگذاری شده باشد، خالی است
 const lastUpdatedText = computed(() => '');
 
 // ============================================================
-// Computed: هشدارهای کوتاه (حداکثر ۳ مورد)
+// 🆕 متن خلاصه عناصر برای کارت اصلی (جایگزین متن تکراری)
+// ============================================================
+const heroSummaryText = computed(() => {
+  const targets = targetStore.targetElements as Record<string, number>;
+  const actual = (result.value?.concentrations || {}) as Record<string, number>;
+
+  let preciseCount = 0;
+  let totalCount = 0;
+  const outliers: string[] = [];
+
+  for (const [element, targetRaw] of Object.entries(targets)) {
+    const target = Number(targetRaw);
+    if (target <= 0) continue;
+    totalCount++;
+    const ratio = ((Number(actual[element]) || 0) / target) * 100;
+    const deviation = Math.abs(ratio - 100);
+    if (deviation <= 3) {
+      preciseCount++;
+    } else if (deviation > 10 && outliers.length < 3) {
+      outliers.push(element);
+    }
+  }
+
+  if (totalCount === 0) {
+    return 'هنوز عنصر هدفی برای این گزارش ثبت نشده است.';
+  }
+
+  if (outliers.length === 0) {
+    return `${preciseCount.toLocaleString('fa-IR')} از ${totalCount.toLocaleString('fa-IR')} عنصر دقیقاً در محدوده هدف قرار دارند.`;
+  }
+
+  return `${preciseCount.toLocaleString('fa-IR')} از ${totalCount.toLocaleString('fa-IR')} عنصر دقیق هستند؛ ${outliers.join('، ')} نیاز به بررسی دارند.`;
+});
+
+// ============================================================
+// Computed: هشدارهای کوتاه
 // ============================================================
 const attentionItems = computed(() => {
   const items: Array<{ text: string; danger: boolean; hint?: string }> = [];
@@ -457,7 +482,7 @@ const loadDashboardData = async () => {
         const waterData = await apiService.getWaterAnalysis(String(reportStore.currentReportId));
         if (waterData) waterStore.loadFromAPI(waterData);
       } catch {
-        // آنالیز آب اختیاری است؛ نبودنش خطا نیست
+        // آنالیز آب اختیاری است
       }
     }
   } catch (err: any) {
