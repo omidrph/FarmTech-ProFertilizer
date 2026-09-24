@@ -47,12 +47,12 @@
     />
 
     <!-- ۲) گزارش باز است ولی هنوز محاسبه نشده -->
-    <HomeNextStep
+    <HomeSteps
       v-else-if="!hasCalculatedData"
-      :title="nextStep.title"
-      :action-label="nextStep.action"
-      :steps="progressSteps"
-      @go="emit('navigate', nextStep.tab)"
+      :steps="steps"
+      :current-key="currentStepKey"
+      @go="goToStep"
+      @skip="skipStep"
     />
 
     <!-- ۳) نتیجه محاسبه: فقط وضعیت کلی -->
@@ -81,10 +81,12 @@ import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
 import { useCalcStore } from '@/store/modules/calcStore';
+import { useFertilizerStore } from '@/store/modules/fertilizerStore';
 import { apiService } from '@/services/apiService';
 
 import HomeRecentReports from './home/HomeRecentReports.vue';
-import HomeNextStep from './home/HomeNextStep.vue';
+import HomeSteps from './home/HomeSteps.vue';
+import type { HomeStepItem } from './home/HomeSteps.vue';
 import HomeStatusCard from './home/HomeStatusCard.vue';
 import HomeAttentionList from './home/HomeAttentionList.vue';
 
@@ -102,6 +104,7 @@ const reportStore = useReportStore();
 const targetStore = useTargetStore();
 const waterStore = useWaterStore();
 const calcStore = useCalcStore();
+const fertilizerStore = useFertilizerStore();
 
 // ============================================================
 // State
@@ -124,7 +127,7 @@ const openReport = (id: number) => {
 };
 
 // ============================================================
-// Computed: گام بعدی (وقتی هنوز محاسبه‌ای نیست)
+// Computed: مراحل محاسبه کود (وقتی هنوز محاسبه‌ای نیست)
 // ============================================================
 const hasTargets = computed(() =>
   Object.values(targetStore.targetElements || {}).some(value => Number(value) > 0)
@@ -134,18 +137,91 @@ const hasWater = computed(() =>
   Object.values(waterStore.waterValues || {}).some(value => Number(value) > 0)
 );
 
-const progressSteps = computed(() => [
-  { key: 'targets', label: 'عناصر هدف', done: hasTargets.value },
-  { key: 'water', label: 'آنالیز آب (اختیاری)', done: hasWater.value },
-  { key: 'calc', label: 'محاسبه کود', done: hasCalculatedData.value }
+const userFertilizersCount = computed(
+  () => (fertilizerStore.fertilizers || []).filter((f: any) => !f.isSystemDefault).length
+);
+
+// «رد کردن» مرحله‌ی اختیاری آنالیز آب؛ برای هر گزارش جداگانه و در همین نشست مرورگر نگه داشته می‌شود
+const waterSkipKey = () => `farmtech_water_step_skipped_${reportStore.currentReportId ?? 'none'}`;
+const readWaterSkipped = (): boolean => {
+  try {
+    return sessionStorage.getItem(waterSkipKey()) === '1';
+  } catch {
+    return false;
+  }
+};
+const waterSkipped = ref(readWaterSkipped());
+
+watch(
+  () => reportStore.currentReportId,
+  () => {
+    waterSkipped.value = readWaterSkipped();
+  }
+);
+
+const stockHint = computed(() => {
+  const s = calcStore.stockSettings;
+  return `مخزن ${s.tankVolume.toLocaleString('fa-IR')} لیتر • استوک ${s.stockVolume.toLocaleString('fa-IR')} لیتر • نسبت ۱:${s.injectionRatio.toLocaleString('fa-IR')}`;
+});
+
+const steps = computed<HomeStepItem[]>(() => [
+  {
+    key: 'target-elements',
+    title: 'عناصر هدف',
+    status: hasTargets.value ? 'done' : 'pending',
+    hint: hasTargets.value
+      ? `${activeElementsCount.value.toLocaleString('fa-IR')} عنصر ثبت شده است`
+      : 'مقدار عناصر مورد نیاز گیاه را وارد کنید',
+    actionLabel: 'ورود عناصر هدف'
+  },
+  {
+    key: 'water-analysis',
+    title: 'آنالیز آب',
+    optional: true,
+    status: hasWater.value ? 'done' : waterSkipped.value ? 'skipped' : 'pending',
+    hint: hasWater.value
+      ? 'ثبت شده است'
+      : waterSkipped.value
+        ? 'رد شد؛ هر زمان خواستید می‌توانید ثبتش کنید'
+        : 'دقت محاسبه را بالا می‌برد',
+    actionLabel: 'ثبت آنالیز آب'
+  },
+  {
+    key: 'fertilizer-db',
+    title: 'پایگاه‌داده کود',
+    status: userFertilizersCount.value > 0 ? 'done' : 'pending',
+    hint: userFertilizersCount.value > 0
+      ? `${userFertilizersCount.value.toLocaleString('fa-IR')} کود ثبت شده است`
+      : 'حداقل یک کود اضافه کنید تا برای انتخاب در دسترس باشد',
+    actionLabel: 'افزودن کود'
+  },
+  {
+    key: 'fertilizer-calc',
+    title: 'تنظیمات استوک و محاسبه',
+    status: hasCalculatedData.value ? 'done' : 'pending',
+    hint: stockHint.value,
+    actionLabel: 'تنظیم و محاسبه'
+  }
 ]);
 
-const nextStep = computed(() => {
-  if (!hasTargets.value) {
-    return { title: 'عناصر هدف را وارد کنید', action: 'عناصر هدف', tab: 'target-elements' };
+// مرحله‌ی جاری: اولین مرحله‌ای که نه انجام شده و نه رد شده است
+const currentStepKey = computed<string | null>(
+  () => steps.value.find(step => step.status === 'pending')?.key ?? null
+);
+
+const goToStep = (key: string) => {
+  emit('navigate', key);
+};
+
+const skipStep = (key: string) => {
+  if (key !== 'water-analysis') return;
+  waterSkipped.value = true;
+  try {
+    sessionStorage.setItem(waterSkipKey(), '1');
+  } catch {
+    // در حالت خصوصی مرورگر ممکن است ذخیره‌سازی در دسترس نباشد؛ فقط در حافظه می‌ماند
   }
-  return { title: 'آماده‌ی محاسبه کود هستید', action: 'محاسبه کود', tab: 'fertilizer-calc' };
-});
+};
 
 // ============================================================
 // Computed: وضعیت کلی نتیجه

@@ -62,39 +62,6 @@
 
       <!-- ===================== مرحله ۱ ===================== -->
       <div v-if="currentStep === 1" key="step-1" class="space-y-4">
-        <!-- پیش‌نیازها -->
-        <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">پیش‌نیازهای محاسبه</h3>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div
-              v-for="item in prerequisites"
-              :key="item.key"
-              class="flex items-start gap-2 rounded-lg border p-2.5"
-              :class="item.done
-                ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20'
-                : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'"
-            >
-              <span
-                class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                :class="item.done ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'"
-              >
-                <svg v-if="item.done" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-                <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01" />
-                </svg>
-              </span>
-              <div class="min-w-0">
-                <p class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ item.title }}</p>
-                <p class="text-[11px]" :class="item.done ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'">
-                  {{ item.hint }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <!-- تنظیمات استوک (بدون تغییر در منطق، فقط ظاهر موبایل بهبود یافته) -->
         <StockSettings
           :main-tank-volume="mainTankVolume"
@@ -360,7 +327,6 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useTargetStore } from '@/store/modules/targetStore';
-import { useWaterStore } from '@/store/modules/waterStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
@@ -391,7 +357,6 @@ const emit = defineEmits<{
 // ===== Stores / Composables =====
 const calcStore = useCalcStore();
 const targetStore = useTargetStore();
-const waterStore = useWaterStore();
 const reportStore = useReportStore();
 const { optimizeFertilizers, isOptimizing } = useCalculations();
 const { exportOptimizationPdf, isExporting } = usePdfExport();
@@ -448,44 +413,7 @@ const hasTargets = computed(() =>
   Object.values(targetStore.targetElements || {}).some((value) => Number(value) > 0)
 );
 
-const hasWaterAnalysis = computed(() =>
-  Object.values(waterStore.waterValues || {}).some((value) => Number(value) > 0)
-);
-
-// 🆕 پیش‌نیاز چهارم: کاربر باید حداقل یک کود شخصی در پایگاه‌داده کود
-// ثبت کرده باشد؛ بدون آن، مرحله «انتخاب کود» چیزی برای انتخاب ندارد.
-const hasUserFertilizers = computed(() =>
-  props.fertilizers.some((f: any) => !f.isSystemDefault)
-);
-
-// پیش‌نیازها: کود انتخابی از این لیست حذف شد (در همان مرحله انتخاب کود
-// به‌طور واضح نمایش داده می‌شود و تکرارش اینجا لازم نیست)
-const prerequisites = computed(() => [
-  {
-    key: 'targets',
-    title: 'عناصر هدف',
-    done: hasTargets.value,
-    hint: hasTargets.value ? 'ثبت شده است' : 'از تب «عناصر هدف» مقادیر را وارد کنید'
-  },
-  {
-    key: 'water',
-    title: 'آنالیز آب',
-    done: hasWaterAnalysis.value,
-    hint: hasWaterAnalysis.value ? 'ثبت شده است' : 'اختیاری، ولی دقت محاسبه را بالا می‌برد'
-  },
-  {
-    key: 'fertilizer-db',
-    title: 'پایگاه‌داده کود',
-    done: hasUserFertilizers.value,
-    hint: hasUserFertilizers.value ? 'ثبت شده است' : 'از تب «پایگاه‌داده کود» حداقل یک کود اضافه کنید'
-  },
-  {
-    key: 'stock',
-    title: 'تنظیمات استوک',
-    done: mainTankVolume.value > 0 && stockVolume.value > 0 && injectionRatio.value > 0,
-    hint: `مخزن ${mainTankVolume.value} لیتر • استوک ${stockVolume.value} لیتر • نسبت ۱:${injectionRatio.value}`
-  }
-]);
+// پیش‌نیازهای محاسبه (عناصر هدف، آنالیز آب، پایگاه‌داده کود) حالا در صفحه «خانه» و در بخش «مراحل محاسبه کود» نمایش داده می‌شوند.
 
 const canOptimize = computed(() => hasTargets.value && localSelectedFertilizers.value.length > 0);
 

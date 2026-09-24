@@ -1091,7 +1091,7 @@ const showToast = (
 
 const loadWaterTemplates = async () => {
   try {
-    const templates = await apiService.get('/water-templates/');
+    const templates = await apiService.get('/water-templates/', { params: { limit: 6 } });
 
     waterTemplates.value = Array.isArray(templates)
       ? templates
@@ -1100,6 +1100,22 @@ const loadWaterTemplates = async () => {
     console.error('Load water templates error:', error);
     showToast('دریافت قالب‌ها ناموفق بود؛ صفحه را دوباره باز کنید', 'error');
   }
+};
+
+// فقط مقدارهای عددی معتبر به سرور فرستاده می‌شوند (مقدار خالی یا NaN باعث خطای 422 می‌شد)
+const toNumberMap = (source: Record<string, any> | null | undefined): Record<string, number> => {
+  const result: Record<string, number> = {};
+  for (const [key, value] of Object.entries(source || {})) {
+    const num = Number(value);
+    if (value !== null && value !== '' && Number.isFinite(num)) result[key] = num;
+  }
+  return result;
+};
+
+const extractErrorMessage = (error: any, fallback: string): string => {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  return error?.message && !String(error.message).startsWith('Request failed') ? error.message : fallback;
 };
 
 const openSaveTemplateModal = () => {
@@ -1147,10 +1163,10 @@ const saveWaterTemplate = async () => {
         ecUnit.value,
 
       water_values:
-        waterStore.waterValues,
+        toNumberMap(waterStore.waterValues),
 
       wastewater_values:
-        waterStore.wastewaterValues
+        toNumberMap(waterStore.wastewaterValues)
     });
 
     await loadWaterTemplates();
@@ -1165,7 +1181,7 @@ const saveWaterTemplate = async () => {
     console.error('Save water template error:', error);
 
     showToast(
-      'خطا در ذخیره قالب',
+      extractErrorMessage(error, 'خطا در ذخیره قالب'),
       'error'
     );
   } finally {

@@ -48,7 +48,7 @@ def create_water_template(
 @water_templates_router.get("/", response_model=List[WaterAnalysisTemplateResponse])
 def get_water_templates(
     skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=6),
+    limit: int = Query(100, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -154,4 +154,7 @@ def delete_water_template(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در حذف قالب: {str(e)}"
         )
+
+
+
 
