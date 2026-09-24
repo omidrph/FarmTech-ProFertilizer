@@ -2,7 +2,6 @@
 import { createPinia } from 'pinia';
 import { useAppStore } from './modules/appStore';
 import { useCalcStore } from './modules/calcStore';
-import { useEducationStore } from './modules/educationStore';
 import { useFertilizerStore } from './modules/fertilizerStore';
 import { useReportStore } from './modules/reportStore';
 import { useTargetStore } from './modules/targetStore';
@@ -15,7 +14,6 @@ const pinia = createPinia();
 export {
     useAppStore,
     useCalcStore,
-    useEducationStore,
     useFertilizerStore,
     useReportStore,
     useTargetStore,
