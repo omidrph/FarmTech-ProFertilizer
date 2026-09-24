@@ -530,42 +530,14 @@
     <!-- ============================================================ -->
     <!-- مودال فیلتر -->
     <!-- ============================================================ -->
-    <Teleport to="body">
-      <div
-        v-if="showFilterModal"
-        class="fixed inset-0 z-[100] overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div
-          class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm"
-          @click="closeFilterModal"
-        ></div>
+    <AppModal :open="showFilterModal" size="sm" title="فیلترهای پیشرفته" @close="closeFilterModal">
+      <template #icon>
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+        </svg>
+      </template>
 
-        <div class="flex min-h-full items-center justify-center p-4">
-          <div class="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
-
-            <!-- هدر مودال -->
-            <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-6 py-4 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                </svg>
-                <h3 class="text-lg font-bold text-white">فیلترهای پیشرفته</h3>
-              </div>
-
-              <button
-                @click="closeFilterModal"
-                class="text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            <!-- بدنه مودال -->
-            <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+      <div class="space-y-4">
 
               <!-- فرم فیزیکی -->
               <div>
@@ -727,32 +699,20 @@
                   </label>
                 </div>
               </div>
-            </div>
-
-            <!-- فوتر مودال -->
-            <div class="bg-gray-50 dark:bg-gray-700/30 px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex gap-3">
-              <button
-                @click="resetFilters"
-                class="flex-1 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm font-medium"
-              >
-                بازنشانی
-              </button>
-
-              <button
-                @click="applyFilters"
-                class="flex-1 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors text-sm font-medium shadow-sm hover:shadow-md"
-              >
-                اعمال فیلتر
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
-    </Teleport>
+
+      <template #footer>
+        <div class="app-modal-actions">
+          <button type="button" @click="resetFilters" class="app-modal-btn app-modal-btn-secondary">بازنشانی</button>
+          <button type="button" @click="applyFilters" class="app-modal-btn app-modal-btn-primary">اعمال فیلتر</button>
+        </div>
+      </template>
+    </AppModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import AppModal from '@/components/common/AppModal.vue';
 import { ref, computed } from 'vue';
 import {
   IconPowder,
@@ -1114,3 +1074,5 @@ const clearTable = () => {
   background: #4b5563;
 }
 </style>
+
+

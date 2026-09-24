@@ -1,4 +1,3 @@
-
 <!-- frontend/src/views/MainLayout.vue -->
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200 flex flex-col">
@@ -75,9 +74,9 @@
       <!-- Home Tab -->
       <div v-if="activeTab === 'home'" class="space-y-4 sm:space-y-6">
         
-        <!-- Report Header -->
-        <!-- 🆕 بزرگ فقط در تب خانه و وقتی هنوز گزارشی باز نشده -->
+        <!-- باکس کامل گزارش: فقط در تب خانه (تنها جای ویرایش مشخصات گزارش) -->
         <ReportHeader
+          v-if="activeSubTab === 'home'"
           v-model:reportName="reportStore.reportData.reportName"
           v-model:plantName="reportStore.reportData.plantName"
           v-model:season="reportStore.reportData.season"
@@ -87,9 +86,20 @@
           @save="handleSaveReport"
         />
 
+        <!-- در بقیه‌ی تب‌ها: نوار باریک و فقط‌نمایشی -->
+        <ReportBar
+          v-else
+          :report-name="reportStore.reportData.reportName"
+          :plant-name="reportStore.reportData.plantName"
+          :season="reportStore.reportData.season"
+          :growth-stage="reportStore.reportData.growthStage"
+          :report-date="reportStore.reportData.date"
+          @edit="goToHome"
+        />
+
         <!-- Home Sub Tab -->
         <div v-if="activeSubTab === 'home'" :key="homeTabKey">
-          <HomeTab :target-unit="targetStore.targetUnit" />
+          <HomeTab @navigate="selectSubTab" />
         </div>
 
         <!-- Water Analysis Sub Tab -->
@@ -213,6 +223,7 @@ import ProfileModal from '@/components/layout/ProfileModal.vue';
 
 // Feature Components
 import ReportHeader from '@/components/features/ReportHeader.vue';
+import ReportBar from '@/components/features/ReportBar.vue';
 import HomeTab from '@/components/features/HomeTab.vue';
 import WaterAnalysisTab from '@/components/features/WaterAnalysisTab.vue';
 import TargetElementsTab from '@/components/features/TargetElementsTab.vue';
@@ -372,6 +383,11 @@ const selectSubTab = (tabId: string) => {
   activeSubTab.value = tabId;
 };
 
+const goToHome = () => {
+  activeSubTab.value = 'home';
+  window.scrollTo({ top: 0, behavior: 'auto' });
+};
+
 const clearErrors = () => {
   clearError();
   fertilizerStore.clearError();
@@ -445,11 +461,3 @@ onUnmounted(() => {
   transform: translate(-50%, 10px);
 }
 </style>
-
-
-
-
-
-================================================================================
-
-

@@ -1,37 +1,28 @@
+<!-- frontend/src/components/features/ReportHeader.vue -->
+<!--
+  باکس کامل گزارش (فقط در تب «خانه» نمایش داده می‌شود و تنها جای ویرایش مشخصات گزارش است)
+  در بقیه‌ی تب‌ها به‌جای این باکس، نوار باریک ReportBar نمایش داده می‌شود.
+-->
 <template>
-  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-5 lg:p-6">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-4 sm:p-5">
+    <div class="flex items-center justify-between gap-3 mb-4">
       <div class="flex items-center gap-3 min-w-0">
         <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
           <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414v10a2 2 0 01-2 2H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414V19a2 2 0 01-2 2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
           </svg>
         </div>
-        <div class="min-w-0">
-          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">
-            {{ reportName || 'گزارش جدید' }}
-          </h2>
-          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            مشخصات گزارش را کامل کنید تا مراحل بعدی فعال شوند.
-          </p>
-        </div>
+        <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">گزارش</h2>
       </div>
 
-      <button
-        type="button"
-        @click="emitSave"
-        :disabled="isSaving"
-        class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+      <span
+        class="flex-shrink-0 text-xs px-2.5 py-1 rounded-full font-medium"
+        :class="isComplete
+          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
+          : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'"
       >
-        <svg v-if="isSaving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-        </svg>
-        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-        {{ isSaving ? 'در حال ذخیره...' : 'ذخیره گزارش' }}
-      </button>
+        {{ isComplete ? 'آماده ثبت' : 'تکمیل اطلاعات' }}
+      </span>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
@@ -71,18 +62,19 @@
       </div>
     </div>
 
-    <div class="mt-4 flex items-center justify-between gap-3 flex-wrap">
-      <p class="text-xs text-gray-500 dark:text-gray-400">
-        همه فیلدهای علامت‌دار برای ثبت گزارش الزامی هستند.
-      </p>
-      <span
-        class="text-xs px-2.5 py-1 rounded-full"
-        :class="isComplete
-          ? 'bg-success-50 dark:bg-success-900/20 text-success-700 dark:text-success-400'
-          : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400'"
+    <div class="mt-4 flex sm:justify-end">
+      <button
+        type="button"
+        @click="emitSave"
+        :disabled="isSaving"
+        class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {{ isComplete ? 'آماده ثبت' : 'تکمیل اطلاعات' }}
-      </span>
+        <svg v-if="isSaving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+        {{ isSaving ? 'در حال ذخیره...' : 'ذخیره گزارش' }}
+      </button>
     </div>
   </section>
 </template>

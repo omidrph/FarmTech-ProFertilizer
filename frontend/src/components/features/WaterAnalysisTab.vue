@@ -434,13 +434,13 @@
           >
             <div class="flex items-start justify-between mb-2">
               <h4
-                class="font-medium text-gray-900 dark:text-white text-sm truncate pr-6"
+                class="font-medium text-gray-900 dark:text-white text-sm truncate pl-16 sm:pl-0"
               >
                 {{ template.name }}
               </h4>
 
               <div
-                class="absolute top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                class="absolute top-2 left-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity"
               >
                 <button
                   @click="loadWaterTemplate(template)"
@@ -571,65 +571,20 @@
     <!-- ============================================================ -->
     <!-- مودال ذخیره قالب -->
     <!-- ============================================================ -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showSaveTemplateModal"
-          class="fixed inset-0 z-[100] overflow-y-auto"
-          role="dialog"
-        >
-          <div
-            class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm"
-            @click="closeSaveTemplateModal"
-          ></div>
+    <AppModal
+      :open="showSaveTemplateModal"
+      size="sm"
+      title="ذخیره تنظیمات فعلی"
+      subtitle="مقادیر فعلی به‌عنوان قالب ذخیره می‌شود"
+      @close="closeSaveTemplateModal"
+    >
+      <template #icon>
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+        </svg>
+      </template>
 
-          <div class="flex min-h-full items-center justify-center p-4">
-            <div
-              class="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden transform transition-all"
-            >
-              <div
-                class="bg-gradient-to-l from-indigo-600 to-indigo-700 dark:from-indigo-800 dark:to-indigo-900 px-6 py-4 flex items-center justify-between"
-              >
-                <h3
-                  class="text-lg font-bold text-white flex items-center gap-2"
-                >
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                    />
-                  </svg>
-                  ذخیره تنظیمات فعلی
-                </h3>
-
-                <button
-                  @click="closeSaveTemplateModal"
-                  class="text-white/80 hover:text-white transition-colors"
-                >
-                  <svg
-                    class="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <div class="p-6 space-y-4">
+      <div class="space-y-4">
                 <div>
                   <label
                     class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
@@ -641,7 +596,7 @@
                   <input
                     type="text"
                     v-model="templateForm.name"
-                    class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     placeholder="مثال: آب چاه شماره ۱ - تابستان"
                     autofocus
                   />
@@ -657,13 +612,13 @@
                   <textarea
                     v-model="templateForm.description"
                     rows="2"
-                    class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+                    class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all resize-none"
                     placeholder="توضیحات تکمیلی..."
                   ></textarea>
                 </div>
 
                 <div
-                  class="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 text-xs text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800"
+                  class="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-3 text-xs text-primary-700 dark:text-primary-300 border border-primary-100 dark:border-primary-800"
                 >
                   <p class="flex items-center gap-1.5">
                     <svg
@@ -684,52 +639,26 @@
                     خواهند شد.
                   </p>
                 </div>
-              </div>
+      </div>
 
-              <div
-                class="bg-gray-50 dark:bg-gray-700/30 px-6 py-4 flex flex-row-reverse gap-3"
-              >
-                <button
-                  @click="saveWaterTemplate"
-                  :disabled="isSavingTemplate || !templateForm.name"
-                  class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2 shadow-lg shadow-indigo-500/30"
-                >
-                  <svg
-                    v-if="isSavingTemplate"
-                    class="animate-spin h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    ></path>
-                  </svg>
-
-                  {{ isSavingTemplate ? "در حال ذخیره..." : "ذخیره قالب" }}
-                </button>
-
-                <button
-                  @click="closeSaveTemplateModal"
-                  class="px-5 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 transition-colors font-medium"
-                >
-                  انصراف
-                </button>
-              </div>
-            </div>
-          </div>
+      <template #footer>
+        <div class="app-modal-actions">
+          <button type="button" @click="closeSaveTemplateModal" class="app-modal-btn app-modal-btn-secondary">انصراف</button>
+          <button
+            type="button"
+            @click="saveWaterTemplate"
+            :disabled="isSavingTemplate || !templateForm.name"
+            class="app-modal-btn app-modal-btn-primary"
+          >
+            <svg v-if="isSavingTemplate" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {{ isSavingTemplate ? 'در حال ذخیره...' : 'ذخیره قالب' }}
+          </button>
         </div>
-      </Transition>
-    </Teleport>
+      </template>
+    </AppModal>
 
     <!-- ============================================================ -->
     <!-- پیام Toast -->
@@ -781,6 +710,7 @@
 </template>
 
 <script setup lang="ts">
+import AppModal from '@/components/common/AppModal.vue';
 import { ref, computed, onMounted } from 'vue';
 import { useWaterStore } from '@/store/modules/waterStore';
 import { apiService } from '@/services/apiService';
@@ -1161,13 +1091,14 @@ const showToast = (
 
 const loadWaterTemplates = async () => {
   try {
-    const templates = await apiService.get('/water-templates');
+    const templates = await apiService.get('/water-templates/');
 
     waterTemplates.value = Array.isArray(templates)
       ? templates
       : [];
   } catch (error) {
-    console.error(error);
+    console.error('Load water templates error:', error);
+    showToast('دریافت قالب‌ها ناموفق بود؛ صفحه را دوباره باز کنید', 'error');
   }
 };
 
@@ -1198,7 +1129,7 @@ const saveWaterTemplate = async () => {
   isSavingTemplate.value = true;
 
   try {
-    await apiService.post('/water-templates', {
+    await apiService.post('/water-templates/', {
       name: templateForm.value.name,
       description:
         templateForm.value.description || null,
@@ -1392,3 +1323,5 @@ onMounted(() => {
   }
 }
 </style>
+
+

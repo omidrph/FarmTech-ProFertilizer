@@ -1,35 +1,14 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal">
-      <div
-        v-if="isOpen"
-        class="fixed inset-0 z-[100] overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-      >
-        <!-- Backdrop -->
-        <div
-          class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity"
-          @click="closeModal"
-        ></div>
-
-        <!-- Modal Container -->
-        <div
-          class="flex min-h-full items-center justify-center p-0 sm:p-4"
-        >
-          <div
-            class="relative w-full h-full sm:h-auto sm:max-w-3xl sm:my-8 bg-white dark:bg-gray-800 sm:rounded-2xl shadow-2xl overflow-hidden"
-          >
-            <!-- Loading State -->
-            <div v-if="isLoadingUser" class="flex flex-col items-center justify-center py-20">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-              <p class="mt-4 text-gray-600 dark:text-gray-400">در حال بارگذاری اطلاعات کاربر...</p>
-            </div>
-
-            <!-- User Data -->
-            <template v-else-if="currentUser">
-              <!-- Header -->
-              <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-6 py-6">
+  <AppModal
+    :open="isOpen"
+    size="lg"
+    tall
+    flush
+    title="حساب کاربری"
+    @close="closeModal"
+  >
+    <template v-if="!isLoadingUser && currentUser" #header>
+      <div class="px-4 sm:px-6 py-5">
                 <div class="flex items-start justify-between">
                   <div class="flex items-center gap-4">
                     <!-- Avatar -->
@@ -71,9 +50,10 @@
                     </svg>
                   </button>
                 </div>
-              </div>
+      </div>
+    </template>
 
-              <!-- Tabs -->
+    <template v-if="!isLoadingUser && currentUser" #subheader>
               <div class="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                 <div class="flex overflow-x-auto scrollbar-hide">
                   <button
@@ -90,9 +70,17 @@
                   </button>
                 </div>
               </div>
+    </template>
 
-              <!-- Tab Content -->
-              <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+    <!-- Loading State -->
+            <div v-if="isLoadingUser" class="flex flex-col items-center justify-center py-20">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+              <p class="mt-4 text-gray-600 dark:text-gray-400">در حال بارگذاری اطلاعات کاربر...</p>
+            </div>
+
+    <!-- User Data -->
+    <template v-else-if="currentUser">
+      <div>
 
                 <!-- Profile Tab -->
                 <div v-if="activeTab === 'profile'" class="p-6">
@@ -458,7 +446,7 @@
                   </div>
                 </div>
 
-              </div>
+      </div>
 
               <!-- Messages -->
               <Transition name="fade">
@@ -487,9 +475,9 @@
                   </div>
                 </div>
               </Transition>
-            </template>
+    </template>
 
-            <!-- Error State -->
+    <!-- Error State -->
             <div v-else class="flex flex-col items-center justify-center py-20">
               <svg class="w-16 h-16 text-danger-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
@@ -499,14 +487,11 @@
                 تلاش مجدد
               </button>
             </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+  </AppModal>
 </template>
 
 <script setup lang="ts">
+import AppModal from '@/components/common/AppModal.vue';
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 import { useAuth } from '@/composables/useAuth';
 import { apiService } from '@/services/apiService';
@@ -938,4 +923,7 @@ onMounted(() => {
 .dark .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
 </style>
+
+
+
 

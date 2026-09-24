@@ -1,4 +1,3 @@
-
 <!-- frontend/src/components/layout/AppHeader.vue -->
 <template>
   <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-50 transition-colors duration-200">
@@ -171,45 +170,31 @@
       </div>
     </div>
 
-    <!-- Modal Open Report -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="showOpenModal" class="fixed inset-0 z-[100] overflow-hidden" role="dialog" aria-modal="true">
-          <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity" @click="closeOpenModal"></div>
-          <div class="h-full flex items-center justify-center p-2 sm:p-4">
-            <div class="relative w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] sm:max-w-2xl bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-              <!-- Header -->
-              <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-6 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold text-white">بازکردن گزارش</h3>
-                    <p class="text-xs text-primary-100">یک گزارش از لیست زیر انتخاب کنید</p>
-                  </div>
-                </div>
-                <button @click="closeOpenModal" class="p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
+    <AppModal
+      :open="showOpenModal"
+      size="md"
+      title="بازکردن گزارش"
+      subtitle="یک گزارش از لیست زیر انتخاب کنید"
+      flush
+      @close="closeOpenModal"
+    >
+      <template #icon>
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/>
+        </svg>
+      </template>
 
-              <!-- Search Bar -->
-              <div class="px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                <div class="relative">
+      <template #subheader>
+        <div class="px-4 sm:px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+          <div class="relative">
                   <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                   </svg>
                   <input v-model="searchQuery" type="text" placeholder="جستجو در گزارش‌ها..." class="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" />
-                </div>
-              </div>
+          </div>
+        </div>
+      </template>
 
-              <!-- Reports List -->
-              <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                 <div v-if="reportStore.isLoading" class="flex items-center justify-center py-12">
                   <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                   <span class="mr-2 text-gray-600 dark:text-gray-400">در حال بارگذاری...</span>
@@ -281,18 +266,11 @@
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Footer -->
-              <div class="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">
-                <span class="text-xs text-gray-500 dark:text-gray-400">{{ filteredReports.length }} گزارش</span>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+      <template #footer>
+        <span class="text-xs text-gray-500 dark:text-gray-400">{{ filteredReports.length }} گزارش</span>
+      </template>
+    </AppModal>
 
     <!-- Toast -->
     <Teleport to="body">
@@ -312,6 +290,7 @@
 </template>
 
 <script setup lang="ts">
+import AppModal from '@/components/common/AppModal.vue';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useWaterStore } from '@/store/modules/waterStore';
@@ -745,8 +724,3 @@ watch(mobileMenuOpen, (newVal) => {
   50% { opacity: 0.3; }
 }
 </style>
-
-
-================================================================================
-
-

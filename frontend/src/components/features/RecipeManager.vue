@@ -542,74 +542,18 @@
     <!-- ============================================================ -->
     <!-- مودال ایجاد/ویرایش رسپی -->
     <!-- ============================================================ -->
-    <Teleport to="body">
-      <div
-        v-if="showModal"
-        class="fixed inset-0 z-[100] overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-      >
-        <!-- Backdrop -->
-        <div
-          class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity"
-          @click="closeModal"
-        ></div>
+    <AppModal
+      :open="showModal"
+      size="xl"
+      :title="isEditing ? 'ویرایش رسپی' : 'ساخت رسپی جدید'"
+      @close="closeModal"
+    >
+      <template #icon>
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </template>
 
-        <!-- Modal Container -->
-        <div
-          class="flex min-h-full items-center justify-center p-0 sm:p-4"
-        >
-          <div
-            class="relative w-full h-full sm:h-auto sm:max-w-4xl sm:my-8 bg-white dark:bg-gray-800 sm:rounded-2xl shadow-2xl overflow-hidden"
-          >
-            <!-- Header -->
-            <div
-              class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-10"
-            >
-              <h3
-                class="text-lg sm:text-xl font-bold text-white flex items-center gap-2"
-              >
-                <svg
-                  class="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-
-                {{ isEditing ? 'ویرایش رسپی' : 'ساخت رسپی جدید' }}
-              </h3>
-
-              <button
-                @click="closeModal"
-                class="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
-              >
-                <svg
-                  class="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <!-- Body -->
-            <div
-              class="px-4 sm:px-6 py-5 max-h-[calc(100vh-140px)] sm:max-h-[calc(100vh-200px)] overflow-y-auto custom-scrollbar"
-            >
               <div class="space-y-4">
                 <!-- نام رسپی -->
                 <div>
@@ -743,59 +687,25 @@
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Footer -->
-            <div
-              class="bg-gray-50 dark:bg-gray-700/30 px-4 sm:px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex flex-col-reverse sm:flex-row gap-3 justify-end sticky bottom-0"
-            >
-              <button
-                @click="closeModal"
-                class="w-full sm:w-auto px-6 py-2.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 transition-colors font-medium"
-              >
-                انصراف
-              </button>
-
-              <button
-                @click="saveRecipe"
-                :disabled="isSaving || !formData.name"
-                class="w-full sm:w-auto px-6 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2 shadow-lg shadow-primary-500/30"
-              >
-                <svg
-                  v-if="isSaving"
-                  class="animate-spin h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-
-                {{
-                  isSaving
-                    ? 'در حال ذخیره...'
-                    : isEditing
-                      ? 'ذخیره تغییرات'
-                      : 'ساخت رسپی'
-                }}
-              </button>
-            </div>
-          </div>
+      <template #footer>
+        <div class="app-modal-actions">
+          <button type="button" @click="closeModal" class="app-modal-btn app-modal-btn-secondary">انصراف</button>
+          <button
+            type="button"
+            @click="saveRecipe"
+            :disabled="isSaving || !formData.name"
+            class="app-modal-btn app-modal-btn-primary"
+          >
+            <svg v-if="isSaving" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {{ isSaving ? 'در حال ذخیره...' : isEditing ? 'ذخیره تغییرات' : 'ساخت رسپی' }}
+          </button>
         </div>
-      </div>
-    </Teleport>
+      </template>
+    </AppModal>
 
     <!-- ============================================================ -->
     <!-- پیام موفقیت/خطا -->
@@ -849,6 +759,7 @@
 </template>
 
 <script setup lang="ts">
+import AppModal from '@/components/common/AppModal.vue';
 import { ref, reactive, onMounted, computed } from 'vue';
 import { useRecipeStore } from '@/store/modules/recipeStore';
 import { useTargetStore } from '@/store/modules/targetStore';
@@ -1238,3 +1149,5 @@ onMounted(async () => {
   pointer-events: auto;
 }
 </style>
+
+

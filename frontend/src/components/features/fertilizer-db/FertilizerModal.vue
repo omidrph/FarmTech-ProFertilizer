@@ -1,67 +1,18 @@
 <!-- frontend/src/components/features/fertilizer-db/FertilizerModal.vue -->
 <template>
-  <Teleport to="body">
-    <div 
-      v-if="isOpen" 
-      class="fixed inset-0 z-[100] overflow-y-auto"
-      aria-labelledby="modal-title" 
-      role="dialog" 
-      aria-modal="true"
-    >
-      <!-- پس‌زمینه تاریک -->
-      <div 
-        class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" 
-        @click="isMobile ? null : $emit('close')"
-      ></div>
+  <AppModal
+    :open="isOpen"
+    size="xl"
+    :title="isEditing ? 'ویرایش کود' : 'افزودن کود شخصی'"
+    :subtitle="isEditing ? 'تغییرات را اعمال کنید' : 'اطلاعات کود جدید را وارد کنید'"
+    @close="$emit('close')"
+  >
+    <template #icon>
+      <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+      </svg>
+    </template>
 
-      <!-- کانتینر مودال -->
-      <div 
-        class="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4"
-        @click.self="isMobile ? null : $emit('close')"
-      >
-        <div 
-          class="relative transform overflow-hidden bg-white dark:bg-gray-800 text-right shadow-xl transition-all w-full sm:w-auto sm:max-w-4xl sm:rounded-xl"
-          :class="isMobile ? 'h-full max-h-screen rounded-none' : 'sm:my-6 max-h-[95vh]'"
-          style="max-height: 100vh;"
-        >
-          <!-- ============================================================ -->
-          <!-- هدر مودال - ارتفاع یکپارچه با سایر مودال‌ها (py-4) -->
-          <!-- ============================================================ -->
-          <div class="bg-gradient-to-l from-primary-600 to-primary-700 dark:from-primary-800 dark:to-primary-900 px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-20">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                </svg>
-              </div>
-              <div class="min-w-0">
-                <h3 id="modal-title" class="text-lg sm:text-xl font-bold text-white truncate">
-                  {{ isEditing ? 'ویرایش کود' : 'افزودن کود شخصی' }}
-                </h3>
-                <p class="text-xs text-primary-100/80 hidden sm:block">
-                  {{ isEditing ? 'تغییرات را اعمال کنید' : 'اطلاعات کود جدید را وارد کنید' }}
-                </p>
-              </div>
-            </div>
-            <button 
-              @click="$emit('close')" 
-              class="text-white/70 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10 flex-shrink-0"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          <!-- ============================================================ -->
-          <!-- بدنه مودال -->
-          <!-- ============================================================ -->
-          <div 
-            class="px-3 sm:px-6 py-4 overflow-y-auto"
-            :class="isMobile ? 'pb-24' : ''"
-            style="max-height: calc(100vh - 130px);"
-            ref="modalBodyRef"
-          >
             
             <!-- هشدارها -->
             <div v-if="!formData.name && isTouched" class="bg-danger-50 dark:bg-danger-900/20 border-r-4 border-danger-500 rounded-lg p-2.5 mb-3 flex items-center gap-2">
@@ -366,39 +317,29 @@
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- ============================================================ -->
-          <!-- فوتر مودال - چسبیده به پایین -->
-          <!-- ============================================================ -->
-          <div 
-            class="bg-gray-50 dark:bg-gray-700/30 px-3 sm:px-6 py-3 border-t border-gray-200 dark:border-gray-600 sticky bottom-0 z-10"
-            :class="isMobile ? 'shadow-[0_-4px_12px_rgba(0,0,0,0.05)]' : ''"
-          >
-            <button 
-              @click="handleSave" 
-              :disabled="isSaving || !formData.name || totalElementsPercentage > 100"
-              class="w-full py-2.5 sm:py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-sm hover:shadow-md"
-            >
-              <span v-if="isSaving" class="flex items-center justify-center gap-2">
-                <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                </svg>
-                <span>در حال ذخیره...</span>
-              </span>
-              <span v-else>
-                {{ isEditing ? 'ذخیره تغییرات' : 'افزودن کود' }}
-              </span>
-            </button>
-          </div>
-        </div>
+    <template #footer>
+      <div class="app-modal-actions">
+        <button type="button" @click="$emit('close')" class="app-modal-btn app-modal-btn-secondary">انصراف</button>
+        <button
+          type="button"
+          @click="handleSave"
+          :disabled="isSaving || !formData.name || totalElementsPercentage > 100"
+          class="app-modal-btn app-modal-btn-primary"
+        >
+          <svg v-if="isSaving" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          {{ isSaving ? 'در حال ذخیره...' : (isEditing ? 'ذخیره تغییرات' : 'افزودن کود') }}
+        </button>
       </div>
-    </div>
-  </Teleport>
+    </template>
+  </AppModal>
 </template>
 
 <script setup lang="ts">
+import AppModal from '@/components/common/AppModal.vue';
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 
 // ============================================================
@@ -454,7 +395,6 @@ const emit = defineEmits<{
 // ============================================================
 const isTouched = ref(false);
 const isMobile = ref(window.innerWidth < 640);
-const modalBodyRef = ref<HTMLElement | null>(null);
 
 const elementsList = [
   'N-NO3', 'N-NH4', 'P', 'K', 'Ca', 'Mg', 'S', 
@@ -631,3 +571,5 @@ input:focus, select:focus, textarea:focus {
   outline: none;
 }
 </style>
+
+

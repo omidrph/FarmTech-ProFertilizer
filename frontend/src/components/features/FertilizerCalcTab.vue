@@ -1,4 +1,3 @@
-
 <!-- frontend/src/components/features/FertilizerCalcTab.vue -->
 <!--
   ============================================================
@@ -310,30 +309,29 @@
     <!-- ============================================================ -->
     <!-- تأیید بازنشانی -->
     <!-- ============================================================ -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="showResetConfirm" class="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/50" @click.self="showResetConfirm = false">
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm p-5">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">بازنشانی محاسبه</h3>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-              کودهای انتخاب‌شده، تنظیمات استوک و نتیجه فعلی پاک می‌شوند. ادامه می‌دهید؟
-            </p>
-            <div class="flex items-center justify-end gap-2 mt-5">
-              <button
-                type="button"
-                @click="showResetConfirm = false"
-                class="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >انصراف</button>
-              <button
-                type="button"
-                @click="resetAll"
-                class="px-4 py-2 text-sm font-medium rounded-lg text-white bg-rose-600 hover:bg-rose-700"
-              >بازنشانی</button>
-            </div>
-          </div>
+    <AppModal
+      :open="showResetConfirm"
+      size="sm"
+      title="بازنشانی محاسبه"
+      @close="showResetConfirm = false"
+    >
+      <template #icon>
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </template>
+
+      <p class="text-sm text-gray-600 dark:text-gray-300 leading-7">
+        کودهای انتخاب‌شده، تنظیمات استوک و نتیجه فعلی پاک می‌شوند. ادامه می‌دهید؟
+      </p>
+
+      <template #footer>
+        <div class="app-modal-actions">
+          <button type="button" @click="showResetConfirm = false" class="app-modal-btn app-modal-btn-secondary">انصراف</button>
+          <button type="button" @click="resetAll" class="app-modal-btn app-modal-btn-danger">بازنشانی</button>
         </div>
-      </Transition>
-    </Teleport>
+      </template>
+    </AppModal>
 
     <!-- ============================================================ -->
     <!-- پیام‌ها -->
@@ -342,7 +340,7 @@
       <Transition name="fade">
         <div
           v-if="toastMessage"
-          class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[320] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 max-w-[92vw]"
+          class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-5 py-3 rounded-xl shadow-2xl flex items-center gap-2 max-w-[92vw]"
           :class="toastType === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
         >
           <svg v-if="toastType === 'success'" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,6 +365,7 @@ import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
 
+import AppModal from '@/components/common/AppModal.vue';
 import StockSettings from './calc/StockSettings.vue';
 import FertilizerSelector from './calc/FertilizerSelector.vue';
 import OptimizationResult from './calc/OptimizationResult.vue';
@@ -566,7 +565,8 @@ const syncRestoredState = () => {
 const isStepDone = (step: StepId): boolean => {
   if (step === 1) return currentStep.value > 1;
   if (step === 2) return hasOptimizationResult.value;
-  return false;
+  // مرحله «نتیجه» به‌محض وجود نتیجه‌ی محاسبه، مثل بقیه‌ی مراحل سبز و تیک‌دار می‌شود
+  return hasOptimizationResult.value;
 };
 
 const isStepReachable = (step: StepId): boolean => {
@@ -729,7 +729,3 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   opacity: 0;
 }
 </style>
-
-
-
-================================================================================
