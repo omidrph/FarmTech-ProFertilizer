@@ -9,8 +9,8 @@
   سه حالت:
     ۱) گزارشی باز نیست        ← گزارش‌های اخیر
     ۲) گزارش باز، بدون محاسبه ← کارت «گام بعدی»
-    ۳) محاسبه انجام شده        ← داشبورد: کارت اصلی با نمودار دایره‌ای، حلقه‌های عناصر،
-                                 تعادل یونی، مخازن، هشدارها و اقدام‌های سریع
+    ۳) محاسبه انجام شده        ← داشبورد: کارت اصلی با نمودار دایره‌ای،
+                                 حلقه‌های عناصر، تعادل یونی، مخازن، هشدارها و اقدامات سریع
   ============================================================
 -->
 <template>
@@ -28,9 +28,9 @@
     <!-- خطا -->
     <div
       v-else-if="error"
-      class="flex items-center justify-between gap-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 px-4 py-3"
+      class="flex items-center justify-between gap-3 rounded-xl border border-rose-200 dark:border-rose-700/60 bg-rose-50 dark:bg-rose-950/40 px-4 py-3"
     >
-      <p class="text-sm text-rose-700 dark:text-rose-400">{{ error }}</p>
+      <p class="text-sm text-rose-700 dark:text-rose-300">{{ error }}</p>
       <button
         type="button"
         @click="loadDashboardData"
@@ -69,6 +69,7 @@
         :cost-text="costText"
         :fertilizers-count="fertilizerCount"
         :is-exporting="isExporting"
+        :last-updated-text="lastUpdatedText"
         @view-details="emit('navigate', 'fertilizer-calc')"
         @export-pdf="handleExportPdf"
       />
@@ -269,7 +270,7 @@ const skipStep = (key: string) => {
 // Computed: وضعیت کلی نتیجه
 // ============================================================
 const result = computed(() => calcStore.optimizationResult);
-// تعادل یونی خودِ فرمول (از نتیجه‌ی محاسبه)؛ اگر نبود، از تعادل عناصر هدف
+
 const ionSource = computed(() => {
   const fromResult = result.value?.ion_balance;
   if (fromResult && (Number(fromResult.cation) > 0 || Number(fromResult.anion) > 0)) return fromResult;
@@ -309,9 +310,11 @@ const statusSubtitle = computed(
 const accuracyText = computed(() =>
   accuracy.value.toLocaleString('fa-IR', { maximumFractionDigits: 1 })
 );
+
 const ecText = computed(() =>
   ec.value.toLocaleString('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 );
+
 const costText = computed(() => Math.round(calcStore.totalCost || 0).toLocaleString('fa-IR'));
 
 const activeElementsCount = computed(() =>
@@ -327,17 +330,21 @@ const fertilizerCount = computed(() =>
   Object.values(result.value?.weights || {}).filter(value => Number(value) > 0).length
 );
 
+// آخرین به‌روزرسانی: اگر گزارش تازه بارگذاری شده باشد، خالی است
+const lastUpdatedText = computed(() => '');
+
 // ============================================================
 // Computed: هشدارهای کوتاه (حداکثر ۳ مورد)
 // ============================================================
 const attentionItems = computed(() => {
-  const items: Array<{ text: string; danger: boolean }> = [];
+  const items: Array<{ text: string; danger: boolean; hint?: string }> = [];
 
   if (!ionBalanced.value && ionSource.value) {
     const diff = Math.abs(ionSource.value.cation - ionSource.value.anion);
     items.push({
       text: `اختلاف کاتیون و آنیون ${diff.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} meq/L است`,
-      danger: true
+      danger: true,
+      hint: 'تعادل یونی برای جذب بهینه عناصر ضروری است'
     });
   }
 
@@ -356,20 +363,30 @@ const attentionItems = computed(() => {
   if (deficient.length) {
     items.push({
       text: `${deficient.slice(0, 3).join('، ')}${deficient.length > 3 ? ' و ...' : ''} کمتر از ۷۰٪ هدف است`,
-      danger: false
+      danger: false,
+      hint: 'افزایش این عناصر با استفاده از کود مناسب'
     });
   }
   if (excessive.length) {
     items.push({
       text: `${excessive.slice(0, 3).join('، ')}${excessive.length > 3 ? ' و ...' : ''} بیشتر از ۱۳۰٪ هدف است`,
-      danger: false
+      danger: false,
+      hint: 'کاهش این عناصر یا استفاده از کود با درصد کمتر'
     });
   }
 
   if (ec.value > 3.5) {
-    items.push({ text: `EC بسیار بالا است (${ecText.value} dS/m)؛ خطر شوری`, danger: true });
+    items.push({
+      text: `EC بسیار بالا است (${ecText.value} dS/m)؛ خطر شوری`,
+      danger: true,
+      hint: 'کاهش غلظت کودها یا استفاده از آب با کیفیت‌تر'
+    });
   } else if (ec.value < 0.8) {
-    items.push({ text: `EC پایین است (${ecText.value} dS/m)`, danger: false });
+    items.push({
+      text: `EC پایین است (${ecText.value} dS/m)`,
+      danger: false,
+      hint: 'افزایش غلظت کودها متناسب با نیاز گیاه'
+    });
   }
 
   return items.slice(0, 3);

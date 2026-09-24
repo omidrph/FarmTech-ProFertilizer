@@ -1,100 +1,141 @@
 <!-- frontend/src/components/features/home/HomeHeroCard.vue -->
 <!--
-  کارت اصلی صفحه خانه بعد از محاسبه:
-  نمودار دایره‌ای بزرگ «دقت رسیدن به هدف» + وضعیت فرمول + شاخص‌های کلیدی + دکمه‌های اصلی
+  کارت اصلی صفحه خانه: نمای کلی وضعیت فرمول
+  ------------------------------------------------------------
+  - نوار وضعیت بالای کارت با یک جمله خلاصه + آخرین به‌روزرسانی
+  - نمودار دایره‌ای بزرگ «دقت رسیدن به هدف»
+  - سه شاخص کلیدی (EC، هزینه، تعداد کود)
+  - دو دکمه اصلی
 -->
 <template>
-  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-    <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
-
-      <!-- نمودار دایره‌ای بزرگ (روی موبایل کمی کوچک‌تر) -->
-      <div class="relative w-[128px] h-[128px] sm:w-[150px] sm:h-[150px] flex-shrink-0">
-        <svg viewBox="0 0 150 150" class="w-full h-full" role="img" :aria-label="`دقت ${accuracyText} درصد`">
-          <circle cx="75" cy="75" r="62" fill="none" stroke-width="12" class="stroke-gray-100 dark:stroke-gray-700" />
-          <circle
-            cx="75" cy="75" r="62" fill="none" stroke-width="12" stroke-linecap="round"
-            stroke="currentColor"
-            :class="[ringColor, 'ring-progress']"
-            :stroke-dasharray="CIRC"
-            :stroke-dashoffset="offset"
-            transform="rotate(-90 75 75)"
-          />
-        </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center">
-          <span class="text-[26px] sm:text-3xl font-bold tabular-nums leading-tight" :class="ringColor">{{ accuracyText }}٪</span>
-          <span class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">دقت هدف</span>
-        </div>
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+    <!-- نوار وضعیت -->
+    <div
+      class="px-4 sm:px-6 py-3 border-b flex items-center justify-between gap-3"
+      :class="statusBarClasses"
+    >
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span class="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center" :class="statusIconWrapClasses">
+          <svg v-if="tone === 'good'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+          <svg v-else-if="tone === 'warn'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          </svg>
+          <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </span>
+        <span class="text-sm font-medium truncate" :class="statusTextClasses">{{ statusBarText }}</span>
       </div>
+      <span v-if="lastUpdatedText" class="text-[11px] flex-shrink-0 hidden sm:inline" :class="statusTextClasses">
+        {{ lastUpdatedText }}
+      </span>
+    </div>
 
-      <!-- وضعیت و شاخص‌ها -->
-      <div class="flex-1 min-w-0 w-full">
-        <div class="flex items-start justify-center sm:justify-start gap-2">
-          <!-- آیکون وضعیت: حرفه‌ای و متناسب با هر حالت -->
-          <span class="w-7 h-7 sm:w-8 sm:h-8 mt-0.5 rounded-full flex items-center justify-center flex-shrink-0 text-white shadow-sm" :class="badgeClass">
-            <!-- وضعیت مطلوب: تیک -->
-            <svg v-if="tone === 'good'" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
-            </svg>
+    <!-- بدنه اصلی -->
+    <div class="p-4 sm:p-6">
+      <div class="flex flex-col sm:flex-row items-center gap-4 sm:gap-8">
 
-            <!-- وضعیت نیازمند بررسی: مثلث هشدار -->
-            <svg v-else-if="tone === 'warn'" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-            </svg>
-
-            <!-- وضعیت بحرانی: ضربدر داخل دایره -->
-            <svg v-else class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </span>
-          <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-7 text-center sm:text-right">{{ title }}</h3>
+        <!-- نمودار دایره‌ای -->
+        <div class="relative w-[132px] h-[132px] sm:w-[156px] sm:h-[156px] flex-shrink-0">
+          <svg viewBox="0 0 150 150" class="w-full h-full" role="img" :aria-label="`دقت ${accuracyText} درصد`">
+            <circle cx="75" cy="75" r="62" fill="none" stroke-width="10" class="stroke-gray-100 dark:stroke-gray-700/60" />
+            <circle
+              cx="75" cy="75" r="62" fill="none" stroke-width="10" stroke-linecap="round"
+              stroke="currentColor"
+              :class="[ringColor, 'ring-progress']"
+              :stroke-dasharray="CIRC"
+              :stroke-dashoffset="offset"
+              transform="rotate(-90 75 75)"
+            />
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <span class="text-[28px] sm:text-[34px] font-bold tabular-nums leading-none" :class="ringColor">
+              {{ accuracyText }}<span class="text-lg">٪</span>
+            </span>
+            <span class="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">دقت هدف</span>
+          </div>
         </div>
-        <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center sm:text-right leading-5">{{ subtitle }}</p>
 
-        <!-- شاخص‌ها: موبایل = لیست ردیفی، دسکتاپ = سه ستون -->
-        <dl class="mt-4 rounded-xl bg-gray-50 dark:bg-gray-700/30 divide-y divide-gray-200/70 dark:divide-gray-600/50 sm:bg-transparent sm:dark:bg-transparent sm:divide-y-0 sm:rounded-none sm:grid sm:grid-cols-3 sm:gap-4">
-          <div class="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:px-0 sm:py-0">
-            <dt class="text-xs text-gray-500 dark:text-gray-400">EC نهایی</dt>
-            <dd class="sm:mt-0.5 text-base sm:text-lg font-bold tabular-nums whitespace-nowrap" :class="ecOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'">
-              {{ ecText }} <span class="text-[11px] font-normal text-gray-400">dS/m</span>
-            </dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:px-0 sm:py-0">
-            <dt class="text-xs text-gray-500 dark:text-gray-400">هزینه فرمول</dt>
-            <dd class="sm:mt-0.5 text-base sm:text-lg font-bold tabular-nums whitespace-nowrap text-gray-900 dark:text-white">
-              {{ costText }} <span class="text-[11px] font-normal text-gray-400">تومان</span>
-            </dd>
-          </div>
-          <div class="flex items-baseline justify-between gap-3 px-3 py-2.5 sm:block sm:px-0 sm:py-0">
-            <dt class="text-xs text-gray-500 dark:text-gray-400">کودهای فرمول</dt>
-            <dd class="sm:mt-0.5 text-base sm:text-lg font-bold tabular-nums whitespace-nowrap text-gray-900 dark:text-white">
-              {{ fertilizersCount.toLocaleString('fa-IR') }} <span class="text-[11px] font-normal text-gray-400">کود</span>
-            </dd>
-          </div>
-        </dl>
+        <!-- محتوا -->
+        <div class="flex-1 min-w-0 w-full">
+          <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-7 text-center sm:text-right">
+            {{ title }}
+          </h3>
+          <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 text-center sm:text-right leading-5">
+            {{ subtitle }}
+          </p>
 
-        <!-- دکمه‌ها: موبایل = زیر هم و تمام‌عرض، دسکتاپ = کنار هم -->
-        <div class="mt-4 sm:mt-5 flex flex-col sm:flex-row sm:flex-wrap gap-2">
-          <button
-            type="button"
-            @click="emit('view-details')"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors"
-          >
-            مشاهده نتیجه کامل
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            @click="emit('export-pdf')"
-            :disabled="isExporting"
-            class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-5 py-3 sm:py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3M12 3v7" />
-            </svg>
-            {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
-          </button>
+          <!-- شاخص‌ها -->
+          <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 px-3 py-2.5">
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                EC نهایی
+              </p>
+              <p class="mt-1 text-base sm:text-lg font-bold tabular-nums leading-tight"
+                 :class="ecOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'">
+                {{ ecText }}<span class="text-[11px] font-normal text-gray-400 mr-1"> dS/m</span>
+              </p>
+            </div>
+
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 px-3 py-2.5">
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7.5A1.5 1.5 0 014.5 6h13A1.5 1.5 0 0119 7.5V9H4.5A1.5 1.5 0 013 7.5z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9h16.5A1.5 1.5 0 0121 10.5v7a1.5 1.5 0 01-1.5 1.5H4.5A1.5 1.5 0 013 17.5V9z" />
+                </svg>
+                هزینه فرمول
+              </p>
+              <p class="mt-1 text-base sm:text-lg font-bold tabular-nums leading-tight text-gray-900 dark:text-white">
+                {{ costText }}<span class="text-[11px] font-normal text-gray-400 mr-1"> تومان</span>
+              </p>
+            </div>
+
+            <div class="rounded-xl bg-gray-50 dark:bg-gray-700/30 border border-gray-100 dark:border-gray-700 px-3 py-2.5">
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+                کودهای فرمول
+              </p>
+              <p class="mt-1 text-base sm:text-lg font-bold tabular-nums leading-tight text-gray-900 dark:text-white">
+                {{ fertilizersCount.toLocaleString('fa-IR') }}<span class="text-[11px] font-normal text-gray-400 mr-1"> کود</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- دکمه‌ها -->
+          <div class="mt-5 flex flex-col sm:flex-row gap-2">
+            <button
+              type="button"
+              @click="emit('view-details')"
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors shadow-sm hover:shadow-md"
+            >
+              مشاهده نتیجه کامل
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              @click="emit('export-pdf')"
+              :disabled="isExporting"
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <svg v-if="!isExporting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3M12 3v7" />
+              </svg>
+              <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -104,18 +145,22 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
 
-const props = defineProps<{
-  tone: 'good' | 'warn' | 'bad';
-  title: string;
-  subtitle: string;
-  accuracy: number;
-  accuracyText: string;
-  ecText: string;
-  ecOutOfRange: boolean;
-  costText: string;
-  fertilizersCount: number;
-  isExporting: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    tone: 'good' | 'warn' | 'bad';
+    title: string;
+    subtitle: string;
+    accuracy: number;
+    accuracyText: string;
+    ecText: string;
+    ecOutOfRange: boolean;
+    costText: string;
+    fertilizersCount: number;
+    isExporting: boolean;
+    lastUpdatedText?: string;
+  }>(),
+  { lastUpdatedText: '' }
+);
 
 const emit = defineEmits<{
   (e: 'view-details'): void;
@@ -124,7 +169,6 @@ const emit = defineEmits<{
 
 const CIRC = 2 * Math.PI * 62;
 
-// حلقه از صفر شروع می‌شود و بعد از نمایش، به مقدار واقعی پر می‌شود
 const ready = ref(false);
 onMounted(() => {
   requestAnimationFrame(() => {
@@ -132,7 +176,9 @@ onMounted(() => {
   });
 });
 
-const offset = computed(() => CIRC * (1 - (ready.value ? Math.max(0, Math.min(100, props.accuracy)) : 0) / 100));
+const offset = computed(
+  () => CIRC * (1 - (ready.value ? Math.max(0, Math.min(100, props.accuracy)) : 0) / 100)
+);
 
 const ringColor = computed(() =>
   props.tone === 'good'
@@ -142,21 +188,42 @@ const ringColor = computed(() =>
       : 'text-rose-500'
 );
 
-const badgeClass = computed(() =>
-  props.tone === 'good' ? 'bg-emerald-500' : props.tone === 'warn' ? 'bg-amber-500' : 'bg-rose-500'
-);
+const statusBarClasses = computed(() => {
+  if (props.tone === 'good')
+    return 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-100 dark:border-emerald-800/60';
+  if (props.tone === 'warn')
+    return 'bg-amber-50 dark:bg-amber-950/40 border-amber-100 dark:border-amber-800/60';
+  return 'bg-rose-50 dark:bg-rose-950/40 border-rose-100 dark:border-rose-800/60';
+});
+
+const statusIconWrapClasses = computed(() => {
+  if (props.tone === 'good')
+    return 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400';
+  if (props.tone === 'warn')
+    return 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400';
+  return 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400';
+});
+
+const statusTextClasses = computed(() => {
+  if (props.tone === 'good') return 'text-emerald-700 dark:text-emerald-300';
+  if (props.tone === 'warn') return 'text-amber-700 dark:text-amber-300';
+  return 'text-rose-700 dark:text-rose-300';
+});
+
+const statusBarText = computed(() => {
+  if (props.tone === 'good') return 'وضعیت فرمول: مطلوب و آماده استفاده';
+  if (props.tone === 'warn') return 'وضعیت فرمول: نیازمند بررسی';
+  return 'وضعیت فرمول: نیازمند اصلاح';
+});
 </script>
 
 <style scoped>
 .ring-progress {
-  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: stroke-dashoffset 1.1s cubic-bezier(0.22, 1, 0.36, 1);
 }
 @media (prefers-reduced-motion: reduce) {
   .ring-progress {
     transition: none;
   }
 }
-/* کلاس کمکی برای سایزهای دلخواه */
-.w-4\.5 { width: 1.125rem; }
-.h-4\.5 { height: 1.125rem; }
 </style>

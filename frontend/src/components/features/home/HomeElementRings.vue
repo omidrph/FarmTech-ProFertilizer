@@ -1,61 +1,94 @@
 <!-- frontend/src/components/features/home/HomeElementRings.vue -->
 <!--
-  «پوشش عناصر هدف» با حلقه‌های کوچک (همان منطق صفحه‌ی نتیجه):
-    • حلقه‌ی اصلی = رسیدن به هدف (حداکثر ۱۰۰٪)
-    • حلقه‌ی نازک بیرونی = بیش‌تأمین
-    • رنگ: سبز (تا ۳٪ فاصله)، کهربایی (تا ۱۰٪)، قرمز (بیشتر)
-  عناصر مشکل‌دار اول نمایش داده می‌شوند؛ حداکثر ۶ عنصر، و دکمه‌ی «نمایش همه».
+  «پوشش عناصر هدف» با حلقه‌های کوچک
+  ------------------------------------------------------------
+  - هر حلقه: درصد دستیابی به هدف
+  - حلقه نازک بیرونی: بیش‌تأمین
+  - رنگ: سبز (تا ۳٪)، کهربایی (تا ۱۰٪)، رز (بیشتر)
+  - عناصر مشکل‌دار اول نمایش داده می‌شوند
 -->
 <template>
-  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
-    <div class="flex items-center justify-between gap-3 mb-4">
-      <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white">پوشش عناصر هدف</h3>
-      <span class="text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-        {{ visibleRows.length.toLocaleString('fa-IR') }} از {{ rows.length.toLocaleString('fa-IR') }} عنصر
-      </span>
-    </div>
-
-    <div v-if="rows.length" class="grid grid-cols-3 sm:grid-cols-4 gap-3">
-      <div
-        v-for="row in visibleRows"
-        :key="row.element"
-        class="flex flex-col items-center gap-1"
-      >
-        <svg width="72" height="72" viewBox="0 0 72 72" role="img" :aria-label="`${row.element}: ${row.percentLabel}`">
-          <circle cx="36" cy="36" r="26" fill="none" stroke-width="7" class="stroke-gray-100 dark:stroke-gray-700" />
-          <circle
-            cx="36" cy="36" r="26" fill="none" stroke-width="7" stroke-linecap="round"
-            stroke="currentColor" :class="[row.ringClass, 'ring-progress']"
-            :stroke-dasharray="RING_CIRC"
-            :stroke-dashoffset="ready ? row.innerOffset : RING_CIRC"
-            transform="rotate(-90 36 36)"
-          />
-          <circle
-            v-if="row.overshootOffset !== null"
-            cx="36" cy="36" r="33" fill="none" stroke-width="3" stroke-linecap="round"
-            stroke="currentColor" class="text-rose-500 ring-progress"
-            :stroke-dasharray="OUTER_CIRC"
-            :stroke-dashoffset="ready ? row.overshootOffset : OUTER_CIRC"
-            transform="rotate(-90 36 36)"
-          />
-          <text x="36" y="34" text-anchor="middle" class="fill-gray-900 dark:fill-white" style="font-size:11px;font-weight:700">{{ row.element }}</text>
-          <text x="36" y="47" text-anchor="middle" :class="row.textClass" style="font-size:11px;font-weight:600">{{ row.percentLabel }}</text>
-        </svg>
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <!-- هدر -->
+    <header class="px-4 sm:px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <span class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
+          <svg class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8" stroke-width="2" />
+            <circle cx="12" cy="12" r="4" stroke-width="2" />
+            <circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+        <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white">پوشش عناصر هدف</h3>
       </div>
-    </div>
+      <span class="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+        {{ visibleRows.length.toLocaleString('fa-IR') }} از {{ rows.length.toLocaleString('fa-IR') }}
+      </span>
+    </header>
 
-    <p v-else class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">عنصر هدفی ثبت نشده است.</p>
+    <!-- حلقه‌ها -->
+    <div class="p-4 sm:p-5">
+      <div v-if="rows.length" class="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div
+          v-for="row in visibleRows"
+          :key="row.element"
+          class="flex flex-col items-center gap-1"
+        >
+          <svg width="76" height="76" viewBox="0 0 76 76" role="img" :aria-label="`${row.element}: ${row.percentLabel}`">
+            <!-- حلقه پایه -->
+            <circle cx="38" cy="38" r="26" fill="none" stroke-width="7" class="stroke-gray-100 dark:stroke-gray-700/60" />
+            <!-- حلقه اصلی: تا ۱۰۰٪ -->
+            <circle
+              cx="38" cy="38" r="26" fill="none" stroke-width="7" stroke-linecap="round"
+              stroke="currentColor" :class="[row.ringClass, 'ring-progress']"
+              :stroke-dasharray="RING_CIRC"
+              :stroke-dashoffset="ready ? row.innerOffset : RING_CIRC"
+              transform="rotate(-90 38 38)"
+            />
+            <!-- حلقه نازک بیرونی: بیش‌تأمین -->
+            <circle
+              v-if="row.overshootOffset !== null"
+              cx="38" cy="38" r="33" fill="none" stroke-width="3" stroke-linecap="round"
+              stroke="currentColor" class="text-rose-500 ring-progress"
+              :stroke-dasharray="OUTER_CIRC"
+              :stroke-dashoffset="ready ? row.overshootOffset : OUTER_CIRC"
+              transform="rotate(-90 38 38)"
+            />
+            <text x="38" y="36" text-anchor="middle" class="fill-gray-900 dark:fill-white" style="font-size:11px;font-weight:700">{{ row.element }}</text>
+            <text x="38" y="49" text-anchor="middle" :class="row.textClass" style="font-size:11px;font-weight:600">{{ row.percentLabel }}</text>
+          </svg>
+        </div>
+      </div>
 
-    <div v-if="rows.length" class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
-      <span class="text-[11px] text-gray-400 dark:text-gray-500">حلقه‌ی نازک قرمز = بیش‌تأمین</span>
-      <button
-        v-if="rows.length > LIMIT"
-        type="button"
-        @click="showAll = !showAll"
-        class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
-      >
-        {{ showAll ? 'نمایش کمتر' : `نمایش همه ${rows.length.toLocaleString('fa-IR')} عنصر` }}
-      </button>
+      <p v-else class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        عنصر هدفی ثبت نشده است.
+      </p>
+
+      <!-- پانوشت -->
+      <div v-if="rows.length" class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
+          <span class="flex items-center gap-1">
+            <i class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></i>
+            دقیق
+          </span>
+          <span class="flex items-center gap-1">
+            <i class="w-2 h-2 rounded-full bg-amber-500 inline-block"></i>
+            تا ۱۰٪
+          </span>
+          <span class="flex items-center gap-1">
+            <i class="w-2 h-2 rounded-full bg-rose-500 inline-block"></i>
+            بیشتر
+          </span>
+        </div>
+        <button
+          v-if="rows.length > LIMIT"
+          type="button"
+          @click="showAll = !showAll"
+          class="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline"
+        >
+          {{ showAll ? 'نمایش کمتر' : `نمایش همه ${rows.length.toLocaleString('fa-IR')} عنصر` }}
+        </button>
+      </div>
     </div>
   </section>
 </template>
@@ -71,7 +104,6 @@ const props = defineProps<{
 const LIMIT = 6;
 const RING_CIRC = 2 * Math.PI * 26;
 const OUTER_CIRC = 2 * Math.PI * 33;
-// یک دور کامل حلقه‌ی بیرونی = ۵۰٪ اضافه بر هدف
 const OVERSHOOT_FULL_AT = 0.5;
 
 const showAll = ref(false);
@@ -92,17 +124,17 @@ const rows = computed(() => {
   const list = entries.map(([element, targetRaw]) => {
     const target = Number(targetRaw);
     const actual = Number(props.concentrations?.[element] || 0);
-    const ratio = actual / target;
+    const ratio = target > 0 ? actual / target : 0;
     const absDeviation = Math.abs((ratio - 1) * 100);
 
     const level: Level = absDeviation <= 3 ? 'ok' : absDeviation <= 10 ? 'warn' : 'bad';
     const ringClass =
-      level === 'ok' ? 'text-emerald-500' : level === 'warn' ? 'text-amber-500' : 'text-rose-500';
+      level === 'ok' ? 'text-emerald-500 dark:text-emerald-400'
+        : level === 'warn' ? 'text-amber-500 dark:text-amber-400'
+          : 'text-rose-500 dark:text-rose-400';
     const textClass =
-      level === 'ok'
-        ? 'fill-emerald-600 dark:fill-emerald-400'
-        : level === 'warn'
-          ? 'fill-amber-600 dark:fill-amber-400'
+      level === 'ok' ? 'fill-emerald-600 dark:fill-emerald-400'
+        : level === 'warn' ? 'fill-amber-600 dark:fill-amber-400'
           : 'fill-rose-600 dark:fill-rose-400';
 
     const innerOffset = RING_CIRC * (1 - Math.min(ratio, 1));
@@ -124,7 +156,6 @@ const rows = computed(() => {
     };
   });
 
-  // مشکل‌دارها اول (بدترین بالاتر)؛ عناصر سالم به ترتیب اصلی می‌مانند
   return list.sort((a, b) => {
     if (a.level !== b.level) return levelOrder[a.level] - levelOrder[b.level];
     return a.level === 'ok' ? 0 : b.absDeviation - a.absDeviation;
