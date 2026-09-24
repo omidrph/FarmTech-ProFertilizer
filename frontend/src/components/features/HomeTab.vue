@@ -1,14 +1,4 @@
 <!-- frontend/src/components/features/HomeTab.vue -->
-<!--
-  ============================================================
-  صفحه خانه (داشبورد وضعیت)
-  ------------------------------------------------------------
-  سه حالت:
-    ۱) گزارشی باز نیست        ← گزارش‌های اخیر
-    ۲) گزارش باز، بدون محاسبه ← کارت «گام بعدی»
-    ۳) محاسبه انجام شده        ← داشبورد
-  ============================================================
--->
 <template>
   <div class="space-y-3 sm:space-y-4">
 
@@ -91,6 +81,8 @@
         <HomeAttentionList class="flex-1" :items="attentionItems" />
         <HomeQuickActions
           class="sm:mr-auto"
+          :is-recalculating="isRecalculating"
+          @recalculate="handleRecalculate"
           @edit-targets="emit('navigate', 'target-elements')"
         />
       </div>
@@ -150,6 +142,7 @@ const fertilizerStore = useFertilizerStore();
 // ============================================================
 const isLoading = ref(false);
 const error = ref<string | null>(null);
+const isRecalculating = ref(false);
 
 // ============================================================
 // Computed: وضعیت گزارش
@@ -324,7 +317,7 @@ const fertilizerCount = computed(() =>
 const lastUpdatedText = computed(() => '');
 
 // ============================================================
-// 🆕 متن خلاصه عناصر برای کارت اصلی (جایگزین متن تکراری)
+// متن خلاصه عناصر
 // ============================================================
 const heroSummaryText = computed(() => {
   const targets = targetStore.targetElements as Record<string, number>;
@@ -416,6 +409,61 @@ const attentionItems = computed(() => {
 
   return items.slice(0, 3);
 });
+
+// ============================================================
+// 🆕 محاسبه مجدد (بدون ترک صفحه)
+// ============================================================
+const handleRecalculate = async () => {
+  if (isRecalculating.value) return;
+
+  const selectedIds = fertilizerStore.selectedFertilizerIds || [];
+  const selectedFertilizers = (fertilizerStore.fertilizers || []).filter(
+    (f: any) => selectedIds.includes(f.id)
+  );
+
+  // اگر کودی انتخاب نشده، از آخرین کودهای استفاده‌شده در calcStore کمک بگیر
+  const fallbackFertilizers = (calcStore as any).lastFertilizersUsed || [];
+  const fertilizersToUse =
+    selectedFertilizers.length > 0 ? selectedFertilizers : fallbackFertilizers;
+
+  if (fertilizersToUse.length === 0) {
+    showToast(
+      'برای محاسبه مجدد، ابتدا از تب «محاسبه کود» حداقل یک کود انتخاب کنید.',
+      'error'
+    );
+    return;
+  }
+
+  if (!hasTargets.value) {
+    showToast('ابتدا عناصر هدف را تعریف کنید.', 'error');
+    return;
+  }
+
+  isRecalculating.value = true;
+  try {
+    const s = calcStore.stockSettings;
+
+    const res = await calcStore.optimizeFertilizers(
+      targetStore.targetElements as Record<string, number>,
+      waterStore.waterValues as Record<string, number>,
+      fertilizersToUse,
+      undefined,
+      s.tankVolume,
+      s.stockVolume,
+      s.injectionRatio
+    );
+
+    if (res) {
+      showToast('محاسبه مجدد با موفقیت انجام شد', 'success');
+    } else {
+      showToast(calcStore.lastOptimizationError || 'خطا در محاسبه مجدد', 'error');
+    }
+  } catch (err: any) {
+    showToast(err?.message || 'خطا در محاسبه مجدد', 'error');
+  } finally {
+    isRecalculating.value = false;
+  }
+};
 
 // ============================================================
 // خروجی PDF و پیام کوتاه

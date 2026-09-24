@@ -2,14 +2,14 @@
 <!--
   اقدامات سریع بعد از محاسبه
   ------------------------------------------------------------
-  - دکمه «محاسبه مجدد»: بدون تغییر صفحه، محاسبه را دوباره اجرا می‌کند
+  - دکمه «محاسبه مجدد»: event را به والد می‌فرستد
   - دکمه «ویرایش عناصر هدف»: به تب عناصر هدف می‌رود
 -->
 <template>
   <div class="flex flex-wrap items-center gap-2">
     <button
       type="button"
-      @click="handleRecalculate"
+      @click="emit('recalculate')"
       :disabled="isRecalculating"
       class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
     >
@@ -40,66 +40,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useTargetStore } from '@/store/modules/targetStore';
-import { useWaterStore } from '@/store/modules/waterStore';
-import { useCalcStore } from '@/store/modules/calcStore';
-import { useFertilizerStore } from '@/store/modules/fertilizerStore';
+withDefaults(
+  defineProps<{
+    isRecalculating?: boolean;
+  }>(),
+  { isRecalculating: false }
+);
 
 const emit = defineEmits<{
+  (e: 'recalculate'): void;
   (e: 'edit-targets'): void;
 }>();
-
-const targetStore = useTargetStore();
-const waterStore = useWaterStore();
-const calcStore = useCalcStore();
-const fertilizerStore = useFertilizerStore();
-
-const isRecalculating = ref(false);
-
-const handleRecalculate = async () => {
-  if (isRecalculating.value) return;
-
-  // اطمینان از وجود نیازمندی‌های محاسبه
-  const selectedIds = fertilizerStore.selectedFertilizerIds || [];
-  const selectedFertilizers = (fertilizerStore.fertilizers || []).filter(
-    (f: any) => selectedIds.includes(f.id)
-  );
-
-  if (selectedFertilizers.length === 0) {
-    // اگر کودی انتخاب نشده، از ردیف‌های محاسبه قبلی استفاده کن
-    const fallback = (calcStore as any).lastFertilizersUsed || [];
-    if (fallback.length === 0) {
-      // در نهایت به تب محاسبه هدایت کن
-      emit('edit-targets');
-      return;
-    }
-    await runOptimization(fallback);
-    return;
-  }
-
-  await runOptimization(selectedFertilizers);
-};
-
-const runOptimization = async (fertilizers: any[]) => {
-  isRecalculating.value = true;
-  try {
-    // از همان تنظیمات استوک ذخیره‌شده استفاده کن
-    const s = calcStore.stockSettings;
-
-    await calcStore.optimizeFertilizers(
-      targetStore.targetElements as Record<string, number>,
-      waterStore.waterValues as Record<string, number>,
-      fertilizers,
-      undefined,
-      s.tankVolume,
-      s.stockVolume,
-      s.injectionRatio
-    );
-  } catch (err) {
-    console.error('Recalculate error:', err);
-  } finally {
-    isRecalculating.value = false;
-  }
-};
 </script>
