@@ -1,0 +1,148 @@
+<!-- frontend/src/components/features/home/HomeHeroCard.vue -->
+<!--
+  کارت اصلی صفحه خانه بعد از محاسبه:
+  نمودار دایره‌ای بزرگ «دقت رسیدن به هدف» + وضعیت فرمول + شاخص‌های کلیدی + دکمه‌های اصلی
+-->
+<template>
+  <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 sm:p-6">
+    <div class="flex flex-col sm:flex-row items-center gap-5 sm:gap-8">
+
+      <!-- نمودار دایره‌ای بزرگ -->
+      <div class="relative w-[150px] h-[150px] flex-shrink-0">
+        <svg width="150" height="150" viewBox="0 0 150 150" role="img" :aria-label="`دقت ${accuracyText} درصد`">
+          <circle cx="75" cy="75" r="62" fill="none" stroke-width="12" class="stroke-gray-100 dark:stroke-gray-700" />
+          <circle
+            cx="75" cy="75" r="62" fill="none" stroke-width="12" stroke-linecap="round"
+            stroke="currentColor"
+            :class="[ringColor, 'ring-progress']"
+            :stroke-dasharray="CIRC"
+            :stroke-dashoffset="offset"
+            transform="rotate(-90 75 75)"
+          />
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span class="text-3xl font-bold tabular-nums leading-tight" :class="ringColor">{{ accuracyText }}٪</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">دقت هدف</span>
+        </div>
+      </div>
+
+      <!-- وضعیت و شاخص‌ها -->
+      <div class="flex-1 min-w-0 w-full text-center sm:text-right">
+        <div class="flex items-center justify-center sm:justify-start gap-2">
+          <span class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white" :class="badgeClass">
+            <svg v-if="tone === 'good'" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01" />
+            </svg>
+          </span>
+          <h3 class="text-lg font-bold text-gray-900 dark:text-white">{{ title }}</h3>
+        </div>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
+
+        <div class="mt-4 grid grid-cols-3 gap-3 text-center sm:text-right">
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">EC نهایی</p>
+            <p class="mt-0.5 text-lg font-bold tabular-nums" :class="ecOutOfRange ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white'">
+              {{ ecText }} <span class="text-[11px] font-normal text-gray-400">dS/m</span>
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">هزینه فرمول</p>
+            <p class="mt-0.5 text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+              {{ costText }} <span class="text-[11px] font-normal text-gray-400">تومان</span>
+            </p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">کودهای فرمول</p>
+            <p class="mt-0.5 text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+              {{ fertilizersCount.toLocaleString('fa-IR') }} <span class="text-[11px] font-normal text-gray-400">کود</span>
+            </p>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center justify-center sm:justify-start gap-2">
+          <button
+            type="button"
+            @click="emit('view-details')"
+            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium transition-colors"
+          >
+            مشاهده نتیجه کامل
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            @click="emit('export-pdf')"
+            :disabled="isExporting"
+            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3M12 3v7" />
+            </svg>
+            {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, onMounted } from 'vue';
+
+const props = defineProps<{
+  tone: 'good' | 'warn' | 'bad';
+  title: string;
+  subtitle: string;
+  accuracy: number;
+  accuracyText: string;
+  ecText: string;
+  ecOutOfRange: boolean;
+  costText: string;
+  fertilizersCount: number;
+  isExporting: boolean;
+}>();
+
+const emit = defineEmits<{
+  (e: 'view-details'): void;
+  (e: 'export-pdf'): void;
+}>();
+
+const CIRC = 2 * Math.PI * 62;
+
+// حلقه از صفر شروع می‌شود و بعد از نمایش، به مقدار واقعی پر می‌شود
+const ready = ref(false);
+onMounted(() => {
+  requestAnimationFrame(() => {
+    ready.value = true;
+  });
+});
+
+const offset = computed(() => CIRC * (1 - (ready.value ? Math.max(0, Math.min(100, props.accuracy)) : 0) / 100));
+
+const ringColor = computed(() =>
+  props.tone === 'good'
+    ? 'text-emerald-500'
+    : props.tone === 'warn'
+      ? 'text-amber-500'
+      : 'text-rose-500'
+);
+
+const badgeClass = computed(() =>
+  props.tone === 'good' ? 'bg-emerald-500' : props.tone === 'warn' ? 'bg-amber-500' : 'bg-rose-500'
+);
+</script>
+
+<style scoped>
+.ring-progress {
+  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress {
+    transition: none;
+  }
+}
+</style>

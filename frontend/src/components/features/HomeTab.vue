@@ -1,7 +1,7 @@
 <!-- frontend/src/components/features/HomeTab.vue -->
 <!--
   ============================================================
-  صفحه خانه (بازطراحی مینیمال)
+  صفحه خانه (داشبورد وضعیت)
   ------------------------------------------------------------
   فقط «وضعیت کلی» را نشان می‌دهد؛ جزئیات کامل در تب «محاسبه کود ← نتیجه» است.
   این فایل فقط منطق و داده را دارد؛ ظاهر هر حالت در پوشه‌ی home/ است.
@@ -9,7 +9,8 @@
   سه حالت:
     ۱) گزارشی باز نیست        ← گزارش‌های اخیر
     ۲) گزارش باز، بدون محاسبه ← کارت «گام بعدی»
-    ۳) محاسبه انجام شده        ← کارت وضعیت + هشدارهای کوتاه
+    ۳) محاسبه انجام شده        ← داشبورد: کارت اصلی با نمودار دایره‌ای، حلقه‌های عناصر،
+                                 تعادل یونی، مخازن، هشدارها و اقدام‌های سریع
   ============================================================
 -->
 <template>
@@ -55,22 +56,58 @@
       @skip="skipStep"
     />
 
-    <!-- ۳) نتیجه محاسبه: فقط وضعیت کلی -->
+    <!-- ۳) نتیجه محاسبه: داشبورد وضعیت -->
     <template v-else>
-      <HomeStatusCard
+      <HomeHeroCard
         :tone="tone"
         :title="statusTitle"
-        :ion-balanced="ionBalanced"
+        :subtitle="statusSubtitle"
+        :accuracy="accuracy"
         :accuracy-text="accuracyText"
         :ec-text="ecText"
         :ec-out-of-range="ecOutOfRange"
         :cost-text="costText"
-        :elements-count="activeElementsCount"
-        :reservoirs-count="activeReservoirsCount"
         :fertilizers-count="fertilizerCount"
+        :is-exporting="isExporting"
         @view-details="emit('navigate', 'fertilizer-calc')"
+        @export-pdf="handleExportPdf"
       />
-      <HomeAttentionList :items="attentionItems" />
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+        <HomeElementRings
+          class="lg:col-span-2"
+          :target-values="(targetStore.targetElements as Record<string, number>)"
+          :concentrations="result?.concentrations || {}"
+        />
+        <div class="space-y-3 sm:space-y-4">
+          <HomeIonBalance
+            :cation="Number(ionSource?.cation) || 0"
+            :anion="Number(ionSource?.anion) || 0"
+            :balanced="ionBalanced"
+          />
+          <HomeReservoirs :counts="reservoirCounts" />
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-start gap-3">
+        <HomeAttentionList class="flex-1" :items="attentionItems" />
+        <HomeQuickActions
+          class="sm:mr-auto"
+          @recalculate="emit('navigate', 'fertilizer-calc')"
+          @edit-targets="emit('navigate', 'target-elements')"
+        />
+      </div>
+
+      <!-- پیام کوتاه (مثلاً بعد از ساخت PDF) -->
+      <Transition name="home-toast">
+        <div
+          v-if="toastMessage"
+          class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] px-4 py-2.5 rounded-lg text-sm text-white shadow-lg max-w-[90vw]"
+          :class="toastType === 'error' ? 'bg-rose-600' : 'bg-emerald-600'"
+        >
+          {{ toastMessage }}
+        </div>
+      </Transition>
     </template>
   </div>
 </template>
@@ -83,11 +120,16 @@ import { useWaterStore } from '@/store/modules/waterStore';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useFertilizerStore } from '@/store/modules/fertilizerStore';
 import { apiService } from '@/services/apiService';
+import { usePdfExport } from '@/composables/usePdfExport';
 
 import HomeRecentReports from './home/HomeRecentReports.vue';
 import HomeSteps from './home/HomeSteps.vue';
 import type { HomeStepItem } from './home/HomeSteps.vue';
-import HomeStatusCard from './home/HomeStatusCard.vue';
+import HomeHeroCard from './home/HomeHeroCard.vue';
+import HomeElementRings from './home/HomeElementRings.vue';
+import HomeIonBalance from './home/HomeIonBalance.vue';
+import HomeReservoirs from './home/HomeReservoirs.vue';
+import HomeQuickActions from './home/HomeQuickActions.vue';
 import HomeAttentionList from './home/HomeAttentionList.vue';
 
 // ============================================================
@@ -227,8 +269,13 @@ const skipStep = (key: string) => {
 // Computed: وضعیت کلی نتیجه
 // ============================================================
 const result = computed(() => calcStore.optimizationResult);
-const ionBalance = computed(() => targetStore.ionBalance);
-const ionBalanced = computed(() => ionBalance.value?.isBalanced !== false);
+// تعادل یونی خودِ فرمول (از نتیجه‌ی محاسبه)؛ اگر نبود، از تعادل عناصر هدف
+const ionSource = computed(() => {
+  const fromResult = result.value?.ion_balance;
+  if (fromResult && (Number(fromResult.cation) > 0 || Number(fromResult.anion) > 0)) return fromResult;
+  return targetStore.ionBalance;
+});
+const ionBalanced = computed(() => ionSource.value?.isBalanced !== false);
 
 const accuracy = computed(() => {
   const values = Object.values(result.value?.target_achievement || {});
@@ -252,6 +299,13 @@ const statusTitle = computed(() => {
   return 'فرمول نیازمند اصلاح است';
 });
 
+const statusSubtitle = computed(
+  () =>
+    `${ionBalanced.value ? 'تعادل یونی مطلوب' : 'عدم تعادل یونی'} · ${
+      result.value?.is_converged === false ? 'محاسبه همگرا نشد' : 'محاسبه همگرا شد'
+    }`
+);
+
 const accuracyText = computed(() =>
   accuracy.value.toLocaleString('fa-IR', { maximumFractionDigits: 1 })
 );
@@ -264,9 +318,9 @@ const activeElementsCount = computed(() =>
   Object.values(targetStore.targetElements || {}).filter(v => Number(v) > 0).length
 );
 
-const activeReservoirsCount = computed(() => {
+const reservoirCounts = computed(() => {
   const data = calcStore.reservoirData;
-  return (['A', 'B', 'C'] as const).filter(key => (data?.[key]?.length || 0) > 0).length;
+  return { A: data?.A?.length || 0, B: data?.B?.length || 0, C: data?.C?.length || 0 };
 });
 
 const fertilizerCount = computed(() =>
@@ -279,8 +333,8 @@ const fertilizerCount = computed(() =>
 const attentionItems = computed(() => {
   const items: Array<{ text: string; danger: boolean }> = [];
 
-  if (!ionBalanced.value && ionBalance.value) {
-    const diff = Math.abs(ionBalance.value.cation - ionBalance.value.anion);
+  if (!ionBalanced.value && ionSource.value) {
+    const diff = Math.abs(ionSource.value.cation - ionSource.value.anion);
     items.push({
       text: `اختلاف کاتیون و آنیون ${diff.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} meq/L است`,
       danger: true
@@ -320,6 +374,51 @@ const attentionItems = computed(() => {
 
   return items.slice(0, 3);
 });
+
+// ============================================================
+// خروجی PDF و پیام کوتاه
+// ============================================================
+const { exportOptimizationPdf, isExporting } = usePdfExport();
+
+const toastMessage = ref<string | null>(null);
+const toastType = ref<'success' | 'error'>('success');
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = message;
+  toastType.value = type;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastMessage.value = null;
+  }, 3500);
+};
+
+const handleExportPdf = async () => {
+  if (!calcStore.optimizationResult) {
+    showToast('ابتدا محاسبه را انجام دهید', 'error');
+    return;
+  }
+
+  try {
+    const report: any = (reportStore as any).reportData || {};
+    await exportOptimizationPdf({
+      result: calcStore.optimizationResult,
+      fertilizers: fertilizerStore.fertilizers,
+      targetValues: targetStore.targetElements as Record<string, number>,
+      meta: {
+        reportName: report.reportName,
+        plantName: report.plantName,
+        season: report.season,
+        tankVolume: calcStore.stockSettings.tankVolume,
+        stockVolume: calcStore.stockSettings.stockVolume,
+        injectionRatio: calcStore.stockSettings.injectionRatio
+      }
+    });
+    showToast('فایل PDF آماده شد؛ در پنجره چاپ گزینه Save as PDF را انتخاب کنید', 'success');
+  } catch (err: any) {
+    showToast(err?.message || 'خطا در ساخت خروجی PDF', 'error');
+  }
+};
 
 // ============================================================
 // Methods
@@ -384,7 +483,20 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (toastTimer) clearTimeout(toastTimer);
   window.removeEventListener('report-changed', handleReportChanged);
   window.removeEventListener('report-reset', handleReportReset);
 });
 </script>
+
+<style scoped>
+.home-toast-enter-active,
+.home-toast-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.home-toast-enter-from,
+.home-toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+}
+</style>
