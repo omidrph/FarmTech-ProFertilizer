@@ -29,12 +29,21 @@
       <!-- وضعیت و شاخص‌ها -->
       <div class="flex-1 min-w-0 w-full">
         <div class="flex items-start justify-center sm:justify-start gap-2">
-          <span class="w-6 h-6 sm:w-7 sm:h-7 mt-0.5 rounded-full flex items-center justify-center flex-shrink-0 text-white" :class="badgeClass">
-            <svg v-if="tone === 'good'" class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <!-- آیکون وضعیت: حرفه‌ای و متناسب با هر حالت -->
+          <span class="w-7 h-7 sm:w-8 sm:h-8 mt-0.5 rounded-full flex items-center justify-center flex-shrink-0 text-white shadow-sm" :class="badgeClass">
+            <!-- وضعیت مطلوب: تیک -->
+            <svg v-if="tone === 'good'" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
             </svg>
-            <svg v-else class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01" />
+
+            <!-- وضعیت نیازمند بررسی: مثلث هشدار -->
+            <svg v-else-if="tone === 'warn'" class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+
+            <!-- وضعیت بحرانی: ضربدر داخل دایره -->
+            <svg v-else class="w-4 h-4 sm:w-4.5 sm:h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </span>
           <h3 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white leading-7 text-center sm:text-right">{{ title }}</h3>
@@ -147,4 +156,7 @@ const badgeClass = computed(() =>
     transition: none;
   }
 }
+/* کلاس کمکی برای سایزهای دلخواه */
+.w-4\.5 { width: 1.125rem; }
+.h-4\.5 { height: 1.125rem; }
 </style>
