@@ -88,7 +88,7 @@
 
         <!-- در بقیه‌ی تب‌ها: نوار باریک و فقط‌نمایشی -->
         <ReportBar
-          v-else
+          v-else-if="activeSubTab !== 'widgets'"
           :report-name="reportStore.reportData.reportName"
           :plant-name="reportStore.reportData.plantName"
           :season="reportStore.reportData.season"
@@ -145,6 +145,11 @@
             v-model:fertilizers="fertilizerStore.fertilizers"
             @delete-fertilizer="handleDeleteFertilizer"
           />
+        </div>
+
+        <!-- Widgets Sub Tab -->
+        <div v-else-if="activeSubTab === 'widgets'">
+          <WidgetsTab />
         </div>
       </div>
 
@@ -224,6 +229,7 @@ import ProfileModal from '@/components/layout/ProfileModal.vue';
 // Feature Components
 import ReportHeader from '@/components/features/ReportHeader.vue';
 import ReportBar from '@/components/features/ReportBar.vue';
+import WidgetsTab from '@/components/features/WidgetsTab.vue';
 import HomeTab from '@/components/features/HomeTab.vue';
 import WaterAnalysisTab from '@/components/features/WaterAnalysisTab.vue';
 import TargetElementsTab from '@/components/features/TargetElementsTab.vue';
@@ -293,6 +299,11 @@ const subTabs = [
     id: 'fertilizer-db',
     label: 'پایگاه داده کودها',
     icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
+  },
+  {
+    id: 'widgets',
+    label: 'ابزارک‌ها',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>`
   }
 ];
 
