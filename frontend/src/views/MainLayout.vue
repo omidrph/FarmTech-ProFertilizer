@@ -147,6 +147,11 @@
           />
         </div>
 
+        <!-- 🆕 PH Sub Tab (ماشین‌حساب pH - خارج از چرخه‌ی رسمی محاسبه) -->
+        <div v-else-if="activeSubTab === 'ph'">
+          <PhCalculatorTab />
+        </div>
+
         <!-- Widgets Sub Tab -->
         <div v-else-if="activeSubTab === 'widgets'">
           <WidgetsTab />
@@ -235,6 +240,7 @@ import WaterAnalysisTab from '@/components/features/WaterAnalysisTab.vue';
 import TargetElementsTab from '@/components/features/TargetElementsTab.vue';
 import FertilizerCalcTab from '@/components/features/FertilizerCalcTab.vue';
 import FertilizerDBTab from '@/components/features/FertilizerDBTab.vue';
+import PhCalculatorTab from '@/components/features/PhCalculatorTab.vue';
 import InterpretationTab from '@/components/features/InterpretationTab.vue';
 import EducationQuickStart from '@/components/features/EducationQuickStart.vue';
 import EducationFAQ from '@/components/features/EducationFAQ.vue';
@@ -299,6 +305,11 @@ const subTabs = [
     id: 'fertilizer-db',
     label: 'پایگاه داده کودها',
     icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>`
+  },
+  {
+    id: 'ph',
+    label: 'PH',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`
   },
   {
     id: 'widgets',
@@ -472,3 +483,6 @@ onUnmounted(() => {
   transform: translate(-50%, 10px);
 }
 </style>
+
+
+

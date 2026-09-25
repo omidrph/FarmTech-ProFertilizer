@@ -1,4 +1,4 @@
-<!-- frontend/src/components/features/widgets/ph/PhTitrationChart.vue -->
+<!-- frontend/src/components/features/ph/PhTitrationChart.vue -->
 <!-- منحنی تیتراسیون: حجم تجمعی تیترانت (محور افقی) در برابر pH (محور عمودی) -->
 <template>
   <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
@@ -99,3 +99,6 @@ const xTicks = computed(() => {
 
 const formatTick = (t: number) => (t >= 10 ? t.toFixed(0) : t.toFixed(1));
 </script>
+
+
+

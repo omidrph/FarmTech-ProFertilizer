@@ -228,7 +228,44 @@ __all__ = [
     'validate_name',
     'validate_element_name',
     'validate_code',
+
+    # 🆕 pH Calculator
+    'ChemicalInput',
+    'ChemicalOutput',
+    'AcidOption',
+    'TheoreticalRequest',
+    'TitrationPointInput',
+    'TitrationRequest',
+    'TheoreticalDetail',
+    'TitrationDetail',
+    'Sensitivity',
+    'DoseResponse',
+    'DoseErrorResponse',
+    'PhHistoryItem',
+    'PhContextResponse',
 ]
+
+# ============================================================
+# 🆕 Export از ph_calculator.py
+# ============================================================
+from .ph_calculator import (
+    ChemicalInput,
+    ChemicalOutput,
+    AcidOption,
+    TheoreticalRequest,
+    TitrationPointInput,
+    TitrationRequest,
+    TheoreticalDetail,
+    TitrationDetail,
+    Sensitivity,
+    DoseResponse,
+    DoseErrorResponse,
+    PhHistoryItem,
+    PhContextResponse,
+)
+
+
+
 
 
 

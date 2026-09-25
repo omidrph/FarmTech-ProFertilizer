@@ -1,5 +1,6 @@
-// frontend/src/components/features/widgets/ph/phFormat.ts
+// frontend/src/components/features/ph/phFormat.ts
 // ابزارهای ورودی/خروجی عددی (پشتیبانی از ارقام فارسی و عربی)
+// (بدون تغییر نسبت به نسخه‌ی قبلی widgets/ph/phFormat.ts - فقط جابه‌جا شده)
 
 const PERSIAN = '۰۱۲۳۴۵۶۷۸۹';
 const ARABIC = '٠١٢٣٤٥٦٧٨٩';

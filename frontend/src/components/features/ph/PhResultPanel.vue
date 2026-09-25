@@ -1,5 +1,5 @@
-<!-- frontend/src/components/features/widgets/ph/PhResultPanel.vue -->
-<!-- نمایش نتیجه‌ی ماشین‌حساب pH: مقدار پیشنهادی + روش + فرض‌ها + هشدارها + ایمنی -->
+<!-- frontend/src/components/features/ph/PhResultPanel.vue -->
+<!-- نمایش نتیجه‌ی ماشین‌حساب pH (پاسخ backend: DoseResponse) -->
 <template>
   <div class="space-y-3 sm:space-y-4" :class="stale ? 'opacity-60' : ''">
 
@@ -21,8 +21,10 @@
       <section class="rounded-2xl border border-primary-200 dark:border-primary-800 bg-primary-50/60 dark:bg-primary-900/15 p-4 sm:p-5">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <p class="text-xs text-gray-500 dark:text-gray-400">مقدار پیشنهادی {{ chemical.name }} ({{ fmt(chemical.purityPct, 1) }}٪)</p>
-            <p class="mt-1 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tabular-nums">{{ fmtVolumeL(result.commercialVolumeL) }}</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              مقدار پیشنهادی {{ result.chemical.name }} ({{ fmt(result.chemical.purity_pct, 1) }}٪)
+            </p>
+            <p class="mt-1 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tabular-nums">{{ fmtVolumeL(result.commercial_volume_l) }}</p>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
               ≈ {{ fmtVolumeL(perThousand) }} به ازای هر ۱٬۰۰۰ لیتر
             </p>
@@ -32,14 +34,22 @@
           </span>
         </div>
 
+        <p v-if="result.chemical.source === 'fertilizer_db'" class="mt-2 text-[11px] text-primary-700/80 dark:text-primary-300/80">
+          از پایگاه‌داده‌ی کود شما (کود اسیدیِ واقعی) خوانده شده است.
+        </p>
+        <p v-if="result.chemical.density_is_reference" class="mt-1 text-[11px] text-amber-700/90 dark:text-amber-300/80">
+          چگالی از جدول مرجع صنعتی تخمین زده شده{{ result.chemical.density_extrapolated ? ' (برون‌یابی‌شده - با احتیاط بیشتر استفاده کنید)' : '' }}؛
+          برای دقت بالاتر، چگالی واقعی محصول را از برگه‌ی مشخصات (SDS) وارد کنید.
+        </p>
+
         <p
           v-if="result.sensitivity"
           class="mt-3 text-xs text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-gray-800/60 rounded-lg px-3 py-2 leading-6"
         >
           بازه‌ی حساسیت (خطای اندازه‌گیری آلکالینیتی ±۱۰٪ و pH ±۰٫۱):
-          <span class="font-semibold tabular-nums">{{ fmtVolumeL(result.sensitivity.minL) }}</span>
+          <span class="font-semibold tabular-nums">{{ fmtVolumeL(result.sensitivity.min_l) }}</span>
           تا
-          <span class="font-semibold tabular-nums">{{ fmtVolumeL(result.sensitivity.maxL) }}</span>
+          <span class="font-semibold tabular-nums">{{ fmtVolumeL(result.sensitivity.max_l) }}</span>
         </p>
 
         <p class="mt-3 text-xs text-primary-800 dark:text-primary-200 leading-6">
@@ -112,22 +122,21 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Chemical, DoseSuccess } from './phDose';
+import type { PhDoseResponse } from '@/services/apiService';
 import { fmt, fmtVolumeL, fmtMassG } from './phFormat';
 
 const props = defineProps<{
-  result: DoseSuccess;
-  chemical: Chemical;
+  result: PhDoseResponse;
   volumeL: number;
   targetPH: number;
   stale: boolean;
 }>();
 
-const perThousand = computed(() => (props.result.commercialVolumeL / props.volumeL) * 1000);
+const perThousand = computed(() => (props.result.commercial_volume_l / props.volumeL) * 1000);
 
 const stagedPlan = computed(() => {
-  const half = props.result.commercialVolumeL * 0.5;
-  const rest = props.result.commercialVolumeL - half;
+  const half = props.result.commercial_volume_l * 0.5;
+  const rest = props.result.commercial_volume_l - half;
   return [
     `ابتدا حدود ۵۰٪ دوز (${fmtVolumeL(half)}) را با اختلاط مناسب و به‌تدریج تزریق کنید.`,
     'پس از ۵ تا ۱۰ دقیقه اختلاط، pH را با pH متر کالیبره اندازه بگیرید.',
@@ -139,29 +148,29 @@ const stagedPlan = computed(() => {
 const detailRows = computed(() => {
   const r = props.result;
   const rows: Array<{ label: string; value: string }> = [
-    { label: 'معادل شیمیایی کل', value: `${fmt(r.totalMeq, 0)} meq` },
+    { label: 'معادل شیمیایی کل', value: `${fmt(r.total_meq, 0)} meq` },
     {
       label: 'ظرفیت مؤثر (z)',
-      value: props.chemical.z === 'phosphoric' ? `${fmt(r.effectiveZ, 2)} (وابسته به pH)` : fmt(r.effectiveZ, 2)
+      value: r.chemical.z === 'phosphoric' ? `${fmt(r.effective_z, 2)} (وابسته به pH)` : fmt(r.effective_z, 2)
     },
-    { label: 'جرم ماده‌ی خالص', value: fmtMassG(r.pureMassG) },
-    { label: 'جرم ماده‌ی تجاری', value: fmtMassG(r.commercialMassG) }
+    { label: 'جرم ماده‌ی خالص', value: fmtMassG(r.pure_mass_g) },
+    { label: 'جرم ماده‌ی تجاری', value: fmtMassG(r.commercial_mass_g) }
   ];
 
   if (r.theoretical) {
     rows.push(
-      { label: 'آلکالینیتی اولیه', value: `${fmt(r.theoretical.initialAlkMgL, 1)} mg/L as CaCO₃` },
-      { label: 'آلکالینیتی در pH هدف', value: `${fmt(r.theoretical.targetAlkMgL, 1)} mg/L as CaCO₃` },
-      { label: 'اختلاف آلکالینیتی', value: `${fmt(r.theoretical.deltaMeqL, 3)} meq/L` },
-      { label: 'کربن معدنی کل (C_T)', value: `${fmt(r.theoretical.ctMmolL, 3)} mmol/L` }
+      { label: 'آلکالینیتی اولیه', value: `${fmt(r.theoretical.initial_alk_mg_l, 1)} mg/L as CaCO₃` },
+      { label: 'آلکالینیتی در pH هدف', value: `${fmt(r.theoretical.target_alk_mg_l, 1)} mg/L as CaCO₃` },
+      { label: 'اختلاف آلکالینیتی', value: `${fmt(r.theoretical.delta_meq_l, 3)} meq/L` },
+      { label: 'کربن معدنی کل (C_T)', value: `${fmt(r.theoretical.ct_mmol_l, 3)} mmol/L` }
     );
   }
 
   if (r.titration) {
     rows.push(
-      { label: 'بازه‌ی میان‌یابی', value: `${fmt(r.titration.fromVolumeMl, 2)} تا ${fmt(r.titration.toVolumeMl, 2)} mL` },
-      { label: 'تیترانت در pH هدف', value: `${fmt(r.titration.doseMl, 3)} mL` },
-      { label: 'معادل در هر لیتر نمونه', value: `${fmt(r.titration.meqPerL, 3)} meq/L` }
+      { label: 'بازه‌ی میان‌یابی', value: `${fmt(r.titration.from_volume_ml, 2)} تا ${fmt(r.titration.to_volume_ml, 2)} mL` },
+      { label: 'تیترانت در pH هدف', value: `${fmt(r.titration.dose_ml, 3)} mL` },
+      { label: 'معادل در هر لیتر نمونه', value: `${fmt(r.titration.meq_per_l, 3)} meq/L` }
     );
   }
 

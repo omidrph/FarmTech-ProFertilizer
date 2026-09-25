@@ -12,6 +12,7 @@ from .water_analysis import water_analysis_router
 from .calculations import calculations_router  # مسیر تغییر نکرده چون __init__.py جدید کار را انجام می‌دهد
 from .recipes import recipes_router
 from .water_templates import water_templates_router
+from .ph_calculator import ph_calculator_router
 
 # ایجاد router اصلی
 router = APIRouter()
@@ -25,6 +26,9 @@ router.include_router(water_analysis_router)
 router.include_router(calculations_router)  # بدون تغییر
 router.include_router(recipes_router)
 router.include_router(water_templates_router)
+router.include_router(ph_calculator_router)  # 🆕 ماشین‌حساب pH (خارج از چرخه‌ی رسمی محاسبه)
 
 # Export برای استفاده در main.py
 __all__ = ['router']
+
+

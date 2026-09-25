@@ -49,6 +49,7 @@ class User(Base):
     fertilizers = relationship("Fertilizer", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     optimizations = relationship("OptimizationLog", back_populates="user", cascade="all, delete-orphan")
+    ph_calculations = relationship("PhCalculation", back_populates="user", cascade="all, delete-orphan")
     security_logs = relationship("SecurityLog", back_populates="user", cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
     
@@ -196,6 +197,7 @@ class Report(Base):
     water_analysis = relationship("WaterAnalysis", back_populates="report", uselist=False, cascade="all, delete-orphan")
     calculation = relationship("Calculation", back_populates="report", uselist=False, cascade="all, delete-orphan")
     optimizations = relationship("OptimizationLog", back_populates="report", cascade="all, delete-orphan")
+    ph_calculations = relationship("PhCalculation", back_populates="report", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Report {self.id} - {self.report_name}>"
@@ -364,6 +366,47 @@ class OptimizationLog(Base):
     
     def __repr__(self):
         return f"<OptimizationLog {self.id}>"
+
+
+# ============================================================
+# 🆕 مدل PhCalculation (تاریخچه‌ی ماشین‌حساب pH)
+# ============================================================
+class PhCalculation(Base):
+    """
+    تاریخچه‌ی محاسبات ماشین‌حساب pH.
+
+    این جدول عمداً از جدول Calculation (چرخه‌ی رسمی محاسبه‌ی کود) جدا
+    است: طبق تصمیم محصول، ماشین‌حساب pH فعلاً وارد چرخه‌ی رسمی محاسبه
+    نمی‌شود (کاربر پس از ساخت محلول/استوک، جداگانه و چند بار به این
+    صفحه سر می‌زند) اما همچنان به یک گزارش (report) متصل است تا
+    تاریخچه‌ی هر گزارش قابل بازیابی باشد.
+    """
+    __tablename__ = "ph_calculations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=True)
+
+    method = Column(String(20), nullable=False)  # 'theoretical' | 'titration'
+    direction = Column(String(10), nullable=True)  # 'acid' | 'base' | 'none'
+
+    # ورودی‌های کامل کاربر (برای بازتولید دقیق محاسبه بدون حدس زدن)
+    inputs = Column(JSON, nullable=False)
+    # خروجی کامل محاسبه (همان چیزی که در پاسخ API برگردانده شده)
+    outputs = Column(JSON, nullable=False)
+
+    chemical_name = Column(String(100), nullable=True)
+    fertilizer_id = Column(Integer, ForeignKey("fertilizers.id", ondelete="SET NULL"), nullable=True)
+
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="ph_calculations")
+    report = relationship("Report", back_populates="ph_calculations")
+
+    def __repr__(self):
+        return f"<PhCalculation {self.id} ({self.method})>"
+
 
 
 

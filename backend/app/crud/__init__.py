@@ -99,6 +99,18 @@ from .optimization_log import (
 )
 
 # ============================================================
+# 🆕 Export از ph_calculator.py
+# ============================================================
+from .ph_calculator import (
+    save_ph_calculation,
+    get_ph_calculations,
+    get_ph_calculation_by_id,
+    delete_ph_calculation,
+    get_acid_fertilizers_for_user,
+    get_fertilizer_owned_or_system,
+)
+
+# ============================================================
 # Export از base.py
 # ============================================================
 from .base import (
@@ -177,5 +189,16 @@ __all__ = [
     'safe_json_loads',
     'safe_json_dumps',
     'process_calculation_data',
+
+    # 🆕 pH Calculator
+    'save_ph_calculation',
+    'get_ph_calculations',
+    'get_ph_calculation_by_id',
+    'delete_ph_calculation',
+    'get_acid_fertilizers_for_user',
+    'get_fertilizer_owned_or_system',
 ]
+
+
+
 
