@@ -189,6 +189,10 @@ class Report(Base):
     season = Column(String(20), nullable=True)
     growth_stage = Column(String(50), nullable=True)
     report_date = Column(String(20), nullable=True)
+
+    # 🆕 آیا سیستم بازچرخشی (هیدروپونیک بسته) است؟ فقط از تب PH تنظیم می‌شود.
+    # None = هنوز مشخص نشده (کاربر هنوز به تب PH سر نزده)
+    is_recirculating_system = Column(Boolean, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -387,8 +391,17 @@ class PhCalculation(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=True)
 
-    method = Column(String(20), nullable=False)  # 'theoretical' | 'titration'
+    method = Column(String(20), nullable=True)  # 'theoretical' | 'titration' (فقط برای record_type='correction')
     direction = Column(String(10), nullable=True)  # 'acid' | 'base' | 'none'
+
+    # 🆕 نوع رکورد:
+    #   'correction'  = یک محاسبه‌ی کامل با پیشنهاد دوز اصلاحی (مثل قبل)
+    #   'monitoring'  = فقط ثبت سریع یک اندازه‌گیری (pH/EC) بدون محاسبه‌ی دوز -
+    #                   برای پایش روند در سیستم‌های بازچرخشی (recirculating)
+    record_type = Column(String(20), nullable=False, default="correction", server_default="correction")
+
+    # 🆕 مقدار EC اندازه‌گیری‌شده (mS/cm) - اختیاری، برای هر دو نوع رکورد قابل ثبت
+    ec_ms_cm = Column(Float, nullable=True)
 
     # ورودی‌های کامل کاربر (برای بازتولید دقیق محاسبه بدون حدس زدن)
     inputs = Column(JSON, nullable=False)

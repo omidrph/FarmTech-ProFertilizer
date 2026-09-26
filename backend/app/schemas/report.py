@@ -24,6 +24,9 @@ class ReportUpdate(BaseModel):
     season: Optional[str] = Field(None, max_length=20)
     growth_stage: Optional[str] = Field(None, max_length=50)
     report_date: Optional[str] = None
+    is_recirculating_system: Optional[bool] = Field(
+        None, description="آیا سیستم بازچرخشی (هیدروپونیک بسته) است؟ (برای تب PH)"
+    )
 
 
 class ReportResponse(BaseModel):
@@ -35,9 +38,13 @@ class ReportResponse(BaseModel):
     season: Optional[str]
     growth_stage: Optional[str]
     report_date: Optional[str]
+    is_recirculating_system: Optional[bool] = None
     created_at: datetime
     updated_at: Optional[datetime]
 
     class Config:
         from_attributes = True
+
+
+
 

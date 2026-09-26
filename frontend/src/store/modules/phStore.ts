@@ -16,6 +16,7 @@ import type {
   PhContextResponse,
   PhDoseResponse,
   PhHistoryItem,
+  PhMonitoringRequest,
   PhTheoreticalRequest,
   PhTitrationRequest
 } from '@/services/apiService';
@@ -35,6 +36,10 @@ export const usePhStore = defineStore('ph', () => {
 
   const errorMessage = ref<string>('');
   const needTitrationHint = ref(false);
+
+  // 🆕 پایش سریع (بدون محاسبه‌ی دوز) - برای سیستم‌های بازچرخشی
+  const isLoggingMonitoring = ref(false);
+  const monitoringError = ref<string>('');
 
   // ===== Getters =====
   const hasAcidOptions = computed(() => acidOptions.value.length > 0);
@@ -124,6 +129,33 @@ export const usePhStore = defineStore('ph', () => {
     }
   }
 
+  // 🆕 ثبت سریع یک اندازه‌گیری (pH/EC) بدون محاسبه‌ی دوز - برای پایش روزانه‌ی سیستم بازچرخشی
+  async function logMonitoring(ph: number, ecMsCm?: number | null, note?: string | null): Promise<boolean> {
+    const reportStore = useReportStore();
+    if (!reportStore.currentReportId) {
+      monitoringError.value = 'برای ثبت پایش، ابتدا یک گزارش فعال لازم است.';
+      return false;
+    }
+    isLoggingMonitoring.value = true;
+    monitoringError.value = '';
+    try {
+      const payload: PhMonitoringRequest = {
+        report_id: reportStore.currentReportId,
+        ph,
+        ec_ms_cm: ecMsCm ?? undefined,
+        note: note ?? undefined
+      };
+      await apiService.savePhMonitoring(payload);
+      await loadHistory();
+      return true;
+    } catch (e: any) {
+      monitoringError.value = e?.response?.data?.detail || 'ثبت اندازه‌گیری با خطا مواجه شد.';
+      return false;
+    } finally {
+      isLoggingMonitoring.value = false;
+    }
+  }
+
   async function deleteHistoryItem(id: number): Promise<void> {
     await apiService.deletePhHistoryItem(id);
     history.value = history.value.filter(h => h.id !== id);
@@ -147,6 +179,8 @@ export const usePhStore = defineStore('ph', () => {
     isLoadingHistory,
     errorMessage,
     needTitrationHint,
+    isLoggingMonitoring,
+    monitoringError,
     // getters
     hasAcidOptions,
     // actions
@@ -155,6 +189,7 @@ export const usePhStore = defineStore('ph', () => {
     calculateTheoretical,
     calculateTitration,
     loadHistory,
+    logMonitoring,
     deleteHistoryItem,
     clearResult
   };

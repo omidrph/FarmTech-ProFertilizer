@@ -18,15 +18,32 @@
         class="flex items-start justify-between gap-3 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2.5"
       >
         <div class="min-w-0">
-          <p class="text-sm font-medium text-gray-800 dark:text-gray-100">
-            {{ item.method === 'titration' ? 'تیتراسیون واقعی' : 'مدل تئوریک' }}
-            <span v-if="item.chemical_name" class="text-gray-400 dark:text-gray-500 font-normal"> · {{ item.chemical_name }}</span>
+          <p class="text-sm font-medium text-gray-800 dark:text-gray-100 flex items-center gap-1.5 flex-wrap">
+            <span
+              class="text-[10px] px-1.5 py-0.5 rounded-full font-normal"
+              :class="item.record_type === 'monitoring'
+                ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
+                : 'bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'"
+            >
+              {{ item.record_type === 'monitoring' ? 'پایش' : 'اصلاح' }}
+            </span>
+            <span v-if="item.record_type === 'correction'">
+              {{ item.method === 'titration' ? 'تیتراسیون واقعی' : 'مدل تئوریک' }}
+              <span v-if="item.chemical_name" class="text-gray-400 dark:text-gray-500 font-normal"> · {{ item.chemical_name }}</span>
+            </span>
+            <span v-else class="text-gray-500 dark:text-gray-400 font-normal">فقط ثبت اندازه‌گیری</span>
           </p>
           <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-            {{ fmtVolumeL(item.outputs?.commercial_volume_l ?? 0) }}
-            <span v-if="item.inputs?.current_ph && item.inputs?.target_ph">
-              · pH {{ fmt(item.inputs.current_ph, 2) }} → {{ fmt(item.inputs.target_ph, 2) }}
-            </span>
+            <template v-if="item.record_type === 'correction'">
+              {{ fmtVolumeL(item.outputs?.commercial_volume_l ?? 0) }}
+              <span v-if="item.inputs?.current_ph && item.inputs?.target_ph">
+                · pH {{ fmt(item.inputs.current_ph, 2) }} → {{ fmt(item.inputs.target_ph, 2) }}
+              </span>
+            </template>
+            <template v-else>
+              pH {{ fmt(item.inputs?.ph ?? item.outputs?.ph, 2) }}
+            </template>
+            <span v-if="item.ec_ms_cm !== null && item.ec_ms_cm !== undefined"> · EC {{ fmt(item.ec_ms_cm, 2) }} mS/cm</span>
           </p>
           <p v-if="item.note" class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ item.note }}</p>
           <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">{{ formatDate(item.created_at) }}</p>

@@ -32,6 +32,58 @@
       </div>
     </section>
 
+    <!-- ===================== 🆕 نوع سیستم + پایش سریع (سیستم بازچرخشی) ===================== -->
+    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 space-y-4">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div class="min-w-0">
+          <p class="text-sm font-bold text-gray-900 dark:text-white">نوع سیستم آبیاری این گزارش</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-6">
+            بازچرخشی (هیدروپونیک بسته): محلول مدام در چرخش است و pH/EC آن به‌مرور دریفت می‌کند - نیاز به پایش دوره‌ای دارد.
+            باز (drain-to-waste): محلول یک‌بار به ریشه می‌رود و دور ریخته می‌شود - یک اصلاح معمولاً کافی است.
+          </p>
+        </div>
+        <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
+          <button
+            type="button"
+            @click="setSystemType(false)"
+            class="px-3 py-1.5 text-xs font-medium transition-colors"
+            :class="reportStore.reportData.isRecirculatingSystem === false
+              ? 'bg-primary-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          >باز (drain-to-waste)</button>
+          <button
+            type="button"
+            @click="setSystemType(true)"
+            class="px-3 py-1.5 text-xs font-medium transition-colors border-r border-gray-200 dark:border-gray-700"
+            :class="reportStore.reportData.isRecirculatingSystem === true
+              ? 'bg-primary-600 text-white'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
+          >بازچرخشی</button>
+        </div>
+      </div>
+      <p v-if="!reportStore.hasActiveReport" class="text-xs text-amber-600 dark:text-amber-400">برای ثبت نوع سیستم، ابتدا یک گزارش فعال لازم است.</p>
+
+      <!-- پایش سریع: فقط ثبت اندازه‌گیری، بدون محاسبه‌ی دوز -->
+      <div v-if="reportStore.reportData.isRecirculatingSystem" class="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/60 dark:bg-sky-900/10 p-3 sm:p-4">
+        <p class="text-xs font-bold text-sky-800 dark:text-sky-300 mb-2">ثبت سریع چک روزانه (بدون محاسبه)</p>
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+          <input v-model="monitorForm.ph" type="text" inputmode="decimal" placeholder="pH اندازه‌گیری‌شده" class="field-input" />
+          <input v-model="monitorForm.ec" type="text" inputmode="decimal" placeholder="EC (mS/cm) - اختیاری" class="field-input" />
+          <input v-model="monitorForm.note" type="text" placeholder="یادداشت - اختیاری" class="field-input sm:col-span-1" />
+          <button
+            type="button"
+            @click="submitMonitoring"
+            :disabled="phStore.isLoggingMonitoring || !monitorForm.ph"
+            class="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
+          >{{ phStore.isLoggingMonitoring ? 'در حال ثبت...' : 'فقط ثبت کن' }}</button>
+        </div>
+        <p v-if="phStore.monitoringError" class="mt-2 text-xs text-rose-600 dark:text-rose-400">{{ phStore.monitoringError }}</p>
+        <p class="mt-2 text-[11px] text-sky-800/70 dark:text-sky-300/70 leading-5">
+          اگر عدد pH خیلی از هدف فاصله دارد و نیاز به اصلاح دارید، از فرم کامل پایین («محاسبه دوز») استفاده کنید.
+        </p>
+      </div>
+    </section>
+
     <!-- ===================== راهنمای زمینه (از آنالیز آب/عناصر هدف) ===================== -->
     <div
       v-if="phStore.context?.is_likely_complex_solution"
@@ -101,6 +153,10 @@
         <div>
           <label for="ph-temp" class="field-label">دما (°C)</label>
           <input id="ph-temp" v-model="form.temperature" type="text" inputmode="decimal" placeholder="۲۵" class="field-input" :class="bad(form.temperature) && 'field-invalid'" />
+        </div>
+        <div>
+          <label for="ph-ec" class="field-label">EC اندازه‌گیری‌شده (mS/cm) <span class="font-normal text-gray-400">- اختیاری</span></label>
+          <input id="ph-ec" v-model="form.ec" type="text" inputmode="decimal" placeholder="مثلاً ۲٫۱" class="field-input" />
         </div>
       </div>
       <p v-if="direction" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -340,12 +396,16 @@ const defaultForm = () => ({
   currentPH: '',
   targetPH: '',
   temperature: '25',
+  ec: '',
   alkalinity: '',
   alkUnit: 'mg_l_caco3' as 'mg_l_caco3' | 'meq_l',
   normality: '0.1',
   sampleVolumeMl: '100'
 });
 const form = reactive(defaultForm());
+
+// 🆕 فرم پایش سریع (بدون محاسبه‌ی دوز)
+const monitorForm = reactive({ ph: '', ec: '', note: '' });
 
 const selectedAcidKey = ref('custom');
 const chemFields = reactive({
@@ -556,7 +616,8 @@ async function calculate() {
       chemical,
       report_id: saveToHistory.value ? reportId : undefined,
       save: saveToHistory.value && !!reportId,
-      note: noteText.value || undefined
+      note: noteText.value || undefined,
+      ec_ms_cm: parseNum(form.ec) ?? undefined
     };
     ok = await phStore.calculateTheoretical(payload);
   } else {
@@ -593,7 +654,8 @@ async function calculate() {
       chemical,
       report_id: saveToHistory.value ? reportId : undefined,
       save: saveToHistory.value && !!reportId,
-      note: noteText.value || undefined
+      note: noteText.value || undefined,
+      ec_ms_cm: parseNum(form.ec) ?? undefined
     };
     ok = await phStore.calculateTitration(payload);
   }
@@ -622,6 +684,24 @@ const reset = () => {
 
 async function onDeleteHistory(id: number) {
   await phStore.deleteHistoryItem(id);
+}
+
+// 🆕 تنظیم نوع سیستم (باز/بازچرخشی) روی خود گزارش
+async function setSystemType(isRecirculating: boolean) {
+  await reportStore.setRecirculatingSystem(isRecirculating);
+}
+
+// 🆕 ثبت سریع یک اندازه‌گیری پایشی (بدون محاسبه‌ی دوز)
+async function submitMonitoring() {
+  const ph = parseNum(monitorForm.ph);
+  if (ph === null) return;
+  const ec = parseNum(monitorForm.ec);
+  const ok = await phStore.logMonitoring(ph, ec ?? undefined, monitorForm.note || undefined);
+  if (ok) {
+    monitorForm.ph = '';
+    monitorForm.ec = '';
+    monitorForm.note = '';
+  }
 }
 
 // اگر بعد از محاسبه ورودی‌ها عوض شدند، نتیجه «قدیمی» علامت می‌خورد

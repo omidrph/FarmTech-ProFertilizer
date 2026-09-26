@@ -76,6 +76,7 @@ class TheoreticalRequest(BaseModel):
     report_id: Optional[int] = None
     save: bool = False
     note: Optional[str] = Field(None, max_length=500)
+    ec_ms_cm: Optional[float] = Field(None, ge=0, description="EC اندازه‌گیری‌شده‌ی همین لحظه (mS/cm) - فقط برای ثبت در تاریخچه")
 
 
 class TitrationPointInput(BaseModel):
@@ -90,11 +91,12 @@ class TitrationRequest(BaseModel):
     temperature_c: float = Field(25.0, ge=0, le=60)
     normality: float = Field(..., gt=0)
     sample_volume_ml: float = Field(..., gt=0)
-    points: List[TitrationPointInput] = Field(..., min_items=1, max_items=40)
+    points: List[TitrationPointInput] = Field(..., min_length=1, max_length=40)
     chemical: ChemicalInput
     report_id: Optional[int] = None
     save: bool = False
     note: Optional[str] = Field(None, max_length=500)
+    ec_ms_cm: Optional[float] = Field(None, ge=0, description="EC اندازه‌گیری‌شده‌ی همین لحظه (mS/cm) - فقط برای ثبت در تاریخچه")
 
 
 # ============================================================
@@ -136,6 +138,14 @@ class DoseResponse(BaseModel):
     titration: Optional[TitrationDetail] = None
     chemical: ChemicalOutput
     saved_id: Optional[int] = None
+    element_contributions_mg_l: Optional[Dict[str, float]] = Field(
+        None,
+        description=(
+            "غلظت اضافه‌شده‌ی هر عنصر (mg/L) در محلول نهایی، ناشی از همین دوز اصلاحی؛ "
+            "فقط وقتی ماده از پایگاه‌داده‌ی کود انتخاب شده باشد قابل‌محاسبه است. "
+            "این مقدار باید به «تأمین‌شده‌ی» همان عنصر در نتیجه‌ی محاسبه‌ی کود اضافه شود."
+        ),
+    )
 
 
 class DoseErrorResponse(BaseModel):
@@ -145,14 +155,32 @@ class DoseErrorResponse(BaseModel):
 
 
 # ============================================================
+# 🆕 ثبت سریع «پایش» (بدون محاسبه‌ی دوز) - برای سیستم‌های بازچرخشی
+# ============================================================
+class MonitoringRequest(BaseModel):
+    report_id: int
+    ph: float = Field(..., ge=0, le=14)
+    ec_ms_cm: Optional[float] = Field(None, ge=0)
+    note: Optional[str] = Field(None, max_length=500)
+
+
+class MonitoringResponse(BaseModel):
+    ok: bool = True
+    id: int
+    created_at: datetime
+
+
+# ============================================================
 # تاریخچه
 # ============================================================
 class PhHistoryItem(BaseModel):
     id: int
     report_id: Optional[int] = None
-    method: str
+    record_type: Literal["correction", "monitoring"] = "correction"
+    method: Optional[str] = None
     direction: Optional[str] = None
     chemical_name: Optional[str] = None
+    ec_ms_cm: Optional[float] = None
     inputs: dict
     outputs: dict
     note: Optional[str] = None
@@ -178,4 +206,7 @@ class PhContextResponse(BaseModel):
     complex_indicator_elements: List[str] = []
     latest_reservoir_c: Optional[List[dict]] = Field(
         None, description="اسیدهای مخزن C از آخرین محاسبه‌ی ذخیره‌شده‌ی این گزارش (فقط اطلاعاتی)"
+    )
+    is_recirculating_system: Optional[bool] = Field(
+        None, description="آیا این گزارش به‌عنوان سیستم بازچرخشی (هیدروپونیک بسته) علامت خورده"
     )

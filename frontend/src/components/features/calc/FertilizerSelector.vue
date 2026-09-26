@@ -25,9 +25,10 @@
           type="button"
           @click="selectAll"
           :disabled="availableList.length === 0"
+          title="کودهای اسیدی به‌عمد اضافه نمی‌شوند؛ اگر لازم دارید عمداً از لیست انتخاب کنید"
           class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          افزودن همه
+          افزودن همه (بدون اسید)
         </button>
         <button
           type="button"
@@ -38,6 +39,14 @@
           پاک کردن
         </button>
       </div>
+    </div>
+
+    <!-- 🆕 راهنمای نقش دوگانه‌ی کودهای اسیدی -->
+    <div
+      v-if="hasAcidFertilizers"
+      class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-amber-50/60 dark:bg-amber-900/10 text-[11px] text-amber-800 dark:text-amber-300 leading-5"
+    >
+      کودهای اسیدی (برچسب «اسید») هم عنصر تأمین می‌کنند هم روی pH اثر می‌گذارند؛ به همین دلیل در «افزودن همه» گنجانده نشده‌اند. اصلاح دقیق pH بعد از ساخت محلول در تب «PH» انجام می‌شود.
     </div>
 
     <!-- ============================================================ -->
@@ -117,6 +126,7 @@
                     :class="fertilizer.isAcid
                       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                       : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
+                    :title="fertilizer.isAcid ? 'این کود اسیدی است؛ هم می‌تواند عنصر تأمین کند هم روی pH اثر بگذارد. اصلاح دقیق pH پس از ساخت محلول در تب «PH» انجام می‌شود.' : undefined"
                   >
                     {{ fertilizer.isAcid ? 'اسید' : 'کود' }}
                   </span>
@@ -196,6 +206,7 @@
                   <span
                     v-if="fertilizer.isAcid"
                     class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    title="این کود اسیدی است؛ هم می‌تواند عنصر تأمین کند هم روی pH اثر بگذارد."
                   >اسید</span>
                   <span
                     v-for="el in mainElements(fertilizer)"
@@ -290,6 +301,7 @@ onBeforeUnmount(() => {
 
 // ===== Computed =====
 const userFertilizers = computed(() => props.fertilizers.filter((f) => !f.isSystemDefault));
+const hasAcidFertilizers = computed(() => userFertilizers.value.some((f) => f.isAcid));
 
 const selectedList = computed(() =>
   props.selectedFertilizers
@@ -344,7 +356,11 @@ const removeFertilizer = (id: string) => {
 };
 
 const selectAll = () => {
-  commit(userFertilizers.value.map((f) => f.id));
+  // 🆕 کودهای اسیدی عمداً در «افزودن همه» گنجانده نمی‌شوند: این کودها هم
+  // نقش تغذیه‌ای دارند هم نقش اصلاح pH، و انتخاب ناخواسته‌شان می‌تواند
+  // با آنچه در تب PH محاسبه می‌شود تداخل کند. کاربری که می‌داند دارد
+  // چه‌کار می‌کند، همچنان می‌تواند آن‌ها را دستی انتخاب کند.
+  commit(userFertilizers.value.filter((f) => !f.isAcid).map((f) => f.id));
 };
 
 const clearAll = () => commit([]);
@@ -427,3 +443,6 @@ const onDrop = (pane: Pane) => {
   background: #4b5563;
 }
 </style>
+
+
+

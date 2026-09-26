@@ -18,21 +18,25 @@ def save_ph_calculation(
     db: Session,
     user_id: int,
     report_id: Optional[int],
-    method: str,
+    method: Optional[str],
     direction: Optional[str],
     inputs: Dict[str, Any],
     outputs: Dict[str, Any],
     chemical_name: Optional[str] = None,
     fertilizer_id: Optional[int] = None,
     note: Optional[str] = None,
+    record_type: str = "correction",
+    ec_ms_cm: Optional[float] = None,
 ) -> PhCalculation:
-    """ذخیره‌ی یک بار محاسبه‌ی pH (ورودی + خروجی) به‌عنوان تاریخچه"""
+    """ذخیره‌ی یک رکورد pH: یا یک محاسبه‌ی کامل اصلاحی ('correction') یا فقط یک اندازه‌گیری پایشی ('monitoring')"""
     try:
         record = PhCalculation(
             user_id=user_id,
             report_id=report_id,
             method=method,
             direction=direction,
+            record_type=record_type,
+            ec_ms_cm=ec_ms_cm,
             inputs=inputs,
             outputs=outputs,
             chemical_name=chemical_name,
@@ -42,7 +46,7 @@ def save_ph_calculation(
         db.add(record)
         db.commit()
         db.refresh(record)
-        logger.info(f"PhCalculation saved: {record.id}")
+        logger.info(f"PhCalculation saved: {record.id} ({record_type})")
         return record
     except Exception as e:
         db.rollback()
@@ -54,18 +58,39 @@ def get_ph_calculations(
     db: Session,
     user_id: int,
     report_id: Optional[int] = None,
+    record_type: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
 ) -> List[PhCalculation]:
-    """دریافت تاریخچه‌ی محاسبات pH کاربر (اختیاری: فیلتر بر اساس گزارش)"""
+    """دریافت تاریخچه‌ی محاسبات/پایش‌های pH کاربر (اختیاری: فیلتر بر اساس گزارش و نوع رکورد)"""
     try:
         query = db.query(PhCalculation).filter(PhCalculation.user_id == user_id)
         if report_id is not None:
             query = query.filter(PhCalculation.report_id == report_id)
+        if record_type is not None:
+            query = query.filter(PhCalculation.record_type == record_type)
         return query.order_by(desc(PhCalculation.created_at)).offset(skip).limit(limit).all()
     except Exception as e:
         logger.error(f"Error getting ph calculations: {e}")
         return []
+
+
+def get_latest_correction(db: Session, user_id: int, report_id: int) -> Optional[PhCalculation]:
+    """آخرین رکورد نوع 'correction' برای یک گزارش - برای نمایش در مخزن C صفحه‌ی محاسبه کود"""
+    try:
+        return (
+            db.query(PhCalculation)
+            .filter(
+                PhCalculation.user_id == user_id,
+                PhCalculation.report_id == report_id,
+                PhCalculation.record_type == "correction",
+            )
+            .order_by(desc(PhCalculation.created_at))
+            .first()
+        )
+    except Exception as e:
+        logger.error(f"Error getting latest ph correction: {e}")
+        return None
 
 
 def get_ph_calculation_by_id(db: Session, calc_id: int) -> Optional[PhCalculation]:

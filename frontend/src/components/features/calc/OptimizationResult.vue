@@ -33,6 +33,9 @@
         :tank-volume="tankVolume"
         @update-weight="$emit('update-weight', $event)"
       />
+
+      <!-- 🆕 آخرین اصلاح pH (از تب PH) - بلوکی کاملاً جدا از جدول استوک بالا -->
+      <PhCorrectionBanner v-if="phCorrection" :correction="phCorrection" class="mt-3" />
     </ResultAccordion>
 
     <!-- ============================================================ -->
@@ -55,8 +58,11 @@
 
       <ResultElementsGrid
         :target-values="targetValues"
-        :concentrations="result.concentrations || {}"
+        :concentrations="adjustedConcentrations"
       />
+      <p v-if="phCorrection && hasElementAdjustment" class="mt-2 text-[11px] text-sky-700 dark:text-sky-400">
+        این مقادیر شامل سهم آخرین اصلاح pH هم هستند (جزئیات در کارت «مقدار کودها» بالا).
+      </p>
     </ResultAccordion>
 
     <!-- ============================================================ -->
@@ -140,6 +146,8 @@ import ResultAccordion from './ResultAccordion.vue';
 import ResultFertilizerTable from './ResultFertilizerTable.vue';
 import ResultElementsGrid from './ResultElementsGrid.vue';
 import ResultWarnings from './ResultWarnings.vue';
+import PhCorrectionBanner from './PhCorrectionBanner.vue';
+import type { PhHistoryItem } from '@/services/apiService';
 
 const props = withDefaults(
   defineProps<{
@@ -147,8 +155,9 @@ const props = withDefaults(
     fertilizers: any[];
     targetValues: Record<string, number>;
     tankVolume?: number;
+    phCorrection?: PhHistoryItem | null;
   }>(),
-  { tankVolume: 1000 }
+  { tankVolume: 1000, phCorrection: null }
 );
 
 defineEmits<{
@@ -157,6 +166,25 @@ defineEmits<{
 }>();
 
 const result = computed(() => props.result);
+
+// 🆕 غلظت عناصر با احتساب سهم آخرین اصلاح pH (مثلاً N از HNO3) - رفع
+// همان مشکلی که بدون آن، «تأمین‌شده» عناصر نادرست نمایش داده می‌شد.
+const hasElementAdjustment = computed(() => {
+  const contrib = props.phCorrection?.outputs?.element_contributions_mg_l;
+  return !!contrib && Object.keys(contrib).length > 0;
+});
+
+const adjustedConcentrations = computed<Record<string, number>>(() => {
+  const base = { ...(result.value?.concentrations || {}) };
+  const contrib = props.phCorrection?.outputs?.element_contributions_mg_l as Record<string, number> | undefined;
+  if (!contrib) return base;
+  for (const [el, val] of Object.entries(contrib)) {
+    if (Number.isFinite(val)) {
+      base[el] = (base[el] || 0) + val;
+    }
+  }
+  return base;
+});
 
 const toFixed = (value: unknown, digits = 2): string => {
   const parsed = Number(value);
@@ -246,3 +274,6 @@ const ionPercent = (type: 'cation' | 'anion'): number => {
   font-variant-numeric: tabular-nums;
 }
 </style>
+
+
+

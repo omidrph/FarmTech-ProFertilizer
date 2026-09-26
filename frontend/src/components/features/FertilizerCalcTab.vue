@@ -157,6 +157,7 @@
           :fertilizers="fertilizers"
           :target-values="targetStore.targetElements"
           :tank-volume="mainTankVolume"
+          :ph-correction="phCorrection"
           @update-weight="handleWeightEdit"
           @go-to-selection="goToStep(2)"
         />
@@ -330,6 +331,8 @@ import { useTargetStore } from '@/store/modules/targetStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
+import { apiService } from '@/services/apiService';
+import type { PhHistoryItem } from '@/services/apiService';
 
 import AppModal from '@/components/common/AppModal.vue';
 import StockSettings from './calc/StockSettings.vue';
@@ -448,13 +451,35 @@ onMounted(() => {
   // دوباره روی «محاسبه»، همان وضعیت بازیابی و مستقیم مرحله ۳ نمایش
   // داده می‌شود.
   syncRestoredState();
+  loadPhCorrection();
 
-  window.addEventListener('report-changed', syncRestoredState);
+  window.addEventListener('report-changed', handleReportChanged);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('report-changed', syncRestoredState);
+  window.removeEventListener('report-changed', handleReportChanged);
 });
+
+// 🆕 آخرین «اصلاح pH» ثبت‌شده برای این گزارش (فقط خواندنی؛ از تب PH
+// می‌آید). بازتریگر بهینه‌ساز نمی‌کند - فقط برای نمایش کنار مخزن C.
+const phCorrection = ref<PhHistoryItem | null>(null);
+const loadPhCorrection = async () => {
+  const reportId = reportStore.currentReportId;
+  if (!reportId) {
+    phCorrection.value = null;
+    return;
+  }
+  try {
+    phCorrection.value = await apiService.getPhLatestCorrection(reportId);
+  } catch {
+    phCorrection.value = null;
+  }
+};
+
+const handleReportChanged = () => {
+  syncRestoredState();
+  loadPhCorrection();
+};
 
 // 🆕 همگام‌سازی کودهای انتخاب‌شده، حالت بهینه‌سازی و مرحله جاری از روی
 // وضعیت بازیابی‌شدهٔ calcStore (پس از بارگذاری یک گزارش قدیمی)
@@ -657,3 +682,6 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   opacity: 0;
 }
 </style>
+
+
+

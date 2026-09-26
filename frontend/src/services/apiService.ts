@@ -290,6 +290,7 @@ export interface PhTheoreticalRequest {
     report_id?: number | null;
     save?: boolean;
     note?: string | null;
+    ec_ms_cm?: number | null;
 }
 
 export interface PhTitrationPointInput {
@@ -309,6 +310,7 @@ export interface PhTitrationRequest {
     report_id?: number | null;
     save?: boolean;
     note?: string | null;
+    ec_ms_cm?: number | null;
 }
 
 export interface PhDoseResponse {
@@ -338,14 +340,30 @@ export interface PhDoseResponse {
     } | null;
     chemical: PhChemicalOutput;
     saved_id?: number | null;
+    element_contributions_mg_l?: Record<string, number> | null;
+}
+
+export interface PhMonitoringRequest {
+    report_id: number;
+    ph: number;
+    ec_ms_cm?: number | null;
+    note?: string | null;
+}
+
+export interface PhMonitoringResponse {
+    ok: boolean;
+    id: number;
+    created_at: string;
 }
 
 export interface PhHistoryItem {
     id: number;
     report_id?: number | null;
-    method: string;
+    record_type: 'correction' | 'monitoring';
+    method?: string | null;
     direction?: string | null;
     chemical_name?: string | null;
+    ec_ms_cm?: number | null;
     inputs: Record<string, any>;
     outputs: Record<string, any>;
     note?: string | null;
@@ -360,6 +378,7 @@ export interface PhContextResponse {
     is_likely_complex_solution: boolean;
     complex_indicator_elements: string[];
     latest_reservoir_c?: Array<{ name: string; amount: number; fertilizer_id?: string; is_acid?: boolean }> | null;
+    is_recirculating_system?: boolean | null;
 }
 
 
@@ -1041,10 +1060,11 @@ class ApiService {
         return response.data;
     }
 
-    async getPhHistory(reportId?: number | null, limit: number = 50): Promise<PhHistoryItem[]> {
+    async getPhHistory(reportId?: number | null, limit: number = 50, recordType?: 'correction' | 'monitoring'): Promise<PhHistoryItem[]> {
         try {
             const params: Record<string, any> = { limit };
             if (reportId) params.report_id = reportId;
+            if (recordType) params.record_type = recordType;
             const response: AxiosResponse<PhHistoryItem[]> = await this.api.get('/ph-calculator/history', { params });
             return response.data || [];
         } catch (error) {
@@ -1055,6 +1075,23 @@ class ApiService {
 
     async deletePhHistoryItem(id: number): Promise<void> {
         await this.api.delete(`/ph-calculator/history/${id}`);
+    }
+
+    async savePhMonitoring(data: PhMonitoringRequest): Promise<PhMonitoringResponse> {
+        const response: AxiosResponse<PhMonitoringResponse> = await this.api.post('/ph-calculator/monitoring', data);
+        return response.data;
+    }
+
+    async getPhLatestCorrection(reportId: number): Promise<PhHistoryItem | null> {
+        try {
+            const response: AxiosResponse<PhHistoryItem | null> = await this.api.get('/ph-calculator/latest-correction', {
+                params: { report_id: reportId }
+            });
+            return response.data || null;
+        } catch (error) {
+            console.error('Error fetching latest ph correction:', error);
+            return null;
+        }
     }
 }
 

@@ -243,6 +243,8 @@ __all__ = [
     'DoseErrorResponse',
     'PhHistoryItem',
     'PhContextResponse',
+    'MonitoringRequest',
+    'MonitoringResponse',
 ]
 
 # ============================================================
@@ -262,6 +264,8 @@ from .ph_calculator import (
     DoseErrorResponse,
     PhHistoryItem,
     PhContextResponse,
+    MonitoringRequest,
+    MonitoringResponse,
 )
 
 

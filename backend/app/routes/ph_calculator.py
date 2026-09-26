@@ -42,6 +42,8 @@ from app.schemas import (
     ChemicalInput,
     ChemicalOutput,
     DoseResponse,
+    MonitoringRequest,
+    MonitoringResponse,
     PhContextResponse,
     PhHistoryItem,
     TheoreticalRequest,
@@ -63,9 +65,11 @@ COMPLEX_INDICATOR_ELEMENTS = ("P", "N-NH4")
 # ============================================================
 def _build_engine_chemical(
     db: Session, chem_in: ChemicalInput, user_id: int
-) -> tuple[EngineChemical, bool, bool]:
+) -> tuple[EngineChemical, bool, bool, Optional[dict]]:
     """
-    Returns: (EngineChemical, density_is_reference, density_extrapolated)
+    Returns: (EngineChemical, density_is_reference, density_extrapolated, fertilizer_elements)
+    fertilizer_elements: دیکشنری عنصر->درصد وزنی محصول تجاری (از Fertilizer.elements)،
+    فقط وقتی ماده از پایگاه‌داده انتخاب شده باشد - برای محاسبه‌ی سهم تغذیه‌ای دوز اصلاحی.
     """
     density_is_reference = False
     density_extrapolated = False
@@ -132,6 +136,7 @@ def _build_engine_chemical(
             ),
             density_is_reference,
             density_extrapolated,
+            fert.elements if isinstance(fert.elements, dict) else None,
         )
 
     # ---- ماده‌ی کاملاً سفارشی (بدون fertilizer_id) ----
@@ -167,7 +172,33 @@ def _build_engine_chemical(
         ),
         False,
         False,
+        None,
     )
+
+
+def _compute_element_contributions(
+    commercial_mass_g: float, elements_pct: Optional[dict], volume_l: float
+) -> Optional[dict]:
+    """
+    غلظت اضافه‌شده‌ی هر عنصر (mg/L) در محلول نهایی، از جرم ماده‌ی تجاریِ افزوده‌شده.
+    elements_pct: {element: درصد وزنی در محصول تجاری} (همان Fertilizer.elements،
+    که در سراسر برنامه به همین شکل برای محاسبه‌ی مقدار عنصر از جرم کود استفاده می‌شود).
+        mg عنصر = جرم تجاری (g) × (درصد/100) × 1000
+        mg/L    = mg عنصر ÷ حجم (L)
+    """
+    if not elements_pct or not (volume_l > 0) or not (commercial_mass_g > 0):
+        return None
+    result = {}
+    for element, pct in elements_pct.items():
+        try:
+            pct_f = float(pct)
+        except (TypeError, ValueError):
+            continue
+        if pct_f <= 0:
+            continue
+        mg = commercial_mass_g * (pct_f / 100) * 1000
+        result[element] = mg / volume_l
+    return result or None
 
 
 def _chemical_output(chem: EngineChemical, density_is_reference: bool, density_extrapolated: bool) -> ChemicalOutput:
@@ -187,7 +218,9 @@ def _chemical_output(chem: EngineChemical, density_is_reference: bool, density_e
     )
 
 
-def _result_to_response(result: DoseResult, chemical_out: ChemicalOutput) -> DoseResponse:
+def _result_to_response(
+    result: DoseResult, chemical_out: ChemicalOutput, element_contributions_mg_l: Optional[dict] = None
+) -> DoseResponse:
     return DoseResponse(
         ok=True,
         method=result.method,
@@ -202,6 +235,7 @@ def _result_to_response(result: DoseResult, chemical_out: ChemicalOutput) -> Dos
         theoretical=result.theoretical,
         titration=result.titration,
         chemical=chemical_out,
+        element_contributions_mg_l=element_contributions_mg_l,
     )
 
 
@@ -259,8 +293,13 @@ def get_ph_context(
     target_elements = None
     target_unit = None
     latest_reservoir_c = None
+    is_recirculating_system = None
 
     if report_id is not None:
+        report = crud.get_report_by_id(db, report_id)
+        if report and report.user_id == current_user.id:
+            is_recirculating_system = report.is_recirculating_system
+
         water_analysis = crud.get_water_analysis_by_report(db, report_id)
         if water_analysis:
             water_salinity = water_analysis.water_salinity
@@ -287,6 +326,7 @@ def get_ph_context(
         is_likely_complex_solution=bool(complex_indicators),
         complex_indicator_elements=complex_indicators,
         latest_reservoir_c=latest_reservoir_c,
+        is_recirculating_system=is_recirculating_system,
     )
 
 
@@ -299,7 +339,9 @@ def calculate_theoretical_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    chem, density_is_ref, density_extrapolated = _build_engine_chemical(db, payload.chemical, current_user.id)
+    chem, density_is_ref, density_extrapolated, fert_elements = _build_engine_chemical(
+        db, payload.chemical, current_user.id
+    )
     alk_mg_l = normalize_alkalinity_to_mgl(payload.alkalinity_value, payload.alkalinity_unit)
 
     engine_input = TheoreticalInput(
@@ -321,7 +363,8 @@ def calculate_theoretical_endpoint(
         )
 
     chemical_out = _chemical_output(chem, density_is_ref, density_extrapolated)
-    response = _result_to_response(result, chemical_out)
+    element_contributions = _compute_element_contributions(result.commercial_mass_g, fert_elements, payload.volume_l)
+    response = _result_to_response(result, chemical_out, element_contributions)
 
     if payload.save:
         record = crud.save_ph_calculation(
@@ -335,6 +378,8 @@ def calculate_theoretical_endpoint(
             chemical_name=chem.name,
             fertilizer_id=chem.fertilizer_id,
             note=payload.note,
+            record_type="correction",
+            ec_ms_cm=payload.ec_ms_cm,
         )
         response.saved_id = record.id
 
@@ -350,7 +395,9 @@ def calculate_titration_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    chem, density_is_ref, density_extrapolated = _build_engine_chemical(db, payload.chemical, current_user.id)
+    chem, density_is_ref, density_extrapolated, fert_elements = _build_engine_chemical(
+        db, payload.chemical, current_user.id
+    )
 
     engine_input = TitrationInput(
         volume_l=payload.volume_l,
@@ -372,7 +419,8 @@ def calculate_titration_endpoint(
         )
 
     chemical_out = _chemical_output(chem, density_is_ref, density_extrapolated)
-    response = _result_to_response(result, chemical_out)
+    element_contributions = _compute_element_contributions(result.commercial_mass_g, fert_elements, payload.volume_l)
+    response = _result_to_response(result, chemical_out, element_contributions)
 
     if payload.save:
         record = crud.save_ph_calculation(
@@ -386,10 +434,53 @@ def calculate_titration_endpoint(
             chemical_name=chem.name,
             fertilizer_id=chem.fertilizer_id,
             note=payload.note,
+            record_type="correction",
+            ec_ms_cm=payload.ec_ms_cm,
         )
         response.saved_id = record.id
 
     return response
+
+
+# ============================================================
+# 🆕 POST /ph-calculator/monitoring - ثبت سریع یک اندازه‌گیری
+# (بدون محاسبه‌ی دوز) - برای پایش روند در سیستم‌های بازچرخشی
+# ============================================================
+@ph_calculator_router.post("/monitoring", response_model=MonitoringResponse)
+def log_monitoring_point(
+    payload: MonitoringRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = crud.save_ph_calculation(
+        db,
+        user_id=current_user.id,
+        report_id=payload.report_id,
+        method=None,
+        direction=None,
+        inputs=payload.model_dump(),
+        outputs={"ph": payload.ph, "ec_ms_cm": payload.ec_ms_cm},
+        chemical_name=None,
+        fertilizer_id=None,
+        note=payload.note,
+        record_type="monitoring",
+        ec_ms_cm=payload.ec_ms_cm,
+    )
+    return MonitoringResponse(ok=True, id=record.id, created_at=record.created_at)
+
+
+# ============================================================
+# 🆕 GET /ph-calculator/latest-correction - برای نمایش در «مخزن C»
+# صفحه‌ی محاسبه کود (خواندنی؛ بازتریگر بهینه‌ساز نمی‌کند)
+# ============================================================
+@ph_calculator_router.get("/latest-correction", response_model=Optional[PhHistoryItem])
+def get_latest_correction_endpoint(
+    report_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    record = crud.get_latest_correction(db, current_user.id, report_id)
+    return record
 
 
 # ============================================================
@@ -398,12 +489,15 @@ def calculate_titration_endpoint(
 @ph_calculator_router.get("/history", response_model=List[PhHistoryItem])
 def get_history(
     report_id: Optional[int] = Query(None),
+    record_type: Optional[str] = Query(None, pattern="^(correction|monitoring)$"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    records = crud.get_ph_calculations(db, current_user.id, report_id=report_id, skip=skip, limit=limit)
+    records = crud.get_ph_calculations(
+        db, current_user.id, report_id=report_id, record_type=record_type, skip=skip, limit=limit
+    )
     return records
 
 

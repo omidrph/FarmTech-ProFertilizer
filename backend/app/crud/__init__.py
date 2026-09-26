@@ -108,6 +108,7 @@ from .ph_calculator import (
     delete_ph_calculation,
     get_acid_fertilizers_for_user,
     get_fertilizer_owned_or_system,
+    get_latest_correction,
 )
 
 # ============================================================
@@ -197,6 +198,7 @@ __all__ = [
     'delete_ph_calculation',
     'get_acid_fertilizers_for_user',
     'get_fertilizer_owned_or_system',
+    'get_latest_correction',
 ]
 
 
