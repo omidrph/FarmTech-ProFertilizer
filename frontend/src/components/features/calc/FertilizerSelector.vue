@@ -341,6 +341,7 @@ onBeforeUnmount(() => {
 
 // ===== Computed =====
 const userFertilizers = computed(() => props.fertilizers.filter((f) => !f.isSystemDefault));
+const hasAcidFertilizers = computed(() => userFertilizers.value.some((f) => f.isAcid || f.isBase));
 const includeAcidBaseInSelectAll = ref(false);
 const doseModalFertilizer = ref<Fertilizer | null>(null);
 const manualDose = ref<number>(0);

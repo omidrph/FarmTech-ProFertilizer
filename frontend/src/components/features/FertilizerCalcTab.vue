@@ -336,6 +336,7 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useTargetStore } from '@/store/modules/targetStore';
+import { useWaterStore } from '@/store/modules/waterStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
@@ -369,7 +370,8 @@ const emit = defineEmits<{
 const calcStore = useCalcStore();
 const targetStore = useTargetStore();
 const reportStore = useReportStore();
-const { optimizeFertilizers, isOptimizing } = useCalculations();
+const { isOptimizing } = useCalculations();
+const waterStore = useWaterStore();
 const { exportOptimizationPdf, isExporting } = usePdfExport();
 
 // ===== تنظیمات استوک (از store) =====
@@ -582,7 +584,9 @@ const handleOptimize = async () => {
       prefer_most_accurate: optimizationMode.value === 'accurate'
     };
 
-    const result = await optimizeFertilizers(
+    const result = await calcStore.optimizeFertilizers(
+      targetStore.targetElements as Record<string, number>,
+      waterStore.waterValues as Record<string, number>,
       selectedFerts,
       options,
       mainTankVolume.value,

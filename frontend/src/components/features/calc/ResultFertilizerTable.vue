@@ -91,7 +91,7 @@
               step="0.001"
               min="0"
               class="w-28 text-center tabular-nums rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 text-sm font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
-              :value="displayWeight(item)"
+              :value="displayAmount(item)"
               @input="onWeightInput(item.id, $event)"
               @change="onWeightCommit(item.id)"
             />
