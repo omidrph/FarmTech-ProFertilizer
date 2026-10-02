@@ -157,7 +157,7 @@
           :fertilizers="fertilizers"
           :target-values="targetStore.targetElements"
           :tank-volume="mainTankVolume"
-          :ph-correction="phCorrection"
+          :active-ph="activePh"
           @update-weight="handleWeightEdit"
           @go-to-selection="goToStep(2)"
         />
@@ -332,7 +332,7 @@ import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
 import { apiService } from '@/services/apiService';
-import type { PhHistoryItem } from '@/services/apiService';
+import type { PhActiveSummary } from '@/services/apiService';
 
 import AppModal from '@/components/common/AppModal.vue';
 import StockSettings from './calc/StockSettings.vue';
@@ -451,7 +451,7 @@ onMounted(() => {
   // دوباره روی «محاسبه»، همان وضعیت بازیابی و مستقیم مرحله ۳ نمایش
   // داده می‌شود.
   syncRestoredState();
-  loadPhCorrection();
+  loadActivePh();
 
   window.addEventListener('report-changed', handleReportChanged);
 });
@@ -460,25 +460,22 @@ onBeforeUnmount(() => {
   window.removeEventListener('report-changed', handleReportChanged);
 });
 
-// 🆕 آخرین «اصلاح pH» ثبت‌شده برای این گزارش (فقط خواندنی؛ از تب PH
-// می‌آید). بازتریگر بهینه‌ساز نمی‌کند - فقط برای نمایش کنار مخزن C.
-const phCorrection = ref<PhHistoryItem | null>(null);
-const loadPhCorrection = async () => {
+// 🆕 اصلاح pH «فعال» این گزارش (از تب PH). خود محاسبه در بک‌اند آن را اعمال
+// می‌کند (عناصر اسید/باز مثل آب منبع پایه‌اند)؛ اینجا فقط برای تشخیص این‌که
+// نتیجهٔ نمایش‌داده‌شده با اصلاح فعلی هم‌خوان است یا باید دوباره محاسبه شود.
+const activePh = ref<PhActiveSummary | null>(null);
+const loadActivePh = async () => {
   const reportId = reportStore.currentReportId;
   if (!reportId) {
-    phCorrection.value = null;
+    activePh.value = null;
     return;
   }
-  try {
-    phCorrection.value = await apiService.getPhLatestCorrection(reportId);
-  } catch {
-    phCorrection.value = null;
-  }
+  activePh.value = await apiService.getPhActive(reportId);
 };
 
 const handleReportChanged = () => {
   syncRestoredState();
-  loadPhCorrection();
+  loadActivePh();
 };
 
 // 🆕 همگام‌سازی کودهای انتخاب‌شده، حالت بهینه‌سازی و مرحله جاری از روی
@@ -682,6 +679,3 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   opacity: 0;
 }
 </style>
-
-
-

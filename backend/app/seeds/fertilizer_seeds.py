@@ -352,8 +352,24 @@ SYSTEM_FERTILIZERS: List[Dict[str, Any]] = [
         "price_per_kg": 800000,
         "elements": {"K": 56.589},
         "is_acid": False,
+        "is_base": True,
+        "acid_type": "K2CO3",
         "ph_level": 11.5,
         "description": "کربنات پتاسیم (Potassium Carbonate) - تامین پتاسیم - افزایش pH محلول - مناسب تنظیم pH - خاصیت قلیایی قوی"
+    },
+    {
+        "name": "Potassium Hydroxide 90% (KOH)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 90.0,
+        "price_per_kg": 0.0,
+        "elements": {"K": 62.703},
+        "is_acid": False,
+        "is_base": True,
+        "acid_type": "KOH",
+        "ph_level": 13.5,
+        "description": "پتاسیم هیدروکسید ۹۰٪ (KOH) - باز تنظیم‌کنندهٔ pH و منبع پتاسیم - بسیار خورنده؛ با دستکش و عینک و همیشه در آب حل شود"
     },
     {
         "name": "Potassium Chloride (KCl)",
@@ -570,6 +586,7 @@ def seed_system_fertilizers(db: Session) -> Dict[str, int]:
                 elements=fert_data.get("elements", {}),
                 price_per_kg=fert_data.get("price_per_kg", 0.0),
                 is_acid=fert_data.get("is_acid", False),
+                is_base=fert_data.get("is_base", False),
                 acid_type=fert_data.get("acid_type"),
                 ph_level=fert_data.get("ph_level"),
                 description=fert_data.get("description"),

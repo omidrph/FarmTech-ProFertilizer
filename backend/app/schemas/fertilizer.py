@@ -22,7 +22,8 @@ class FertilizerCreate(BaseModel):
     elements: Optional[Dict[str, float]] = Field(default_factory=dict, description="درصد عناصر")
     price_per_kg: Optional[float] = Field(0.0, ge=0, description="قیمت هر کیلوگرم")
     is_acid: bool = Field(False, description="آیا اسید است؟")
-    acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید: H3PO4, HNO3, H2SO4")
+    is_base: bool = Field(False, description="آیا باز تنظیم‌کنندهٔ pH است؟ (KOH, K2CO3, ...)")
+    acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید/باز: H3PO4, HNO3, H2SO4, KOH, ...")
     ph_level: Optional[float] = Field(None, ge=0, le=14, description="pH محلول")
     description: Optional[str] = Field(None, description="توضیحات")
     is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
@@ -57,6 +58,7 @@ class FertilizerUpdate(BaseModel):
     elements: Optional[Dict[str, float]] = None
     price_per_kg: Optional[float] = Field(None, ge=0)
     is_acid: Optional[bool] = None
+    is_base: Optional[bool] = None
     acid_type: Optional[str] = Field(None, max_length=10)
     ph_level: Optional[float] = Field(None, ge=0, le=14)
     description: Optional[str] = None
@@ -83,6 +85,7 @@ class FertilizerResponse(BaseModel):
     elements: Optional[Dict[str, float]] = None
     price_per_kg: Optional[float] = 0.0
     is_acid: bool = False
+    is_base: bool = False
     acid_type: Optional[str] = None
     ph_level: Optional[float] = None
     description: Optional[str] = None

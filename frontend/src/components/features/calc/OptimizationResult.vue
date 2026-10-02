@@ -34,8 +34,14 @@
         @update-weight="$emit('update-weight', $event)"
       />
 
-      <!-- 🆕 آخرین اصلاح pH (از تب PH) - بلوکی کاملاً جدا از جدول استوک بالا -->
-      <PhCorrectionBanner v-if="phCorrection" :correction="phCorrection" class="mt-3" />
+      <!-- 🆕 اصلاح pH اعمال‌شده در این محاسبه (از تب PH) -->
+      <PhAdjustmentBanner v-if="result.ph_adjustment" :adjustment="result.ph_adjustment" class="mt-3" />
+      <div
+        v-if="phStale"
+        class="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs leading-6 text-amber-800 dark:text-amber-200"
+      >
+        {{ phStaleText }}
+      </div>
     </ResultAccordion>
 
     <!-- ============================================================ -->
@@ -58,10 +64,10 @@
 
       <ResultElementsGrid
         :target-values="targetValues"
-        :concentrations="adjustedConcentrations"
+        :concentrations="result.concentrations"
       />
-      <p v-if="phCorrection && hasElementAdjustment" class="mt-2 text-[11px] text-sky-700 dark:text-sky-400">
-        این مقادیر شامل سهم آخرین اصلاح pH هم هستند (جزئیات در کارت «مقدار کودها» بالا).
+      <p v-if="result.ph_adjustment" class="mt-2 text-[11px] text-sky-700 dark:text-sky-400">
+        این مقادیر (و تعادل یونی و EC) شامل سهم اسید/باز تنظیم pH هم هستند (جزئیات در کارت «مقدار کودها»).
       </p>
     </ResultAccordion>
 
@@ -146,8 +152,8 @@ import ResultAccordion from './ResultAccordion.vue';
 import ResultFertilizerTable from './ResultFertilizerTable.vue';
 import ResultElementsGrid from './ResultElementsGrid.vue';
 import ResultWarnings from './ResultWarnings.vue';
-import PhCorrectionBanner from './PhCorrectionBanner.vue';
-import type { PhHistoryItem } from '@/services/apiService';
+import PhAdjustmentBanner from './PhAdjustmentBanner.vue';
+import type { PhActiveSummary } from '@/services/apiService';
 
 const props = withDefaults(
   defineProps<{
@@ -155,9 +161,9 @@ const props = withDefaults(
     fertilizers: any[];
     targetValues: Record<string, number>;
     tankVolume?: number;
-    phCorrection?: PhHistoryItem | null;
+    activePh?: PhActiveSummary | null;
   }>(),
-  { tankVolume: 1000, phCorrection: null }
+  { tankVolume: 1000, activePh: null }
 );
 
 defineEmits<{
@@ -167,24 +173,21 @@ defineEmits<{
 
 const result = computed(() => props.result);
 
-// 🆕 غلظت عناصر با احتساب سهم آخرین اصلاح pH (مثلاً N از HNO3) - رفع
-// همان مشکلی که بدون آن، «تأمین‌شده» عناصر نادرست نمایش داده می‌شد.
-const hasElementAdjustment = computed(() => {
-  const contrib = props.phCorrection?.outputs?.element_contributions_mg_l;
-  return !!contrib && Object.keys(contrib).length > 0;
+// 🆕 آیا اصلاح pH فعال گزارش با آنچه در این نتیجه اعمال شده یکی است؟
+// (اگر کاربر در تب PH اصلاحی را اعمال/لغو/عوض کرده باشد، نتیجه باید دوباره محاسبه شود)
+const phStale = computed(() => {
+  const applied = result.value?.ph_adjustment ?? null;
+  const active = props.activePh ?? null;
+  if (!applied && !active) return false;
+  if (!applied || !active) return true;
+  return applied.id !== active.id || (applied.updated_at ?? null) !== (active.updated_at ?? null);
 });
 
-const adjustedConcentrations = computed<Record<string, number>>(() => {
-  const base = { ...(result.value?.concentrations || {}) };
-  const contrib = props.phCorrection?.outputs?.element_contributions_mg_l as Record<string, number> | undefined;
-  if (!contrib) return base;
-  for (const [el, val] of Object.entries(contrib)) {
-    if (Number.isFinite(val)) {
-      base[el] = (base[el] || 0) + val;
-    }
-  }
-  return base;
-});
+const phStaleText = computed(() =>
+  props.activePh
+    ? 'اصلاح pH فعال این گزارش با این نتیجه هم‌خوان نیست؛ برای اعمال آن دوباره «محاسبه» را بزنید.'
+    : 'اصلاح pH که در این نتیجه اعمال شده بود دیگر فعال نیست؛ برای حذف سهم آن دوباره «محاسبه» را بزنید.'
+);
 
 const toFixed = (value: unknown, digits = 2): string => {
   const parsed = Number(value);
@@ -274,6 +277,3 @@ const ionPercent = (type: 'cation' | 'anion'): number => {
   font-variant-numeric: tabular-nums;
 }
 </style>
-
-
-

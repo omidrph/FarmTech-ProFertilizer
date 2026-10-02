@@ -147,7 +147,7 @@
           />
         </div>
 
-        <!-- 🆕 PH Sub Tab (ماشین‌حساب pH - خارج از چرخه‌ی رسمی محاسبه) -->
+        <!-- 🆕 PH Sub Tab (اصلاح pH با اسید/باز؛ نتیجهٔ «اعمال‌شده» وارد چرخهٔ محاسبهٔ کود می‌شود) -->
         <div v-else-if="activeSubTab === 'ph'">
           <PhCalculatorTab />
         </div>
@@ -483,6 +483,3 @@ onUnmounted(() => {
   transform: translate(-50%, 10px);
 }
 </style>
-
-
-

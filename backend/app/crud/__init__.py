@@ -102,13 +102,14 @@ from .optimization_log import (
 # 🆕 Export از ph_calculator.py
 # ============================================================
 from .ph_calculator import (
-    save_ph_calculation,
-    get_ph_calculations,
-    get_ph_calculation_by_id,
-    delete_ph_calculation,
-    get_acid_fertilizers_for_user,
-    get_fertilizer_owned_or_system,
-    get_latest_correction,
+    list_adjuster_fertilizers,
+    get_user_fertilizer,
+    create_adjustment,
+    list_adjustments,
+    get_adjustment,
+    get_active_adjustment,
+    set_adjustment_active,
+    delete_adjustment,
 )
 
 # ============================================================
@@ -192,15 +193,12 @@ __all__ = [
     'process_calculation_data',
 
     # 🆕 pH Calculator
-    'save_ph_calculation',
-    'get_ph_calculations',
-    'get_ph_calculation_by_id',
-    'delete_ph_calculation',
-    'get_acid_fertilizers_for_user',
-    'get_fertilizer_owned_or_system',
-    'get_latest_correction',
+    'list_adjuster_fertilizers',
+    'get_user_fertilizer',
+    'create_adjustment',
+    'list_adjustments',
+    'get_adjustment',
+    'get_active_adjustment',
+    'set_adjustment_active',
+    'delete_adjustment',
 ]
-
-
-
-

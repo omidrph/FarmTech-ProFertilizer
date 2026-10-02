@@ -28,6 +28,7 @@ from app.core import (
     get_plant_ec_range,
 )
 from app.core.optimizer.result_processor import validate_optimization_result
+from app.core.ph_calculator import load_active_for_cycle, merge_into_water
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,16 @@ def optimize_fertilizers_endpoint(
         # ۱. آماده‌سازی داده‌ها
         target_values = request.target_values
         water_values = request.water_values or {}
+
+        # 🆕 اصلاح pH فعال گزارش (اسید/باز تب PH): عناصر واردشده مثل آب یک منبع پایه‌اند؛
+        # با افزودن آن‌ها به water_values، سهم کودهای دیگر خودکار کم می‌شود و غلظت نهایی،
+        # تعادل یونی، EC و رسوب با لحاظ اسید محاسبه می‌شوند.
+        ph_contrib, ph_summary = load_active_for_cycle(db, crud, current_user.id, request.report_id)
+        effective_water = merge_into_water(
+            water_values, ph_contrib, (ph_summary or {}).get('alkalinity_shift_ppm')
+        )
+        if ph_summary:
+            logger.info(f"   🧪 pH adjustment applied: {ph_summary['chemical_name']} -> {list(ph_contrib)}")
         
         # تبدیل کودها به فرمت مورد نیاز
         fertilizers = []
@@ -90,7 +101,7 @@ def optimize_fertilizers_endpoint(
         result = core_optimize_fertilizers(
             target_values=target_values,
             fertilizers=fertilizers,
-            water_values=water_values,
+            water_values=effective_water,
             options=options,
             tank_volume=request.tank_volume
         )
@@ -290,6 +301,7 @@ def optimize_fertilizers_endpoint(
                         'summary': result.get('summary'),
                         'ec': ec_result['ec'],
                         'ec_status': ec_result['status_label'],
+                        'ph_adjustment': ph_summary,
                         'stock_info': stock_info
                     }
 
@@ -341,6 +353,7 @@ def optimize_fertilizers_endpoint(
             # 🆕 فیلد EC (pH دیگر در این پاسخ نمایش داده نمی‌شود)
             ec=ec_result['ec'],
             ec_status=ec_result['status_label'],
+            ph_adjustment=ph_summary,
             stock_info=stock_info
         )
         
@@ -361,9 +374,3 @@ def optimize_fertilizers_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در بهینه‌سازی: {str(e)}"
         )
-
-
-
-
-
-

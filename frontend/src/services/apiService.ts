@@ -237,148 +237,155 @@ export interface RecipeListResponse {
 }
 
 // ============================================================
-// 🆕 Types برای ماشین‌حساب pH (backend: app/routes/ph_calculator.py)
+// 🆕 Types «اصلاح pH» (backend: app/routes/ph_calculator.py)
 // ============================================================
-export interface PhChemicalInput {
-    fertilizer_id?: number | null;
-    name?: string | null;
-    kind?: 'acid' | 'base' | null;
-    mw?: number | null;
-    z?: number | null;
-    purity_pct?: number | null;
-    density_g_ml?: number | null;
-}
+export type PhKind = 'acid' | 'base';
+export type PhMode = 'known' | 'trial';
+export type PhDoseUnit = 'ml' | 'g';
 
-export interface PhChemicalOutput {
-    id: string;
-    name: string;
-    formula: string;
-    kind: 'acid' | 'base';
-    mw: number;
-    z: string;
-    purity_pct: number;
-    density_g_ml: number;
-    source: 'fertilizer_db' | 'manual';
-    fertilizer_id?: number | null;
-    density_is_reference: boolean;
-    density_extrapolated: boolean;
-}
-
-export interface PhAcidOption {
+export interface PhAdjusterOption {
     fertilizer_id: number;
     name: string;
+    kind: PhKind;
     acid_type?: string | null;
-    concentration: number;
     form?: string | null;
-    is_system_default: boolean;
-    recognized: boolean;
-    suggested_mw?: number | null;
-    suggested_z?: string | null;
-    suggested_density_g_ml?: number | null;
+    concentration: number;
+    dose_unit: PhDoseUnit;
+    elements_pct: Record<string, number>;
+    elements_source: 'database' | 'derived' | 'missing';
+    density_g_ml?: number | null;
+    density_is_reference: boolean;
     density_extrapolated: boolean;
-}
-
-export interface PhTheoreticalRequest {
-    volume_l: number;
-    current_ph: number;
-    target_ph: number;
-    temperature_c: number;
-    alkalinity_value: number;
-    alkalinity_unit: 'mg_l_caco3' | 'meq_l';
-    sample_type: 'simple' | 'complex';
-    chemical: PhChemicalInput;
-    report_id?: number | null;
-    save?: boolean;
-    note?: string | null;
-    ec_ms_cm?: number | null;
-}
-
-export interface PhTitrationPointInput {
-    volume_ml: number;
-    ph: number;
-}
-
-export interface PhTitrationRequest {
-    volume_l: number;
-    current_ph: number;
-    target_ph: number;
-    temperature_c: number;
-    normality: number;
-    sample_volume_ml: number;
-    points: PhTitrationPointInput[];
-    chemical: PhChemicalInput;
-    report_id?: number | null;
-    save?: boolean;
-    note?: string | null;
-    ec_ms_cm?: number | null;
-}
-
-export interface PhDoseResponse {
-    ok: boolean;
-    method: 'theoretical' | 'titration' | 'no-adjustment';
-    direction: 'acid' | 'base' | 'none';
-    total_meq: number;
-    effective_z: number;
-    pure_mass_g: number;
-    commercial_mass_g: number;
-    commercial_volume_l: number;
+    recognized: boolean;
     warnings: string[];
-    sensitivity?: { min_l: number; max_l: number } | null;
-    theoretical?: {
-        ct_mmol_l: number;
-        initial_alk_mg_l: number;
-        target_alk_mg_l: number;
-        delta_meq_l: number;
-        pK1: number;
-        pK2: number;
-    } | null;
-    titration?: {
-        from_volume_ml: number;
-        to_volume_ml: number;
-        dose_ml: number;
-        meq_per_l: number;
-    } | null;
-    chemical: PhChemicalOutput;
-    saved_id?: number | null;
-    element_contributions_mg_l?: Record<string, number> | null;
 }
 
-export interface PhMonitoringRequest {
-    report_id: number;
+export interface PhTrialStep {
+    amount: number;
     ph: number;
-    ec_ms_cm?: number | null;
-    note?: string | null;
 }
 
-export interface PhMonitoringResponse {
-    ok: boolean;
-    id: number;
-    created_at: string;
-}
-
-export interface PhHistoryItem {
-    id: number;
+export interface PhAdjustmentRequest {
+    mode: PhMode;
+    fertilizer_id: number;
+    tank_volume_l: number;
+    initial_ph?: number | null;
+    target_ph?: number | null;
+    density_g_ml?: number | null;
+    // حالت رسپی
+    dose_amount?: number | null;
+    dose_basis_volume_l?: number | null;
+    // حالت آزمون و خطا
+    sample_volume_l?: number | null;
+    steps?: PhTrialStep[];
     report_id?: number | null;
-    record_type: 'correction' | 'monitoring';
-    method?: string | null;
-    direction?: string | null;
-    chemical_name?: string | null;
-    ec_ms_cm?: number | null;
-    inputs: Record<string, any>;
-    outputs: Record<string, any>;
+}
+
+export interface PhAdjustmentSaveRequest extends PhAdjustmentRequest {
+    report_id: number;
     note?: string | null;
+    ec_before?: number | null;
+    ec_after?: number | null;
+    apply?: boolean;
+}
+
+export interface PhChemicalSnapshot {
+    fertilizer_id?: number | null;
+    name: string;
+    kind: PhKind;
+    acid_type?: string | null;
+    form?: string | null;
+    purity_pct: number;
+    density_g_ml?: number | null;
+    density_is_reference: boolean;
+    elements_pct: Record<string, number>;
+    elements_source: string;
+}
+
+export interface PhAdjustmentResult {
+    ok: boolean;
+    mode: PhMode;
+    kind: PhKind;
+    chemical: PhChemicalSnapshot;
+    dose_unit: PhDoseUnit;
+    tank_volume_l: number;
+    initial_ph?: number | null;
+    target_ph?: number | null;
+    final_ph?: number | null;
+    dose_tank: number;
+    dose_per_1000l: number;
+    commercial_mass_g: number;
+    pure_mass_g: number;
+    stage_first: number;
+    stage_rest: number;
+    sample_volume_l?: number | null;
+    scale_factor?: number | null;
+    sample_dose?: number | null;
+    trial_method?: 'interpolated' | 'measured' | null;
+    curve: Array<{ amount: number; ph: number }>;
+    dose_basis_volume_l?: number | null;
+    element_contributions: Record<string, number>;
+    strength_meq_l: number;
+    water_alkalinity_meq_l?: number | null;
+    ec_delta: number;
+    base_ec?: number | null;
+    predicted_ec?: number | null;
+    warnings: string[];
+}
+
+export interface PhAdjustmentItem {
+    id: number;
+    report_id: number;
+    mode: PhMode;
+    kind: PhKind;
+    fertilizer_id?: number | null;
+    chemical_name: string;
+    chemical: Record<string, any>;
+    tank_volume_l: number;
+    initial_ph?: number | null;
+    target_ph?: number | null;
+    final_ph?: number | null;
+    sample_volume_l?: number | null;
+    trial_steps?: PhTrialStep[] | null;
+    dose_unit: PhDoseUnit;
+    dose_tank: number;
+    dose_per_1000l: number;
+    element_contributions: Record<string, number>;
+    ec_delta?: number | null;
+    ec_before?: number | null;
+    ec_after?: number | null;
+    note?: string | null;
+    is_active: boolean;
     created_at: string;
+    updated_at?: string | null;
+}
+
+export interface PhActiveSummary {
+    id: number;
+    chemical_name: string;
+    kind: PhKind;
+    mode: PhMode;
+    dose_unit: PhDoseUnit;
+    dose_tank: number;
+    dose_per_1000l: number;
+    tank_volume_l: number;
+    initial_ph?: number | null;
+    target_ph?: number | null;
+    final_ph?: number | null;
+    element_contributions: Record<string, number>;
+    ec_delta?: number | null;
+    updated_at?: string | null;
 }
 
 export interface PhContextResponse {
-    water_salinity?: number | null;
-    water_values?: Record<string, number> | null;
-    target_elements?: Record<string, number> | null;
-    target_unit?: string | null;
-    is_likely_complex_solution: boolean;
-    complex_indicator_elements: string[];
-    latest_reservoir_c?: Array<{ name: string; amount: number; fertilizer_id?: string; is_acid?: boolean }> | null;
-    is_recirculating_system?: boolean | null;
+    plant_name?: string | null;
+    tank_volume_l?: number | null;
+    water_ph?: number | null;
+    water_alkalinity_ppm?: number | null;
+    base_ec?: number | null;
+    suggested_target_ph: number;
+    target_ph_range: number[];
+    active?: PhActiveSummary | null;
 }
 
 
@@ -1027,69 +1034,58 @@ class ApiService {
     }
 
     // ============================================================
-    // 🆕 PH Calculator APIs (تب مستقل «PH»؛ خارج از چرخه‌ی رسمی محاسبه)
+    // 🆕 اصلاح pH (تب «PH»)
     // ============================================================
-    async getPhAcidOptions(): Promise<PhAcidOption[]> {
-        try {
-            const response: AxiosResponse<PhAcidOption[]> = await this.api.get('/ph-calculator/acids');
-            return response.data || [];
-        } catch (error) {
-            console.error('Error fetching ph acid options:', error);
-            throw error;
-        }
+    async getPhAdjusters(): Promise<PhAdjusterOption[]> {
+        const response: AxiosResponse<PhAdjusterOption[]> = await this.api.get('/ph-calculator/adjusters');
+        return response.data || [];
     }
 
     async getPhContext(reportId?: number | null): Promise<PhContextResponse> {
-        try {
-            const params = reportId ? { report_id: reportId } : {};
-            const response: AxiosResponse<PhContextResponse> = await this.api.get('/ph-calculator/context', { params });
-            return response.data;
-        } catch (error) {
-            console.error('Error fetching ph context:', error);
-            throw error;
-        }
-    }
-
-    async calculatePhTheoretical(data: PhTheoreticalRequest): Promise<PhDoseResponse> {
-        const response: AxiosResponse<PhDoseResponse> = await this.api.post('/ph-calculator/theoretical', data);
+        const params = reportId ? { report_id: reportId } : {};
+        const response: AxiosResponse<PhContextResponse> = await this.api.get('/ph-calculator/context', { params });
         return response.data;
     }
 
-    async calculatePhTitration(data: PhTitrationRequest): Promise<PhDoseResponse> {
-        const response: AxiosResponse<PhDoseResponse> = await this.api.post('/ph-calculator/titration', data);
+    async previewPhAdjustment(data: PhAdjustmentRequest): Promise<PhAdjustmentResult> {
+        const response: AxiosResponse<PhAdjustmentResult> = await this.api.post('/ph-calculator/preview', data);
         return response.data;
     }
 
-    async getPhHistory(reportId?: number | null, limit: number = 50, recordType?: 'correction' | 'monitoring'): Promise<PhHistoryItem[]> {
-        try {
-            const params: Record<string, any> = { limit };
-            if (reportId) params.report_id = reportId;
-            if (recordType) params.record_type = recordType;
-            const response: AxiosResponse<PhHistoryItem[]> = await this.api.get('/ph-calculator/history', { params });
-            return response.data || [];
-        } catch (error) {
-            console.error('Error fetching ph history:', error);
-            throw error;
-        }
-    }
-
-    async deletePhHistoryItem(id: number): Promise<void> {
-        await this.api.delete(`/ph-calculator/history/${id}`);
-    }
-
-    async savePhMonitoring(data: PhMonitoringRequest): Promise<PhMonitoringResponse> {
-        const response: AxiosResponse<PhMonitoringResponse> = await this.api.post('/ph-calculator/monitoring', data);
+    async savePhAdjustment(data: PhAdjustmentSaveRequest): Promise<PhAdjustmentItem> {
+        const response: AxiosResponse<PhAdjustmentItem> = await this.api.post('/ph-calculator/adjustments', data);
         return response.data;
     }
 
-    async getPhLatestCorrection(reportId: number): Promise<PhHistoryItem | null> {
+    async getPhAdjustments(reportId: number, limit: number = 100): Promise<PhAdjustmentItem[]> {
+        const response: AxiosResponse<PhAdjustmentItem[]> = await this.api.get('/ph-calculator/adjustments', {
+            params: { report_id: reportId, limit }
+        });
+        return response.data || [];
+    }
+
+    async applyPhAdjustment(id: number): Promise<PhAdjustmentItem> {
+        const response: AxiosResponse<PhAdjustmentItem> = await this.api.post(`/ph-calculator/adjustments/${id}/apply`);
+        return response.data;
+    }
+
+    async unapplyPhAdjustment(id: number): Promise<PhAdjustmentItem> {
+        const response: AxiosResponse<PhAdjustmentItem> = await this.api.post(`/ph-calculator/adjustments/${id}/unapply`);
+        return response.data;
+    }
+
+    async deletePhAdjustment(id: number): Promise<void> {
+        await this.api.delete(`/ph-calculator/adjustments/${id}`);
+    }
+
+    async getPhActive(reportId: number): Promise<PhActiveSummary | null> {
         try {
-            const response: AxiosResponse<PhHistoryItem | null> = await this.api.get('/ph-calculator/latest-correction', {
+            const response: AxiosResponse<PhActiveSummary | null> = await this.api.get('/ph-calculator/active', {
                 params: { report_id: reportId }
             });
             return response.data || null;
         } catch (error) {
-            console.error('Error fetching latest ph correction:', error);
+            console.error('Error fetching active ph adjustment:', error);
             return null;
         }
     }
@@ -1097,14 +1093,3 @@ class ApiService {
 
 export const apiService = new ApiService();
 export default apiService;
-
-
-
-
-
-
-
-
-
-
-

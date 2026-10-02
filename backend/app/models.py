@@ -2,7 +2,7 @@
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, BigInteger
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, BigInteger, Index, text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from datetime import datetime
@@ -49,7 +49,7 @@ class User(Base):
     fertilizers = relationship("Fertilizer", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     optimizations = relationship("OptimizationLog", back_populates="user", cascade="all, delete-orphan")
-    ph_calculations = relationship("PhCalculation", back_populates="user", cascade="all, delete-orphan")
+    ph_adjustments = relationship("PhAdjustment", back_populates="user", cascade="all, delete-orphan")
     security_logs = relationship("SecurityLog", back_populates="user", cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
     
@@ -190,9 +190,6 @@ class Report(Base):
     growth_stage = Column(String(50), nullable=True)
     report_date = Column(String(20), nullable=True)
 
-    # 🆕 آیا سیستم بازچرخشی (هیدروپونیک بسته) است؟ فقط از تب PH تنظیم می‌شود.
-    # None = هنوز مشخص نشده (کاربر هنوز به تب PH سر نزده)
-    is_recirculating_system = Column(Boolean, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -201,7 +198,7 @@ class Report(Base):
     water_analysis = relationship("WaterAnalysis", back_populates="report", uselist=False, cascade="all, delete-orphan")
     calculation = relationship("Calculation", back_populates="report", uselist=False, cascade="all, delete-orphan")
     optimizations = relationship("OptimizationLog", back_populates="report", cascade="all, delete-orphan")
-    ph_calculations = relationship("PhCalculation", back_populates="report", cascade="all, delete-orphan")
+    ph_adjustments = relationship("PhAdjustment", back_populates="report", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Report {self.id} - {self.report_name}>"
@@ -225,6 +222,8 @@ class Fertilizer(Base):
     elements = Column(JSON, nullable=True)
     price_per_kg = Column(Float, default=0.0)
     is_acid = Column(Boolean, default=False)
+    # 🆕 باز تنظیم‌کنندهٔ pH (KOH، K2CO3، ...) - همراه با is_acid در تب PH نمایش داده می‌شود
+    is_base = Column(Boolean, default=False, server_default=text("false"), nullable=False)
     acid_type = Column(String(10), nullable=True)
     ph_level = Column(Float, nullable=True)
     description = Column(Text, nullable=True)
@@ -373,53 +372,66 @@ class OptimizationLog(Base):
 
 
 # ============================================================
-# 🆕 مدل PhCalculation (تاریخچه‌ی ماشین‌حساب pH)
+# 🆕 مدل PhAdjustment (اصلاح pH - دوز اسید/باز برای یک مخزن)
 # ============================================================
-class PhCalculation(Base):
+class PhAdjustment(Base):
     """
-    تاریخچه‌ی محاسبات ماشین‌حساب pH.
+    یک «اصلاح pH» ثبت‌شده برای یک گزارش (= یک مخزن/رسپی).
 
-    این جدول عمداً از جدول Calculation (چرخه‌ی رسمی محاسبه‌ی کود) جدا
-    است: طبق تصمیم محصول، ماشین‌حساب pH فعلاً وارد چرخه‌ی رسمی محاسبه
-    نمی‌شود (کاربر پس از ساخت محلول/استوک، جداگانه و چند بار به این
-    صفحه سر می‌زند) اما همچنان به یک گزارش (report) متصل است تا
-    تاریخچه‌ی هر گزارش قابل بازیابی باشد.
+    mode:
+      'known' = رسپی؛ کاربر مقدار مصرفی را از قبل می‌داند.
+      'trial' = آزمون و خطا؛ مقدار از آزمون روی نمونه به کل مخزن تعمیم داده شده.
+
+    هر رکورد یک «عکس لحظه‌ای» کامل است (مشخصات ماده، درصد عناصر، سهم عناصر)؛
+    اگر کاربر بعداً کود را در پایگاه‌داده ویرایش کند، تاریخچه عوض نمی‌شود.
+
+    is_active: همین دوز در چرخهٔ محاسبهٔ گزارش اعمال می‌شود (عناصر آن به‌عنوان
+    منبع تأمین لحاظ می‌شوند). در هر گزارش حداکثر یک رکورد فعال است.
     """
-    __tablename__ = "ph_calculations"
+    __tablename__ = "ph_adjustments"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    report_id = Column(Integer, ForeignKey("reports.id", ondelete="CASCADE"), nullable=False, index=True)
 
-    method = Column(String(20), nullable=True)  # 'theoretical' | 'titration' (فقط برای record_type='correction')
-    direction = Column(String(10), nullable=True)  # 'acid' | 'base' | 'none'
-
-    # 🆕 نوع رکورد:
-    #   'correction'  = یک محاسبه‌ی کامل با پیشنهاد دوز اصلاحی (مثل قبل)
-    #   'monitoring'  = فقط ثبت سریع یک اندازه‌گیری (pH/EC) بدون محاسبه‌ی دوز -
-    #                   برای پایش روند در سیستم‌های بازچرخشی (recirculating)
-    record_type = Column(String(20), nullable=False, default="correction", server_default="correction")
-
-    # 🆕 مقدار EC اندازه‌گیری‌شده (mS/cm) - اختیاری، برای هر دو نوع رکورد قابل ثبت
-    ec_ms_cm = Column(Float, nullable=True)
-
-    # ورودی‌های کامل کاربر (برای بازتولید دقیق محاسبه بدون حدس زدن)
-    inputs = Column(JSON, nullable=False)
-    # خروجی کامل محاسبه (همان چیزی که در پاسخ API برگردانده شده)
-    outputs = Column(JSON, nullable=False)
-
-    chemical_name = Column(String(100), nullable=True)
+    mode = Column(String(10), nullable=False)            # 'known' | 'trial'
+    kind = Column(String(5), nullable=False)             # 'acid' | 'base'
     fertilizer_id = Column(Integer, ForeignKey("fertilizers.id", ondelete="SET NULL"), nullable=True)
+    chemical_name = Column(String(100), nullable=False)
+    chemical = Column(JSON, nullable=False)              # {acid_type, form, purity_pct, density_g_ml, elements_pct, ...}
+
+    tank_volume_l = Column(Float, nullable=False)
+    initial_ph = Column(Float, nullable=True)
+    target_ph = Column(Float, nullable=True)
+    final_ph = Column(Float, nullable=True)              # pH واقعی/برآوردشده در دوز نهایی
+
+    sample_volume_l = Column(Float, nullable=True)       # فقط حالت trial
+    trial_steps = Column(JSON, nullable=True)            # [{amount, ph}] مراحل آزمون
+
+    dose_unit = Column(String(2), nullable=False)        # 'ml' | 'g'
+    dose_tank = Column(Float, nullable=False)            # مقدار برای کل مخزن
+    dose_per_1000l = Column(Float, nullable=False)       # مقدار به‌ازای هر ۱۰۰۰ لیتر (برای رسپی)
+
+    element_contributions = Column(JSON, nullable=False)  # {عنصر: mg/L در محلول نهایی}
+    ec_delta = Column(Float, nullable=True)              # افزایش پیش‌بینی‌شدهٔ EC (dS/m)
+    ec_before = Column(Float, nullable=True)             # EC اندازه‌گیری‌شده قبل از اصلاح (dS/m) - اختیاری
+    ec_after = Column(Float, nullable=True)              # EC اندازه‌گیری‌شده بعد از اصلاح (dS/m) - اختیاری
 
     note = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=False, server_default=text("false"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user = relationship("User", back_populates="ph_calculations")
-    report = relationship("Report", back_populates="ph_calculations")
+    user = relationship("User", back_populates="ph_adjustments")
+    report = relationship("Report", back_populates="ph_adjustments")
+
+    __table_args__ = (
+        # حداکثر یک اصلاح فعال برای هر گزارش
+        Index(
+            "uq_ph_adjustment_one_active_per_report", "report_id", unique=True,
+            postgresql_where=text("is_active"), sqlite_where=text("is_active"),
+        ),
+    )
 
     def __repr__(self):
-        return f"<PhCalculation {self.id} ({self.method})>"
-
-
-
-
+        return f"<PhAdjustment {self.id} ({self.mode}, {self.chemical_name})>"

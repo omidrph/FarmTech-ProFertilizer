@@ -104,6 +104,11 @@ class OptimizationResponse(BaseModel):
     # و بازطراحی این بخش در آینده جداگانه انجام می‌شود). محاسبه داخلی pH
     # همچنان برای هشدارهای شیمیایی (رسوب، تداخل تغذیه‌ای) در سمت سرور
     # استفاده می‌شود، فقط دیگر به کاربر نمایش داده نمی‌شود.
+    ph_adjustment: Optional[Dict[str, Any]] = Field(
+        None,
+        description="🆕 اصلاح pH فعال گزارش که در این محاسبه اعمال شده (عناصر اسید/باز مثل آب به‌عنوان "
+                    "منبع پایه لحاظ می‌شوند). شامل id، نام ماده، دوز، سهم عناصر (mg/L) و ΔEC."
+    )
     stock_info: Optional[Dict[str, Any]] = Field(
         None,
         description="🆕 اطلاعات مخزن/استوک برای این نتیجه: شامل tank_volume, "
@@ -180,9 +185,3 @@ class PrecipitationCheckResponse(BaseModel):
     is_safe: bool = Field(..., description="آیا ترکیب ایمن است؟")
     risks: List[PrecipitationRiskItem] = Field(default_factory=list, description="خطرات احتمالی")
     suggestions: List[str] = Field(default_factory=list, description="پیشنهادات اصلاحی")
-
-
-
-
-
-

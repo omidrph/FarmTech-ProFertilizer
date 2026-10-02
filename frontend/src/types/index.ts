@@ -310,8 +310,25 @@ export interface OptimizationResponse {
     summary: string;
     ec: number;
     ec_status: string;
-    // 🆕 pH و دستورالعمل ساخت استوک عمداً از این پاسخ حذف شده‌اند؛ pH در
-    // یک تب اختصاصی جداگانه ارائه خواهد شد.
+    // 🆕 اصلاح pH فعال (از تب PH) که در این محاسبه اعمال شده است؛ عناصر اسید/باز
+    // مثل آب یک منبع پایه لحاظ شده‌اند و در concentrations / تعادل یونی / EC هستند.
+    ph_adjustment?: {
+        id: number;
+        chemical_name: string;
+        kind: 'acid' | 'base';
+        mode: 'known' | 'trial';
+        dose_unit: 'ml' | 'g';
+        dose_tank: number;
+        dose_per_1000l: number;
+        tank_volume_l: number;
+        initial_ph?: number | null;
+        target_ph?: number | null;
+        final_ph?: number | null;
+        element_contributions: Record<string, number>;
+        strength_meq_l?: number;
+        ec_delta?: number | null;
+        updated_at?: string | null;
+    } | null;
     stock_info?: {
         tank_volume: number;
         stock_volume?: number;
@@ -474,9 +491,3 @@ export interface User {
     updated_at?: string;
     full_name: string;
 }
-
-
-
-
-
-

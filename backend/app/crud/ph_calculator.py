@@ -1,158 +1,119 @@
 # backend/app/crud/ph_calculator.py
-"""
-عملیات CRUD برای مدل PhCalculation (تاریخچه‌ی ماشین‌حساب pH)
-"""
-from typing import Any, Dict, List, Optional
+"""عملیات CRUD «اصلاح pH» (PhAdjustment) و واکشی اسید/بازهای پایگاه‌داده کود کاربر"""
+from __future__ import annotations
 
 import logging
+from typing import Any, Dict, List, Optional
 
-from sqlalchemy import desc
+from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
 
-from app.models import Fertilizer, PhCalculation
+from app.models import Fertilizer, PhAdjustment
 
 logger = logging.getLogger(__name__)
 
 
-def save_ph_calculation(
-    db: Session,
-    user_id: int,
-    report_id: Optional[int],
-    method: Optional[str],
-    direction: Optional[str],
-    inputs: Dict[str, Any],
-    outputs: Dict[str, Any],
-    chemical_name: Optional[str] = None,
-    fertilizer_id: Optional[int] = None,
-    note: Optional[str] = None,
-    record_type: str = "correction",
-    ec_ms_cm: Optional[float] = None,
-) -> PhCalculation:
-    """ذخیره‌ی یک رکورد pH: یا یک محاسبه‌ی کامل اصلاحی ('correction') یا فقط یک اندازه‌گیری پایشی ('monitoring')"""
-    try:
-        record = PhCalculation(
-            user_id=user_id,
-            report_id=report_id,
-            method=method,
-            direction=direction,
-            record_type=record_type,
-            ec_ms_cm=ec_ms_cm,
-            inputs=inputs,
-            outputs=outputs,
-            chemical_name=chemical_name,
-            fertilizer_id=fertilizer_id,
-            note=note,
+# ============================================================
+# اسید/بازها از پایگاه‌داده‌ی کود «خود کاربر»
+# ============================================================
+def list_adjuster_fertilizers(db: Session, user_id: int) -> List[Fertilizer]:
+    """کودهای کاربر که اسید یا باز تنظیم‌کنندهٔ pH هستند (is_acid یا is_base)."""
+    return (
+        db.query(Fertilizer)
+        .filter(
+            Fertilizer.user_id == user_id,
+            or_(Fertilizer.is_acid.is_(True), Fertilizer.is_base.is_(True)),
         )
+        .order_by(Fertilizer.name)
+        .all()
+    )
+
+
+def get_user_fertilizer(db: Session, fertilizer_id: int, user_id: int) -> Optional[Fertilizer]:
+    return (
+        db.query(Fertilizer)
+        .filter(Fertilizer.id == fertilizer_id, Fertilizer.user_id == user_id)
+        .first()
+    )
+
+
+# ============================================================
+# اصلاح‌ها (تاریخچه)
+# ============================================================
+def create_adjustment(db: Session, user_id: int, report_id: int, data: Dict[str, Any], activate: bool = False) -> PhAdjustment:
+    try:
+        record = PhAdjustment(user_id=user_id, report_id=report_id, is_active=False, **data)
         db.add(record)
+        db.flush()
+        if activate:
+            _activate(db, record)
         db.commit()
         db.refresh(record)
-        logger.info(f"PhCalculation saved: {record.id} ({record_type})")
         return record
-    except Exception as e:
+    except Exception:
         db.rollback()
-        logger.error(f"Error saving ph calculation: {e}")
-        raise e
+        raise
 
 
-def get_ph_calculations(
-    db: Session,
-    user_id: int,
-    report_id: Optional[int] = None,
-    record_type: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 100,
-) -> List[PhCalculation]:
-    """دریافت تاریخچه‌ی محاسبات/پایش‌های pH کاربر (اختیاری: فیلتر بر اساس گزارش و نوع رکورد)"""
-    try:
-        query = db.query(PhCalculation).filter(PhCalculation.user_id == user_id)
-        if report_id is not None:
-            query = query.filter(PhCalculation.report_id == report_id)
-        if record_type is not None:
-            query = query.filter(PhCalculation.record_type == record_type)
-        return query.order_by(desc(PhCalculation.created_at)).offset(skip).limit(limit).all()
-    except Exception as e:
-        logger.error(f"Error getting ph calculations: {e}")
-        return []
+def list_adjustments(db: Session, user_id: int, report_id: int, limit: int = 100) -> List[PhAdjustment]:
+    return (
+        db.query(PhAdjustment)
+        .filter(PhAdjustment.user_id == user_id, PhAdjustment.report_id == report_id)
+        .order_by(desc(PhAdjustment.created_at), desc(PhAdjustment.id))
+        .limit(limit)
+        .all()
+    )
 
 
-def get_latest_correction(db: Session, user_id: int, report_id: int) -> Optional[PhCalculation]:
-    """آخرین رکورد نوع 'correction' برای یک گزارش - برای نمایش در مخزن C صفحه‌ی محاسبه کود"""
-    try:
-        return (
-            db.query(PhCalculation)
-            .filter(
-                PhCalculation.user_id == user_id,
-                PhCalculation.report_id == report_id,
-                PhCalculation.record_type == "correction",
-            )
-            .order_by(desc(PhCalculation.created_at))
-            .first()
+def get_adjustment(db: Session, adj_id: int, user_id: int) -> Optional[PhAdjustment]:
+    return (
+        db.query(PhAdjustment)
+        .filter(PhAdjustment.id == adj_id, PhAdjustment.user_id == user_id)
+        .first()
+    )
+
+
+def get_active_adjustment(db: Session, user_id: int, report_id: int) -> Optional[PhAdjustment]:
+    return (
+        db.query(PhAdjustment)
+        .filter(
+            PhAdjustment.user_id == user_id,
+            PhAdjustment.report_id == report_id,
+            PhAdjustment.is_active.is_(True),
         )
-    except Exception as e:
-        logger.error(f"Error getting latest ph correction: {e}")
-        return None
+        .first()
+    )
 
 
-def get_ph_calculation_by_id(db: Session, calc_id: int) -> Optional[PhCalculation]:
+def _activate(db: Session, record: PhAdjustment) -> None:
+    """هر گزارش فقط یک اصلاح فعال دارد؛ ابتدا فعال قبلی خاموش می‌شود."""
+    db.query(PhAdjustment).filter(
+        PhAdjustment.report_id == record.report_id,
+        PhAdjustment.is_active.is_(True),
+        PhAdjustment.id != record.id,
+    ).update({PhAdjustment.is_active: False}, synchronize_session=False)
+    db.flush()
+    record.is_active = True
+
+
+def set_adjustment_active(db: Session, record: PhAdjustment, active: bool) -> PhAdjustment:
     try:
-        return db.query(PhCalculation).filter(PhCalculation.id == calc_id).first()
-    except Exception as e:
-        logger.error(f"Error getting ph calculation: {e}")
-        return None
+        if active:
+            _activate(db, record)
+        else:
+            record.is_active = False
+        db.commit()
+        db.refresh(record)
+        return record
+    except Exception:
+        db.rollback()
+        raise
 
 
-def delete_ph_calculation(db: Session, calc_id: int, user_id: int) -> bool:
-    """حذف یک رکورد تاریخچه (فقط اگر متعلق به همان کاربر باشد)"""
+def delete_adjustment(db: Session, record: PhAdjustment) -> None:
     try:
-        record = (
-            db.query(PhCalculation)
-            .filter(PhCalculation.id == calc_id, PhCalculation.user_id == user_id)
-            .first()
-        )
-        if not record:
-            return False
         db.delete(record)
         db.commit()
-        logger.info(f"PhCalculation deleted: {calc_id}")
-        return True
-    except Exception as e:
+    except Exception:
         db.rollback()
-        logger.error(f"Error deleting ph calculation: {e}")
-        raise e
-
-
-def get_acid_fertilizers_for_user(db: Session, user_id: int) -> List[Fertilizer]:
-    """
-    اسیدهای واقعی موجود در پایگاه‌داده‌ی کود (سیستمی + شخصی کاربر) -
-    همان منبع درستِ «مخزن C» که به‌جای لیست ثابت و هاردکد قبلی استفاده
-    می‌شود.
-    """
-    try:
-        return (
-            db.query(Fertilizer)
-            .filter(
-                Fertilizer.is_acid.is_(True),
-                (Fertilizer.user_id == user_id) | (Fertilizer.is_system_default.is_(True)),
-            )
-            .order_by(Fertilizer.name)
-            .all()
-        )
-    except Exception as e:
-        logger.error(f"Error getting acid fertilizers: {e}")
-        return []
-
-
-def get_fertilizer_owned_or_system(db: Session, fertilizer_id: int, user_id: int) -> Optional[Fertilizer]:
-    """یک کود را فقط اگر متعلق به کاربر یا سیستمی باشد برمی‌گرداند (جلوگیری از دسترسی به کود کاربر دیگر)"""
-    try:
-        return (
-            db.query(Fertilizer)
-            .filter(
-                Fertilizer.id == fertilizer_id,
-                (Fertilizer.user_id == user_id) | (Fertilizer.is_system_default.is_(True)),
-            )
-            .first()
-        )
-    except Exception as e:
-        logger.error(f"Error getting fertilizer: {e}")
-        return None
+        raise
