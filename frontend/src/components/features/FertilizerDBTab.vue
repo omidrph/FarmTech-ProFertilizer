@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/FertilizerDBTab.vue -->
 <template>
   <div class="space-y-6">
@@ -146,8 +147,10 @@ const initialFormData = {
   form: '' as '' | 'liquid' | 'powder' | 'crystal' | 'granular',
   concentration: 100,
   price_per_kg: 0,
+  price_per_liter: 0,
   elements: {} as Record<string, number>,
   is_acid: false,
+  is_base: false,
   acid_type: '',
   ph_level: null as number | null,
   description: '',
@@ -210,6 +213,7 @@ const editFertilizer = (fertilizer: any) => {
     form: fertilizer.form || '',
     concentration: fertilizer.concentration || 100,
     price_per_kg: fertilizer.pricePerKg || fertilizer.price_per_kg || 0,
+    price_per_liter: fertilizer.pricePerLiter || fertilizer.price_per_liter || 0,
     elements: { ...(fertilizer.elements || {}) },
     is_acid: fertilizer.isAcid || fertilizer.is_acid || false,
     acid_type: fertilizer.acidType || fertilizer.acid_type || '',
@@ -258,8 +262,12 @@ const saveFertilizer = async () => {
       form: formData.form || undefined,
       concentration: formData.concentration,
       pricePerKg: Number(formData.price_per_kg),
+      pricePerLiter: formData.form === 'liquid' ? Number(formData.price_per_liter || 0) : undefined,
+      densityGPerMl: formData.specific_gravity || undefined,
+      packageVolumeL: formData.liquid_volume || undefined,
       elements: cleanElements,
       isAcid: formData.is_acid,
+      isBase: formData.is_base,
       acidType: formData.acid_type || undefined,
       phLevel: formData.ph_level || undefined,
       description: formData.description || undefined,

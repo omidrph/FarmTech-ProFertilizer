@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/ResultFertilizerTable.vue -->
 <!--
   جدول مقادیر کود، گروه‌بندی‌شده بر اساس مخزن.
@@ -59,13 +60,13 @@
                 step="0.001"
                 min="0"
                 class="w-24 text-left tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0.5 outline-none transition-colors text-gray-900 dark:text-white font-semibold"
-                :value="displayWeight(item)"
+                :value="displayAmount(item)"
                 @input="onWeightInput(item.id, $event)"
                 @change="onWeightCommit(item.id)"
                 @keyup.enter="onWeightCommit(item.id)"
               />
               <span v-else class="tabular-nums font-semibold text-gray-900 dark:text-white">
-                {{ formatNumber(convertWeight(item.weight), 2) }}
+                {{ formatNumber(displayAmount(item), 2) }}
               </span>
             </td>
             <td class="px-3 py-2 text-left tabular-nums text-gray-700 dark:text-gray-300" dir="ltr">
@@ -95,7 +96,7 @@
               @change="onWeightCommit(item.id)"
             />
             <span v-else class="tabular-nums text-sm font-semibold text-gray-900 dark:text-white">
-              {{ formatNumber(convertWeight(item.weight), 2) }}
+              {{ formatNumber(displayAmount(item), 2) }}
             </span>
           </div>
           <div class="flex items-center justify-between mt-1">
@@ -128,6 +129,10 @@ interface RowItem {
   id: string;
   name: string;
   isAcid: boolean;
+  isBase: boolean;
+  form?: string;
+  densityGPerMl?: number;
+  pricePerLiter?: number;
   weight: number;
   cost: number;
   tank: string;
@@ -157,9 +162,11 @@ const activeModeHint = computed(() =>
     : 'معادل همان مقدار به ازای هر ۱۰۰۰ لیتر محلول آماده مصرف'
 );
 
-const weightColumnLabel = computed(() =>
-  activeMode.value === 'stock' ? 'وزن (گرم)' : 'گرم / ۱۰۰۰ لیتر'
-);
+const weightColumnLabel = computed(() => {
+  const hasLiquid = rows.value.some(r => r.form === 'liquid');
+  if (hasLiquid) return activeMode.value === 'stock' ? 'دوز / مقدار' : 'دوز / ۱۰۰۰ لیتر';
+  return activeMode.value === 'stock' ? 'وزن (گرم)' : 'گرم / ۱۰۰۰ لیتر';
+});
 
 const convertWeight = (weight: number): number => {
   if (activeMode.value === 'stock') return weight;
@@ -172,8 +179,15 @@ const convertWeight = (weight: number): number => {
 const editedWeights = ref<Record<string, number>>({});
 watch(() => props.result, () => { editedWeights.value = {}; });
 
-const displayWeight = (item: RowItem): number =>
-  editedWeights.value[item.id] ?? Number(item.weight.toFixed(3));
+const gramsForItem = (item: RowItem, shown: number): number => item.form === 'liquid' && (item.densityGPerMl || 0) > 0 ? shown * Number(item.densityGPerMl) : shown;
+const displayAmount = (item: RowItem): number => {
+  const grams = editedWeights.value[item.id] ?? item.weight;
+  if (item.form === 'liquid' && (item.densityGPerMl || 0) > 0) {
+    const ml = grams / Number(item.densityGPerMl);
+    return activeMode.value === 'stock' ? ml : (ml / (Number(props.tankVolume) || 1000)) * 1000;
+  }
+  return convertWeight(grams);
+};
 
 const onWeightInput = (fertilizerId: string, event: Event) => {
   const value = parseFloat((event.target as HTMLInputElement).value);
@@ -185,7 +199,9 @@ const onWeightCommit = (fertilizerId: string) => {
   if (newWeight === undefined) return;
   const oldWeight = props.result.weights?.[fertilizerId] ?? 0;
   if (Math.abs(newWeight - oldWeight) < 0.0005) return;
-  emit('update-weight', { fertilizerId, weight: newWeight });
+  const item = rows.value.find(r => r.id === fertilizerId);
+  const grams = item?.form === 'liquid' && (item.densityGPerMl || 0) > 0 ? newWeight * Number(item.densityGPerMl) : (activeMode.value === 'stock' ? newWeight : (newWeight * (Number(props.tankVolume) || 1000) / 1000));
+  emit('update-weight', { fertilizerId, weight: grams });
 };
 
 // ===== نگاشت مخزن هر کود =====
@@ -220,6 +236,10 @@ const rows = computed<RowItem[]>(() => {
         id,
         name: fert?.name || id,
         isAcid: !!fert?.isAcid,
+        isBase: !!fert?.isBase,
+        form: fert?.form,
+        densityGPerMl: fert?.densityGPerMl,
+        pricePerLiter: fert?.pricePerLiter,
         weight: weight as number,
         cost: fert ? ((weight as number) / 1000) * (fert.pricePerKg || 0) : 0,
         tank: tankMap.value[id] || 'other'

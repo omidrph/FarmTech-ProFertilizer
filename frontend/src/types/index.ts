@@ -1,4 +1,5 @@
 
+
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -76,9 +77,14 @@ export interface Fertilizer {
     concentration: number;          // درصد خلوص/غلظت
     elements: Partial<Record<ElementName, number>>;
     pricePerKg: number;
+    pricePerLiter?: number;
+    densityGPerMl?: number;
+    packageVolumeL?: number;
+    activeConcentration?: number;
     
     // فیلدهای اسید و pH
     isAcid: boolean;
+    isBase: boolean;
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
     phLevel?: number;               // pH محلول
     
@@ -102,7 +108,12 @@ export interface FertilizerCreate {
     concentration?: number;
     elements?: Partial<Record<ElementName, number>>;
     pricePerKg?: number;
+    pricePerLiter?: number;
+    densityGPerMl?: number;
+    packageVolumeL?: number;
+    activeConcentration?: number;
     isAcid?: boolean;
+    isBase?: boolean;
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
     phLevel?: number;
     description?: string;
@@ -278,8 +289,12 @@ export interface OptimizationFertilizerInput {
     name: string;
     elements: Record<string, number>;
     price_per_kg: number;
+    form?: string;
+    density_g_ml?: number;
+    price_per_liter?: number;
     purity: number;
     is_acid: boolean;
+    is_base?: boolean;
     is_system_default: boolean;
     fixed_weight?: number;
 }

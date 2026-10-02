@@ -1,4 +1,5 @@
 
+
 // frontend/src/store/modules/calcStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -392,7 +393,8 @@ export const useCalcStore = defineStore('calc', () => {
         options?: OptimizationOptions,
         tankVolume: number = 1000,
         stockVolume: number = 100,
-        injectionRatio: number = 100
+        injectionRatio: number = 100,
+        manualDoses: Record<string, { value: number; unit: 'ml' | 'g' }> = {}
     ): Promise<OptimizationResponse | null> {
         isOptimizing.value = true;
         lastOptimizationError.value = null;
@@ -412,8 +414,13 @@ export const useCalcStore = defineStore('calc', () => {
                     name: f.name,
                     elements: f.elements || {},
                     price_per_kg: f.pricePerKg || 0,
+                    form: f.form,
+                    density_g_ml: f.densityGPerMl,
+                    price_per_liter: f.pricePerLiter,
                     purity: f.concentration || 100,
                     is_acid: f.isAcid || false,
+                    is_base: f.isBase || false,
+                    fixed_weight: manualDoses[f.id] ? (manualDoses[f.id].unit === 'ml' ? manualDoses[f.id].value * Number(f.densityGPerMl || 1) : manualDoses[f.id].value) : undefined,
                     is_system_default: f.isSystemDefault || false
                 })),
                 options: options || {
@@ -446,7 +453,7 @@ export const useCalcStore = defineStore('calc', () => {
                 for (const [fertilizerId, weight] of Object.entries(result.weights)) {
                     const fert = fertilizers.find(f => f.id === fertilizerId);
                     if (fert && weight > 0) {
-                        const cost = (weight / 1000) * (fert.pricePerKg || 0);
+                        const cost = fert?.form === 'liquid' && fert.pricePerLiter && fert.densityGPerMl ? (weight / (fert.densityGPerMl * 1000)) * fert.pricePerLiter : (weight / 1000) * (fert.pricePerKg || 0);
                         totalCostValue += cost;
                         
                         newRows.push({
@@ -526,8 +533,12 @@ export const useCalcStore = defineStore('calc', () => {
                     name: f.name,
                     elements: f.elements || {},
                     price_per_kg: f.pricePerKg || 0,
+                    form: f.form,
+                    density_g_ml: f.densityGPerMl,
+                    price_per_liter: f.pricePerLiter,
                     purity: f.concentration || 100,
                     is_acid: f.isAcid || false,
+                    is_base: f.isBase || false,
                     is_system_default: f.isSystemDefault || false
                 })),
                 weights: currentWeights,
@@ -548,7 +559,7 @@ export const useCalcStore = defineStore('calc', () => {
             for (const [fid, weight] of Object.entries(result.weights)) {
                 const fert = lastFertilizersUsed.value.find(f => f.id === fid);
                 if (fert && weight > 0) {
-                    const cost = (weight / 1000) * (fert.pricePerKg || 0);
+                    const cost = fert?.form === 'liquid' && fert.pricePerLiter && fert.densityGPerMl ? (weight / (fert.densityGPerMl * 1000)) * fert.pricePerLiter : (weight / 1000) * (fert.pricePerKg || 0);
                     totalCostValue += cost;
                     newRows.push({
                         id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -749,9 +760,3 @@ export const useCalcStore = defineStore('calc', () => {
 });
 
 export default useCalcStore;
-
-
-
-
-
-

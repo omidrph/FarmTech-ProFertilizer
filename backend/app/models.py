@@ -1,4 +1,5 @@
 
+
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
@@ -221,6 +222,11 @@ class Fertilizer(Base):
     concentration = Column(Float, default=100.0)
     elements = Column(JSON, nullable=True)
     price_per_kg = Column(Float, default=0.0)
+    # واحدهای تجاری و محاسباتی کود مایع؛ وزن همچنان واحد داخلی solver است.
+    density_g_ml = Column(Float, nullable=True)
+    price_per_liter = Column(Float, nullable=True)
+    package_volume_l = Column(Float, nullable=True)
+    active_concentration = Column(Float, nullable=True)
     is_acid = Column(Boolean, default=False)
     # 🆕 باز تنظیم‌کنندهٔ pH (KOH، K2CO3، ...) - همراه با is_acid در تب PH نمایش داده می‌شود
     is_base = Column(Boolean, default=False, server_default=text("false"), nullable=False)

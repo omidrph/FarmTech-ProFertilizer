@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/FertilizerCalcTab.vue -->
 <!--
   ============================================================
@@ -78,7 +79,9 @@
         <FertilizerSelector
           :fertilizers="fertilizers"
           :selected-fertilizers="localSelectedFertilizers"
+          :manual-mode="manualCalculationEnabled"
           @update:selected-fertilizers="handleSelectionChange"
+          @update:manual-doses="handleManualDoses"
         />
 
         <!-- حالت بهینه‌سازی -->
@@ -116,6 +119,11 @@
           <!-- تنظیمات پیشرفته -->
           <Transition name="step">
             <div v-show="showAdvanced" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              <label class="flex items-start gap-2 cursor-pointer">
+                <input v-model="manualCalculationEnabled" type="checkbox" class="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500" />
+                <span class="min-w-0"><span class="block text-sm font-medium text-gray-700 dark:text-gray-200">محاسبه دستی</span><span class="block text-[11px] text-gray-500 dark:text-gray-400">دوزهای واردشده برای اسید/باز یا کودهای مشخص، ثابت می‌مانند و ادامه محاسبه با همان مقادیر انجام می‌شود.</span></span>
+              </label>
+
               <label class="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -402,6 +410,8 @@ const autoBalanceEnabled = ref(false);
 type OptimizationMode = 'accurate' | 'fewer' | 'cheapest';
 const optimizationMode = ref<OptimizationMode>('accurate');
 const maxFertilizersCount = ref(6);
+const manualDoses = ref<Record<string, { value: number; unit: 'ml' | 'g' }>>({});
+const manualCalculationEnabled = ref(false);
 
 const optimizationModes: Array<{ key: OptimizationMode; title: string; description: string }> = [
   { key: 'accurate', title: 'دقیق‌ترین ترکیب', description: 'کمترین اختلاف با عناصر هدف' },
@@ -538,6 +548,8 @@ const goToStep = (step: number) => {
 };
 
 // ===== اقدامات =====
+const handleManualDoses = (doses: Record<string, { value: number; unit: 'ml' | 'g' }>) => { manualDoses.value = { ...manualDoses.value, ...doses }; };
+
 const handleSelectionChange = (selectedIds: string[]) => {
   localSelectedFertilizers.value = selectedIds;
   emit('update:selectedFertilizers', selectedIds);
@@ -551,6 +563,10 @@ const handleOptimize = async () => {
   if (localSelectedFertilizers.value.length === 0) {
     showToast('لطفاً حداقل یک کود را انتخاب کنید', 'error');
     return;
+  }
+  if (manualCalculationEnabled.value) {
+    const missing = localSelectedFertilizers.value.some(id => !manualDoses.value[id] || Number(manualDoses.value[id].value) <= 0);
+    if (missing) { showToast('در حالت محاسبه دستی، برای همه کودهای انتخاب‌شده مقدار وارد کنید', 'error'); return; }
   }
 
   const selectedFerts = props.fertilizers.filter((f) =>
@@ -571,7 +587,8 @@ const handleOptimize = async () => {
       options,
       mainTankVolume.value,
       stockVolume.value,
-      injectionRatio.value
+      injectionRatio.value,
+      manualCalculationEnabled.value ? manualDoses.value : {}
     );
 
     if (result) {
@@ -632,6 +649,8 @@ const resetAll = () => {
   calcStore.clearOptimizationResult();
   optimizationMode.value = 'accurate';
   autoBalanceEnabled.value = false;
+  manualDoses.value = {};
+  manualCalculationEnabled.value = false;
   currentStep.value = 1;
   showToast('همه داده‌ها پاک شدند', 'success');
 };

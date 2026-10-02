@@ -1,3 +1,4 @@
+
 # backend/app/crud/fertilizer.py
 """
 عملیات CRUD برای مدل Fertilizer (کود)
@@ -41,6 +42,10 @@ def create_fertilizer(db: Session, fertilizer_data: FertilizerCreate, user_id: i
             concentration=fertilizer_data.concentration or 100.0,
             elements=fertilizer_data.elements or {},
             price_per_kg=fertilizer_data.price_per_kg or 0.0,
+            density_g_ml=fertilizer_data.density_g_ml,
+            price_per_liter=fertilizer_data.price_per_liter,
+            package_volume_l=fertilizer_data.package_volume_l,
+            active_concentration=fertilizer_data.active_concentration,
             is_acid=fertilizer_data.is_acid,
             is_base=getattr(fertilizer_data, 'is_base', False),
             acid_type=fertilizer_data.acid_type,
@@ -211,6 +216,10 @@ def copy_system_fertilizer_to_user(db: Session, system_fertilizer_id: int, user_
             concentration=system_fert.concentration,
             elements=system_fert.elements,
             price_per_kg=system_fert.price_per_kg,
+            density_g_ml=system_fert.density_g_ml,
+            price_per_liter=system_fert.price_per_liter,
+            package_volume_l=system_fert.package_volume_l,
+            active_concentration=system_fert.active_concentration,
             is_acid=system_fert.is_acid,
             is_base=bool(getattr(system_fert, 'is_base', False)),
             acid_type=system_fert.acid_type,

@@ -1,4 +1,5 @@
 
+
 # backend/app/routes/calculations/optimization.py
 """
 مسیر بهینه‌سازی خودکار فرمول کود
@@ -72,8 +73,12 @@ def optimize_fertilizers_endpoint(
                 'name': fert.name,
                 'elements': fert.elements,
                 'price_per_kg': fert.price_per_kg,
+                'form': fert.form,
+                'density_g_ml': fert.density_g_ml,
+                'price_per_liter': fert.price_per_liter,
                 'purity': fert.purity,
                 'is_acid': fert.is_acid,
+                'is_base': fert.is_base,
                 'is_system_default': fert.is_system_default,
                 'fixed_weight': fert.fixed_weight if hasattr(fert, 'fixed_weight') else None
             })

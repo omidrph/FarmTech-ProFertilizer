@@ -1,3 +1,4 @@
+
 # backend/app/schemas/fertilizer.py
 """
 طرح‌های مربوط به Fertilizer (کود)
@@ -20,7 +21,11 @@ class FertilizerCreate(BaseModel):
     form: Optional[str] = Field(None, max_length=20, description="فرم فیزیکی: liquid, powder, crystal, granular")
     concentration: Optional[float] = Field(100.0, ge=0, le=100, description="درصد خلوص/غلظت")
     elements: Optional[Dict[str, float]] = Field(default_factory=dict, description="درصد عناصر")
-    price_per_kg: Optional[float] = Field(0.0, ge=0, description="قیمت هر کیلوگرم")
+    price_per_kg: Optional[float] = Field(0.0, ge=0, description="قیمت هر کیلوگرم؛ واحد مرجع هزینه داخلی")
+    density_g_ml: Optional[float] = Field(None, gt=0, description="چگالی کود مایع (g/mL)")
+    price_per_liter: Optional[float] = Field(None, ge=0, description="قیمت هر لیتر برای کود مایع")
+    package_volume_l: Optional[float] = Field(None, gt=0, description="حجم بسته‌بندی (لیتر)")
+    active_concentration: Optional[float] = Field(None, ge=0, le=100, description="درصد ماده مؤثره در کود مایع")
     is_acid: bool = Field(False, description="آیا اسید است؟")
     is_base: bool = Field(False, description="آیا باز تنظیم‌کنندهٔ pH است؟ (KOH, K2CO3, ...)")
     acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید/باز: H3PO4, HNO3, H2SO4, KOH, ...")
@@ -57,6 +62,10 @@ class FertilizerUpdate(BaseModel):
     concentration: Optional[float] = Field(None, ge=0, le=100)
     elements: Optional[Dict[str, float]] = None
     price_per_kg: Optional[float] = Field(None, ge=0)
+    density_g_ml: Optional[float] = Field(None, gt=0)
+    price_per_liter: Optional[float] = Field(None, ge=0)
+    package_volume_l: Optional[float] = Field(None, gt=0)
+    active_concentration: Optional[float] = Field(None, ge=0, le=100)
     is_acid: Optional[bool] = None
     is_base: Optional[bool] = None
     acid_type: Optional[str] = Field(None, max_length=10)
@@ -84,6 +93,10 @@ class FertilizerResponse(BaseModel):
     concentration: Optional[float] = 100.0
     elements: Optional[Dict[str, float]] = None
     price_per_kg: Optional[float] = 0.0
+    density_g_ml: Optional[float] = None
+    price_per_liter: Optional[float] = None
+    package_volume_l: Optional[float] = None
+    active_concentration: Optional[float] = None
     is_acid: bool = False
     is_base: bool = False
     acid_type: Optional[str] = None

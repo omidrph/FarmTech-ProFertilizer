@@ -1,3 +1,4 @@
+
 // frontend/src/store/modules/fertilizerStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -52,9 +53,14 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
             concentration: item.concentration ?? 100.0,
             elements: item.elements || {},
             pricePerKg: item.price_per_kg ?? item.pricePerKg ?? 0,
+            pricePerLiter: item.price_per_liter ?? item.pricePerLiter ?? undefined,
+            densityGPerMl: item.density_g_ml ?? item.densityGPerMl ?? undefined,
+            packageVolumeL: item.package_volume_l ?? item.packageVolumeL ?? undefined,
+            activeConcentration: item.active_concentration ?? item.activeConcentration ?? undefined,
             
             // فیلدهای اسید و pH
             isAcid: item.is_acid ?? item.isAcid ?? false,
+            isBase: item.is_base ?? item.isBase ?? false,
             acidType: item.acid_type ?? item.acidType ?? undefined,
             phLevel: item.ph_level ?? item.phLevel ?? undefined,
             
@@ -96,9 +102,12 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
         if ('pricePerKg' in fertilizerData && fertilizerData.pricePerKg !== undefined) {
             result.price_per_kg = fertilizerData.pricePerKg;
         }
-        if ('isAcid' in fertilizerData && fertilizerData.isAcid !== undefined) {
-            result.is_acid = fertilizerData.isAcid;
-        }
+        if ('pricePerLiter' in fertilizerData) result.price_per_liter = fertilizerData.pricePerLiter;
+        if ('densityGPerMl' in fertilizerData) result.density_g_ml = fertilizerData.densityGPerMl;
+        if ('packageVolumeL' in fertilizerData) result.package_volume_l = fertilizerData.packageVolumeL;
+        if ('activeConcentration' in fertilizerData) result.active_concentration = fertilizerData.activeConcentration;
+        if ('isAcid' in fertilizerData && fertilizerData.isAcid !== undefined) result.is_acid = fertilizerData.isAcid;
+        if ('isBase' in fertilizerData && fertilizerData.isBase !== undefined) result.is_base = fertilizerData.isBase;
         if ('acidType' in fertilizerData && fertilizerData.acidType !== undefined) {
             result.acid_type = fertilizerData.acidType || null;
         }

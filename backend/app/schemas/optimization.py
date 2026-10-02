@@ -1,4 +1,5 @@
 
+
 # backend/app/schemas/optimization.py
 """
 طرح‌های مربوط به بهینه‌سازی (Optimization)
@@ -55,9 +56,13 @@ class OptimizationFertilizerInput(BaseModel):
     id: str = Field(..., description="شناسه کود")
     name: str = Field(..., description="نام کود")
     elements: Dict[str, float] = Field(..., description="درصد عناصر تشکیل‌دهنده")
-    price_per_kg: float = Field(..., ge=0, description="قیمت هر کیلوگرم")
+    price_per_kg: float = Field(..., ge=0, description="قیمت هر کیلوگرم؛ واحد مرجع داخلی")
+    form: Optional[str] = Field(None, description="فرم فیزیکی کود")
+    density_g_ml: Optional[float] = Field(None, gt=0, description="چگالی برای کود مایع")
+    price_per_liter: Optional[float] = Field(None, ge=0, description="قیمت هر لیتر برای کود مایع")
     purity: float = Field(100.0, ge=0, le=100, description="درصد خلوص")
     is_acid: bool = Field(False, description="آیا اسید است؟")
+    is_base: bool = Field(False, description="آیا باز تنظیم‌کننده pH است؟")
     is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
     fixed_weight: Optional[float] = Field(None, ge=0, description="وزن ثابت (اگر کاربر تعیین کرده باشد)")
 

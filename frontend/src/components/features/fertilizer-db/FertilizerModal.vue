@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerModal.vue -->
 <template>
   <AppModal
@@ -209,7 +210,7 @@
                     <div class="relative">
                       <input 
                         type="number" 
-                        v-model.number="formData.price_per_kg" 
+                        v-model.number="displayPrice" 
                         min="0"
                         placeholder="۸۵۰۰۰" 
                         class="w-full px-3 sm:px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all pr-14 sm:pr-16"
@@ -247,6 +248,14 @@
                       class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
                     />
                     <span>اسید است</span>
+                  </label>
+                </div>
+
+                <!-- بخش باز تنظیم‌کننده pH -->
+                <div class="bg-blue-50/50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800/40">
+                  <label class="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input type="checkbox" v-model="formData.is_base" class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
+                    <span>باز تنظیم‌کننده pH است</span>
                   </label>
                 </div>
 
@@ -368,8 +377,10 @@ const props = defineProps<{
     form: '' | 'liquid' | 'powder' | 'crystal' | 'granular';
     concentration: number;
     price_per_kg: number;
+    price_per_liter?: number;
     elements: Record<string, number>;
     is_acid: boolean;
+    is_base: boolean;
     acid_type: string;
     ph_level: number | null;
     description: string;
@@ -404,6 +415,14 @@ const elementsList = [
 // ============================================================
 // Computed - مجموع درصد عناصر
 // ============================================================
+const displayPrice = computed({
+  get: () => props.formData.form === 'liquid' ? (props.formData.price_per_liter ?? 0) : props.formData.price_per_kg,
+  set: (value: number) => {
+    if (props.formData.form === 'liquid') props.formData.price_per_liter = value;
+    else props.formData.price_per_kg = value;
+  }
+});
+
 const totalElementsPercentage = computed(() => {
   const sum = Object.values(props.formData.elements).reduce((acc, val) => acc + (Number(val) || 0), 0);
   return parseFloat(sum.toFixed(1));
@@ -571,5 +590,3 @@ input:focus, select:focus, textarea:focus {
   outline: none;
 }
 </style>
-
-

@@ -1,4 +1,5 @@
 
+
 """
 ساخت ماتریس ضرایب برای بهینه‌سازی
 ================================
@@ -57,6 +58,10 @@ def prepare_fertilizer_data(fertilizers: List[Dict[str, Any]]) -> List[Dict[str,
             'name': fert.get('name', 'نامشخص'),
             'elements': elements,
             'price_per_kg': fert.get('price_per_kg', 0),
+            'price_per_liter': fert.get('price_per_liter'),
+            'density_g_ml': fert.get('density_g_ml'),
+            'form': fert.get('form'),
+            'dose_unit': 'ml' if str(fert.get('form', '')).lower() == 'liquid' else 'g',
             'purity': purity,
             'purity_factor': purity_factor,
             'is_acid': fert.get('is_acid', False),
@@ -252,6 +257,3 @@ def apply_fixed_weights_constraints(
             fixed_weights[str(fert.get('id', ''))] = fixed_weight
     
     return fixed_weights
-
-
-

@@ -1,10 +1,11 @@
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerStatsAndTable.vue -->
 <template>
   <div>
     <!-- ============================================================ -->
     <!-- کارت‌های آماری - تعاملی با فیلتر -->
     <!-- ============================================================ -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
       <!-- همه کودها -->
       <div
         @click="setFilter(null)"
@@ -57,6 +58,19 @@
           <p class="text-xl font-bold text-warning-600 dark:text-warning-400 tabular-nums">{{ acidFertilizersCount }}</p>
         </div>
         <span v-if="activeFilter === 'acid'" class="mr-auto w-2 h-2 rounded-full bg-warning-500"></span>
+      </div>
+
+      <!-- بازها -->
+      <div
+        @click="setFilter('base')"
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
+        :class="activeFilter === 'base' ? 'border-blue-500 dark:border-blue-400' : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'"
+      >
+        <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+          <span class="text-sm font-bold text-blue-600 dark:text-blue-400">pH+</span>
+        </div>
+        <div><p class="text-xs text-gray-500 dark:text-gray-400">بازها</p><p class="text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">{{ baseFertilizersCount }}</p></div>
+        <span v-if="activeFilter === 'base'" class="mr-auto w-2 h-2 rounded-full bg-blue-500"></span>
       </div>
 
       <!-- کودهای سیستمی -->
@@ -650,6 +664,11 @@
                   </label>
 
                   <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" v-model="filterType" value="base" class="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                    <span class="text-sm text-gray-700 dark:text-gray-300">باز</span>
+                  </label>
+
+                  <label class="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       v-model="filterType"
@@ -753,7 +772,7 @@ const filterForm = ref<'all' | 'powder' | 'crystal' | 'liquid' | 'granular'>('al
 const priceMin = ref<number | null>(null);
 const priceMax = ref<number | null>(null);
 const filterElement = ref<string>('all');
-const filterType = ref<'all' | 'normal' | 'acid'>('all');
+const filterType = ref<'all' | 'normal' | 'acid' | 'base'>('all');
 const filterSource = ref<'all' | 'user' | 'system'>('all');
 const showFilterModal = ref(false);
 
@@ -764,9 +783,8 @@ const normalFertilizersCount = computed(() => {
   return props.userFertilizers.filter((f: any) => !f.isAcid).length;
 });
 
-const acidFertilizersCount = computed(() => {
-  return props.userFertilizers.filter((f: any) => f.isAcid).length;
-});
+const acidFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => f.isAcid).length);
+const baseFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => f.isBase).length);
 
 const systemCopiedCount = computed(() => {
   return props.userFertilizers.filter((f: any) => f.sourceSystemId).length;
@@ -793,6 +811,8 @@ const filteredFertilizers = computed(() => {
     result = result.filter((f: any) => !f.isAcid);
   } else if (props.activeFilter === 'acid') {
     result = result.filter((f: any) => f.isAcid);
+  } else if (props.activeFilter === 'base') {
+    result = result.filter((f: any) => f.isBase);
   } else if (props.activeFilter === 'system') {
     result = result.filter((f: any) => f.sourceSystemId);
   }
@@ -840,8 +860,10 @@ const filteredFertilizers = computed(() => {
   // نوع کود
   if (filterType.value === 'acid') {
     result = result.filter((f: any) => f.isAcid);
+  } else if (filterType.value === 'base') {
+    result = result.filter((f: any) => f.isBase);
   } else if (filterType.value === 'normal') {
-    result = result.filter((f: any) => !f.isAcid);
+    result = result.filter((f: any) => !f.isAcid && !f.isBase);
   }
 
   // منشأ کود
@@ -1074,5 +1096,3 @@ const clearTable = () => {
   background: #4b5563;
 }
 </style>
-
-

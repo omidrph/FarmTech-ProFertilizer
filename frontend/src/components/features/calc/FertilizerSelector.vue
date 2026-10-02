@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/FertilizerSelector.vue -->
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -28,7 +29,7 @@
           title="کودهای اسیدی به‌عمد اضافه نمی‌شوند؛ اگر لازم دارید عمداً از لیست انتخاب کنید"
           class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          افزودن همه (بدون اسید)
+          افزودن همه
         </button>
         <button
           type="button"
@@ -39,6 +40,17 @@
           پاک کردن
         </button>
       </div>
+    </div>
+
+    <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/20">
+      <label class="flex items-start gap-2 cursor-pointer">
+        <input v-model="includeAcidBaseInSelectAll" type="checkbox" class="mt-0.5 w-4 h-4 rounded text-primary-600 focus:ring-primary-500" />
+        <span class="min-w-0">
+          <span class="block text-xs font-semibold text-gray-700 dark:text-gray-200">افزودن اسیدها و بازها در «افزودن همه»</span>
+          <span class="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">فقط وقتی فعال کنید که می‌خواهید مواد اصلاح‌کننده pH نیز وارد مجموعه انتخاب خودکار شوند.</span>
+        </span>
+      </label>
+      <p v-if="includeAcidBaseInSelectAll" class="mt-2 text-[10px] text-amber-700 dark:text-amber-400 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2">هشدار: اسید و باز علاوه بر تأمین عناصر، روی pH اثر دارند؛ دوز آن‌ها را قبل از محاسبه بررسی کنید.</p>
     </div>
 
     <!-- 🆕 راهنمای نقش دوگانه‌ی کودهای اسیدی -->
@@ -208,6 +220,7 @@
                     class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                     title="این کود اسیدی است؛ هم می‌تواند عنصر تأمین کند هم روی pH اثر بگذارد."
                   >اسید</span>
+                  <span v-if="fertilizer.isBase" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">باز</span>
                   <span
                     v-for="el in mainElements(fertilizer)"
                     :key="el.symbol"
@@ -215,6 +228,13 @@
                   >{{ el.symbol }} {{ el.value }}٪</span>
                 </div>
               </div>
+
+              <button
+                v-if="props.manualMode"
+                type="button"
+                @click.stop="openDoseModal(fertilizer)"
+                class="px-2 py-1 rounded-md text-[10px] font-medium text-primary-600 bg-primary-50 dark:bg-primary-900/20 dark:text-primary-300"
+              >دوز</button>
 
               <button
                 type="button"
@@ -244,6 +264,21 @@
         </div>
       </section>
     </div>
+
+    <div v-if="doseModalFertilizer" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" @click.self="doseModalFertilizer = null">
+      <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-5 shadow-xl" dir="rtl">
+        <h4 class="text-base font-bold text-gray-900 dark:text-white">دوز دستی {{ doseModalFertilizer.name }}</h4>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">مقدار این {{ doseModalFertilizer.isAcid ? 'اسید' : 'باز' }} را برای همین محاسبه وارد کنید.</p>
+        <div class="mt-4">
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">مقدار ({{ manualDoseUnit }})</label>
+          <input v-model.number="manualDose" type="number" min="0" step="0.01" class="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-sm" />
+        </div>
+        <div class="mt-4 flex gap-2 justify-end">
+          <button type="button" class="px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600" @click="doseModalFertilizer = null">لغو</button>
+          <button type="button" class="px-3 py-2 text-sm rounded-lg bg-primary-600 text-white" @click="() => { if (doseModalFertilizer && manualDose > 0) { emit('update:manualDoses', { [doseModalFertilizer.id]: { value: manualDose, unit: doseModalFertilizer.form === 'liquid' ? 'ml' : 'g' } }); } doseModalFertilizer = null; }">ثبت دوز</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -256,6 +291,9 @@ interface Fertilizer {
   name: string;
   brand?: string;
   isAcid: boolean;
+  isBase: boolean;
+  form?: string;
+  densityGPerMl?: number;
   pricePerKg: number;
   concentration?: number;
   elements: Record<string, number>;
@@ -268,10 +306,12 @@ type Pane = 'available' | 'selected';
 const props = defineProps<{
   fertilizers: Fertilizer[];
   selectedFertilizers: string[];
+  manualMode?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:selectedFertilizers', value: string[]): void;
+  (e: 'update:manualDoses', value: Record<string, { value: number; unit: 'ml' | 'g' }>): void;
 }>();
 
 // ===== State =====
@@ -301,7 +341,10 @@ onBeforeUnmount(() => {
 
 // ===== Computed =====
 const userFertilizers = computed(() => props.fertilizers.filter((f) => !f.isSystemDefault));
-const hasAcidFertilizers = computed(() => userFertilizers.value.some((f) => f.isAcid));
+const includeAcidBaseInSelectAll = ref(false);
+const doseModalFertilizer = ref<Fertilizer | null>(null);
+const manualDose = ref<number>(0);
+const manualDoseUnit = computed(() => doseModalFertilizer.value?.form === 'liquid' ? 'mL' : 'g');
 
 const selectedList = computed(() =>
   props.selectedFertilizers
@@ -346,9 +389,13 @@ const mainElements = (fertilizer: Fertilizer): Array<{ symbol: string; value: nu
 const commit = (ids: string[]) => emit('update:selectedFertilizers', ids);
 
 // ===== Actions =====
+const openDoseModal = (fert: Fertilizer) => { doseModalFertilizer.value = fert; manualDose.value = 0; };
+
 const addFertilizer = (id: string) => {
   if (props.selectedFertilizers.includes(id)) return;
   commit([...props.selectedFertilizers, id]);
+  const fert = userFertilizers.value.find((f) => f.id === id);
+  if (fert && (props.manualMode || fert.isAcid || fert.isBase)) openDoseModal(fert);
 };
 
 const removeFertilizer = (id: string) => {
@@ -356,11 +403,10 @@ const removeFertilizer = (id: string) => {
 };
 
 const selectAll = () => {
-  // 🆕 کودهای اسیدی عمداً در «افزودن همه» گنجانده نمی‌شوند: این کودها هم
-  // نقش تغذیه‌ای دارند هم نقش اصلاح pH، و انتخاب ناخواسته‌شان می‌تواند
-  // با آنچه در تب PH محاسبه می‌شود تداخل کند. کاربری که می‌داند دارد
-  // چه‌کار می‌کند، همچنان می‌تواند آن‌ها را دستی انتخاب کند.
-  commit(userFertilizers.value.filter((f) => !f.isAcid).map((f) => f.id));
+  const list = includeAcidBaseInSelectAll.value
+    ? userFertilizers.value
+    : userFertilizers.value.filter((f) => !f.isAcid && !f.isBase);
+  commit(list.map((f) => f.id));
 };
 
 const clearAll = () => commit([]);
@@ -443,6 +489,3 @@ const onDrop = (pane: Pane) => {
   background: #4b5563;
 }
 </style>
-
-
-

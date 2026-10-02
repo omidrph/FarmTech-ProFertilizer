@@ -1,3 +1,4 @@
+
 """
 تابع اصلی بهینه‌سازی فرمول کود
 ================================
@@ -131,13 +132,42 @@ def optimize_fertilizers(
         }
     
     # ===== ۳. آماده‌سازی هزینه‌ها =====
-    costs = np.array([fert.get('price_per_kg', 0) / 1000 for fert in fertilizers])
-    
-    # ===== ۴. اجرای بهینه‌سازی =====
+    # واحد داخلی solver همیشه گرم است. برای مایع، اگر قیمت/لیتر ثبت شده باشد
+    # آن را با چگالی به تومان/گرم تبدیل می‌کنیم؛ در غیر این صورت price_per_kg
+    # به‌عنوان fallback استفاده می‌شود.
+    costs = []
+    for fert in fertilizers:
+        density = float(fert.get('density_g_ml') or 0)
+        price_l = fert.get('price_per_liter')
+        if str(fert.get('form', '')).lower() == 'liquid' and price_l is not None and density > 0:
+            costs.append(float(price_l) / (density * 1000.0))
+        else:
+            costs.append(float(fert.get('price_per_kg', 0)) / 1000.0)
+    costs = np.array(costs)
+
+    # ===== ۴. اعمال دوزهای دستی/ثابت =====
+    # fixed_weight در payload باید واقعاً قفل شود. سهم مواد ثابت از b کسر
+    # می‌شود و solver فقط روی بخش آزاد مسئله کار می‌کند.
+    fixed = np.zeros(len(fertilizers), dtype=float)
+    fixed_mask = np.zeros(len(fertilizers), dtype=bool)
+    for i, fert in enumerate(fertilizers):
+        fw = fert.get('fixed_weight')
+        if fw is not None and float(fw) > 0:
+            fixed[i] = float(fw)
+            fixed_mask[i] = True
+    b_solver = b - (A @ fixed if fixed_mask.any() else 0)
+    # اگر دوز ثابت بخشی از یک عنصر را بیش از هدف پوشش دهد، solver برای آن
+    # عنصر مقدار منفی نمی‌گیرد؛ غلظت واقعی در post-processing حفظ می‌شود.
+    b_solver = np.maximum(b_solver, 0)
+    A_solver = A.copy()
+    if fixed_mask.any():
+        A_solver[:, fixed_mask] = 0.0
+
+    # ===== ۵. اجرای بهینه‌سازی =====
     try:
         solver_result = solve_optimization(
-            A=A,
-            b=b,
+            A=A_solver,
+            b=b_solver,
             method=method,
             costs=costs,
             cost_weight=cost_weight,
@@ -149,6 +179,23 @@ def optimize_fertilizers(
             max_fertilizers_count=options.get('max_fertilizers_count'),
             prefer_cheapest=options.get('prefer_cheapest', False)
         )
+
+        # حالت «کم‌هزینه» نباید به قیمت رهاکردن اهداف تمام شود. یک حل دقیق
+        # مرجع محاسبه می‌کنیم و اگر جواب ارزان خطای محسوسی بیشتر داشته باشد،
+        # جواب دقیق را نگه می‌داریم. بنابراین cheap فقط «ترجیح هزینه» است، نه
+        # اجازه برای کمبود غیرقابل‌قبول عناصر.
+        if options.get('prefer_cheapest') and not options.get('prefer_fewer_fertilizers'):
+            accurate_reference = solve_optimization(
+                A=A_solver, b=b_solver, method='nnls', costs=costs, cost_weight=0.0,
+                max_iterations=max_iterations, tolerance=tolerance,
+                element_weights=element_weights, active_elements=active_elements
+            )
+            cheap_residual = float(solver_result.get('residual', float('inf')))
+            accurate_residual = float(accurate_reference.get('residual', float('inf')))
+            allowed = max(accurate_residual * 1.10, accurate_residual + 1e-6)
+            if cheap_residual > allowed:
+                solver_result = accurate_reference
+                logger.info("💰 Cheap mode rejected: target-fit degradation exceeded 10%%; accurate solution retained.")
     except Exception as e:
         logger.error(f"Optimization error: {e}")
         return {
@@ -173,6 +220,10 @@ def optimize_fertilizers(
         options['use_ion_balance_check'] = use_ion_balance_check
         options['auto_balance'] = auto_balance  # 🆕 اضافه شدن به options
         
+        if fixed_mask.any():
+            solver_result['weights'] = np.asarray(solver_result.get('weights', np.zeros(len(fertilizers))), dtype=float) + fixed
+            solver_result['residual'] = float(np.linalg.norm(A @ solver_result['weights'] - b))
+
         result = process_optimization_result(
             solver_result=solver_result,
             A=A,
@@ -214,5 +265,3 @@ def optimize_fertilizers(
             'is_converged': False,
             'summary': f"❌ خطا در پردازش نتایج: {str(e)}"
         }
-
-
