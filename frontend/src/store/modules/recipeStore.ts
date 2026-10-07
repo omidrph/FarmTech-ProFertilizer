@@ -1,165 +1,198 @@
-// frontend/src/store/modules/phStore.ts
-// ============================================================
-// استور تب «PH» (اصلاح pH با اسید/باز)
-// ------------------------------------------------------------
-// همهٔ محاسبات در بک‌اند انجام می‌شود؛ این استور فقط وضعیت UI و
-// ارتباط با API را نگه می‌دارد:
-//   • adjusters : اسید/بازهای پایگاه‌داده‌ی کود خود کاربر
-//   • context   : حجم مخزن، pH/آلکالینیتی آب، EC پایه، اصلاح فعال گزارش
-//   • result    : نتیجهٔ آخرین محاسبه (preview)
-//   • history   : تاریخچهٔ اصلاح‌های ثبت‌شدهٔ گزارش
-// ============================================================
+// frontend/src/store/modules/recipeStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import {
-  apiService,
-  type PhAdjusterOption,
-  type PhAdjustmentItem,
-  type PhAdjustmentRequest,
-  type PhAdjustmentResult,
-  type PhAdjustmentSaveRequest,
-  type PhContextResponse
-} from '@/services/apiService';
-import { useReportStore } from './reportStore';
+import { apiService } from '@/services/apiService';
 
-function errorText(err: any, fallback: string): string {
-  const detail = err?.response?.data?.detail;
-  if (typeof detail === 'string') return detail;
-  if (Array.isArray(detail) && detail.length) {
-    // خطاهای اعتبارسنجی Pydantic: «Value error, ...» → فقط متن فارسی
-    const first = detail[0];
-    const msg = typeof first?.msg === 'string' ? first.msg : '';
-    return msg.replace(/^Value error,\s*/i, '') || fallback;
-  }
-  return err?.message || fallback;
+export interface Recipe {
+    id: number;
+    name: string;
+    description?: string | null;
+    target_values: Record<string, number>;
+    category?: string | null;
+    stage?: string | null;
+    is_system: boolean;
+    user_id?: number;
+    created_at: string;
+    updated_at?: string;
 }
 
-export const usePhStore = defineStore('ph', () => {
-  const adjusters = ref<PhAdjusterOption[]>([]);
-  const context = ref<PhContextResponse | null>(null);
-  const result = ref<PhAdjustmentResult | null>(null);
-  const history = ref<PhAdjustmentItem[]>([]);
+export interface RecipeCreate {
+    name: string;
+    description?: string | null;
+    target_values: Record<string, number>;
+    category?: string | null;
+    stage?: string | null;
+}
 
-  const isLoadingAdjusters = ref(false);
-  const isCalculating = ref(false);
-  const isSaving = ref(false);
-  const errorMessage = ref<string | null>(null);
+export interface RecipeUpdate {
+    name?: string;
+    description?: string | null;
+    target_values?: Record<string, number>;
+    category?: string | null;
+    stage?: string | null;
+}
 
-  const activeItem = computed(() => history.value.find((h) => h.is_active) || null);
+export interface RecipeListResponse {
+    system_recipes: Recipe[];
+    user_recipes: Recipe[];
+}
 
-  async function loadAdjusters(): Promise<void> {
-    isLoadingAdjusters.value = true;
-    try {
-      adjusters.value = await apiService.getPhAdjusters();
-    } catch (err) {
-      adjusters.value = [];
-      errorMessage.value = errorText(err, 'خطا در دریافت اسید/بازهای پایگاه‌داده کود');
-    } finally {
-      isLoadingAdjusters.value = false;
+export const useRecipeStore = defineStore('recipe', () => {
+    // ===== State =====
+    const systemRecipes = ref<Recipe[]>([]);
+    const userRecipes = ref<Recipe[]>([]);
+    const isLoading = ref(false);
+    const error = ref<string | null>(null);
+
+    // ===== Getters =====
+    const allRecipes = computed(() => {
+        return [...systemRecipes.value, ...userRecipes.value];
+    });
+
+    const getRecipeById = (id: number) => {
+        return allRecipes.value.find(r => r.id === id);
+    };
+
+    const hasSystemRecipes = computed(() => systemRecipes.value.length > 0);
+    const hasUserRecipes = computed(() => userRecipes.value.length > 0);
+
+    // ===== Actions =====
+
+    async function loadAllRecipes(): Promise<boolean> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            const data = await apiService.get<RecipeListResponse>('/recipes');
+            if (data) {
+                systemRecipes.value = data.system_recipes || [];
+                userRecipes.value = data.user_recipes || [];
+                return true;
+            }
+            return false;
+        } catch (err: any) {
+            error.value = err.message || 'خطا در بارگذاری رسپی‌ها';
+            console.error('Error loading recipes:', err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
     }
-  }
 
-  async function loadContext(): Promise<void> {
-    const reportId = useReportStore().currentReportId;
-    try {
-      context.value = await apiService.getPhContext(reportId ?? undefined);
-    } catch {
-      context.value = null;
+    async function createRecipe(data: RecipeCreate): Promise<Recipe | null> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            const result = await apiService.post<Recipe>('/recipes', data);
+            if (result) {
+                userRecipes.value.push(result);
+                return result;
+            }
+            return null;
+        } catch (err: any) {
+            error.value = err.message || 'خطا در ایجاد رسپی';
+            console.error('Error creating recipe:', err);
+            return null;
+        } finally {
+            isLoading.value = false;
+        }
     }
-  }
 
-  async function loadHistory(): Promise<void> {
-    const reportId = useReportStore().currentReportId;
-    if (!reportId) {
-      history.value = [];
-      return;
+    async function updateRecipe(id: number, data: RecipeUpdate): Promise<Recipe | null> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            const result = await apiService.put<Recipe>(`/recipes/${id}`, data);
+            if (result) {
+                const index = userRecipes.value.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    userRecipes.value[index] = result;
+                }
+                return result;
+            }
+            return null;
+        } catch (err: any) {
+            error.value = err.message || 'خطا در به‌روزرسانی رسپی';
+            console.error('Error updating recipe:', err);
+            return null;
+        } finally {
+            isLoading.value = false;
+        }
     }
-    try {
-      history.value = await apiService.getPhAdjustments(reportId);
-    } catch {
-      history.value = [];
+
+    async function deleteRecipe(id: number): Promise<boolean> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            await apiService.delete(`/recipes/${id}`);
+            userRecipes.value = userRecipes.value.filter(r => r.id !== id);
+            return true;
+        } catch (err: any) {
+            error.value = err.message || 'خطا در حذف رسپی';
+            console.error('Error deleting recipe:', err);
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
     }
-  }
 
-  async function refreshAll(): Promise<void> {
-    await Promise.all([loadAdjusters(), loadContext(), loadHistory()]);
-  }
-
-  async function calculate(payload: PhAdjustmentRequest): Promise<boolean> {
-    isCalculating.value = true;
-    errorMessage.value = null;
-    try {
-      const reportId = useReportStore().currentReportId;
-      result.value = await apiService.previewPhAdjustment({ ...payload, report_id: reportId ?? null });
-      return true;
-    } catch (err: any) {
-      result.value = null;
-      errorMessage.value = errorText(err, 'خطا در محاسبه');
-      return false;
-    } finally {
-      isCalculating.value = false;
+    async function applyRecipe(id: number): Promise<Record<string, number> | null> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            const result = await apiService.post<{ target_values: Record<string, number> }>(`/recipes/${id}/apply`);
+            if (result) {
+                return result.target_values;
+            }
+            return null;
+        } catch (err: any) {
+            error.value = err.message || 'خطا در اعمال رسپی';
+            console.error('Error applying recipe:', err);
+            return null;
+        } finally {
+            isLoading.value = false;
+        }
     }
-  }
 
-  async function save(payload: Omit<PhAdjustmentSaveRequest, 'report_id'>): Promise<PhAdjustmentItem | null> {
-    const reportId = useReportStore().currentReportId;
-    if (!reportId) {
-      errorMessage.value = 'برای ثبت، ابتدا یک گزارش باز یا ذخیره کنید.';
-      return null;
+    async function copySystemRecipe(id: number): Promise<Recipe | null> {
+        isLoading.value = true;
+        error.value = null;
+        try {
+            const result = await apiService.post<{ recipe: Recipe }>(`/recipes/${id}/copy`);
+            if (result && result.recipe) {
+                userRecipes.value.push(result.recipe);
+                return result.recipe;
+            }
+            return null;
+        } catch (err: any) {
+            error.value = err.message || 'خطا در کپی رسپی';
+            console.error('Error copying recipe:', err);
+            return null;
+        } finally {
+            isLoading.value = false;
+        }
     }
-    isSaving.value = true;
-    errorMessage.value = null;
-    try {
-      const item = await apiService.savePhAdjustment({ ...payload, report_id: reportId });
-      await Promise.all([loadHistory(), loadContext()]);
-      return item;
-    } catch (err: any) {
-      errorMessage.value = errorText(err, 'خطا در ثبت');
-      return null;
-    } finally {
-      isSaving.value = false;
+
+    function clearError() {
+        error.value = null;
     }
-  }
 
-  async function setApplied(id: number, applied: boolean): Promise<boolean> {
-    try {
-      if (applied) await apiService.applyPhAdjustment(id);
-      else await apiService.unapplyPhAdjustment(id);
-      await Promise.all([loadHistory(), loadContext()]);
-      return true;
-    } catch (err: any) {
-      errorMessage.value = errorText(err, 'خطا در تغییر وضعیت اعمال');
-      return false;
-    }
-  }
-
-  async function remove(id: number): Promise<boolean> {
-    try {
-      await apiService.deletePhAdjustment(id);
-      await Promise.all([loadHistory(), loadContext()]);
-      return true;
-    } catch (err: any) {
-      errorMessage.value = errorText(err, 'خطا در حذف');
-      return false;
-    }
-  }
-
-  function clearResult() {
-    result.value = null;
-    errorMessage.value = null;
-  }
-
-  function reset() {
-    result.value = null;
-    history.value = [];
-    context.value = null;
-    errorMessage.value = null;
-  }
-
-  return {
-    adjusters, context, result, history, activeItem,
-    isLoadingAdjusters, isCalculating, isSaving, errorMessage,
-    loadAdjusters, loadContext, loadHistory, refreshAll,
-    calculate, save, setApplied, remove, clearResult, reset
-  };
+    return {
+        systemRecipes,
+        userRecipes,
+        isLoading,
+        error,
+        allRecipes,
+        getRecipeById,
+        hasSystemRecipes,
+        hasUserRecipes,
+        loadAllRecipes,
+        createRecipe,
+        updateRecipe,
+        deleteRecipe,
+        applyRecipe,
+        copySystemRecipe,
+        clearError
+    };
 });
+
+export default useRecipeStore;

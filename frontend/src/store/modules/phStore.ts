@@ -1,196 +1,165 @@
 // frontend/src/store/modules/phStore.ts
 // ============================================================
-// استور تب «PH» (ماشین‌حساب pH)
+// استور تب «PH» (اصلاح pH با اسید/باز)
 // ------------------------------------------------------------
-// این تب عمداً خارج از چرخه‌ی رسمی محاسبه‌ی کود است (calcStore) اما
-// از پایگاه‌داده‌ی کود واقعی (اسیدها) و به‌صورت اطلاعاتی از آنالیز آب
-// و عناصر هدف گزارش جاری می‌خواند، و تاریخچه‌ی محاسبات خودش را
-// جداگانه ذخیره می‌کند. تمام محاسبات شیمیایی در بک‌اند (پایتون) انجام
-// می‌شود؛ این استور فقط state و فراخوانی API است.
+// همهٔ محاسبات در بک‌اند انجام می‌شود؛ این استور فقط وضعیت UI و
+// ارتباط با API را نگه می‌دارد:
+//   • adjusters : اسید/بازهای پایگاه‌داده‌ی کود خود کاربر
+//   • context   : حجم مخزن، pH/آلکالینیتی آب، EC پایه، اصلاح فعال گزارش
+//   • result    : نتیجهٔ آخرین محاسبه (preview)
+//   • history   : تاریخچهٔ اصلاح‌های ثبت‌شدهٔ گزارش
 // ============================================================
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { apiService } from '@/services/apiService';
-import type {
-  PhAcidOption,
-  PhContextResponse,
-  PhDoseResponse,
-  PhHistoryItem,
-  PhMonitoringRequest,
-  PhTheoreticalRequest,
-  PhTitrationRequest
+import {
+  apiService,
+  type PhAdjusterOption,
+  type PhAdjustmentItem,
+  type PhAdjustmentRequest,
+  type PhAdjustmentResult,
+  type PhAdjustmentSaveRequest,
+  type PhContextResponse
 } from '@/services/apiService';
 import { useReportStore } from './reportStore';
 
+function errorText(err: any, fallback: string): string {
+  const detail = err?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail) && detail.length) {
+    // خطاهای اعتبارسنجی Pydantic: «Value error, ...» → فقط متن فارسی
+    const first = detail[0];
+    const msg = typeof first?.msg === 'string' ? first.msg : '';
+    return msg.replace(/^Value error,\s*/i, '') || fallback;
+  }
+  return err?.message || fallback;
+}
+
 export const usePhStore = defineStore('ph', () => {
-  // ===== State =====
-  const acidOptions = ref<PhAcidOption[]>([]);
+  const adjusters = ref<PhAdjusterOption[]>([]);
   const context = ref<PhContextResponse | null>(null);
-  const history = ref<PhHistoryItem[]>([]);
-  const result = ref<PhDoseResponse | null>(null);
+  const result = ref<PhAdjustmentResult | null>(null);
+  const history = ref<PhAdjustmentItem[]>([]);
 
-  const isLoadingAcids = ref(false);
-  const isLoadingContext = ref(false);
+  const isLoadingAdjusters = ref(false);
   const isCalculating = ref(false);
-  const isLoadingHistory = ref(false);
+  const isSaving = ref(false);
+  const errorMessage = ref<string | null>(null);
 
-  const errorMessage = ref<string>('');
-  const needTitrationHint = ref(false);
+  const activeItem = computed(() => history.value.find((h) => h.is_active) || null);
 
-  // 🆕 پایش سریع (بدون محاسبه‌ی دوز) - برای سیستم‌های بازچرخشی
-  const isLoggingMonitoring = ref(false);
-  const monitoringError = ref<string>('');
-
-  // ===== Getters =====
-  const hasAcidOptions = computed(() => acidOptions.value.length > 0);
-
-  // ===== Actions =====
-  async function loadAcidOptions(): Promise<void> {
-    isLoadingAcids.value = true;
+  async function loadAdjusters(): Promise<void> {
+    isLoadingAdjusters.value = true;
     try {
-      acidOptions.value = await apiService.getPhAcidOptions();
-    } catch (e) {
-      console.error('خطا در دریافت لیست اسیدها:', e);
-      acidOptions.value = [];
+      adjusters.value = await apiService.getPhAdjusters();
+    } catch (err) {
+      adjusters.value = [];
+      errorMessage.value = errorText(err, 'خطا در دریافت اسید/بازهای پایگاه‌داده کود');
     } finally {
-      isLoadingAcids.value = false;
+      isLoadingAdjusters.value = false;
     }
   }
 
   async function loadContext(): Promise<void> {
-    const reportStore = useReportStore();
-    isLoadingContext.value = true;
+    const reportId = useReportStore().currentReportId;
     try {
-      context.value = await apiService.getPhContext(reportStore.currentReportId ?? undefined);
-    } catch (e) {
-      console.error('خطا در دریافت داده‌ی زمینه:', e);
+      context.value = await apiService.getPhContext(reportId ?? undefined);
+    } catch {
       context.value = null;
-    } finally {
-      isLoadingContext.value = false;
-    }
-  }
-
-  function extractError(e: any): { message: string; needTitration: boolean } {
-    const detail = e?.response?.data?.detail;
-    if (detail && typeof detail === 'object' && 'error' in detail) {
-      return { message: detail.error, needTitration: !!detail.need_titration };
-    }
-    if (typeof detail === 'string') return { message: detail, needTitration: false };
-    return { message: 'خطا در محاسبه. ورودی‌ها را بررسی کنید.', needTitration: false };
-  }
-
-  async function calculateTheoretical(payload: PhTheoreticalRequest): Promise<boolean> {
-    isCalculating.value = true;
-    errorMessage.value = '';
-    needTitrationHint.value = false;
-    try {
-      result.value = await apiService.calculatePhTheoretical(payload);
-      if (payload.save) await loadHistory();
-      return true;
-    } catch (e) {
-      const { message, needTitration } = extractError(e);
-      errorMessage.value = message;
-      needTitrationHint.value = needTitration;
-      result.value = null;
-      return false;
-    } finally {
-      isCalculating.value = false;
-    }
-  }
-
-  async function calculateTitration(payload: PhTitrationRequest): Promise<boolean> {
-    isCalculating.value = true;
-    errorMessage.value = '';
-    needTitrationHint.value = false;
-    try {
-      result.value = await apiService.calculatePhTitration(payload);
-      if (payload.save) await loadHistory();
-      return true;
-    } catch (e) {
-      const { message, needTitration } = extractError(e);
-      errorMessage.value = message;
-      needTitrationHint.value = needTitration;
-      result.value = null;
-      return false;
-    } finally {
-      isCalculating.value = false;
     }
   }
 
   async function loadHistory(): Promise<void> {
-    const reportStore = useReportStore();
-    isLoadingHistory.value = true;
+    const reportId = useReportStore().currentReportId;
+    if (!reportId) {
+      history.value = [];
+      return;
+    }
     try {
-      history.value = await apiService.getPhHistory(reportStore.currentReportId ?? undefined);
-    } catch (e) {
-      console.error('خطا در دریافت تاریخچه:', e);
-    } finally {
-      isLoadingHistory.value = false;
+      history.value = await apiService.getPhAdjustments(reportId);
+    } catch {
+      history.value = [];
     }
   }
 
-  // 🆕 ثبت سریع یک اندازه‌گیری (pH/EC) بدون محاسبه‌ی دوز - برای پایش روزانه‌ی سیستم بازچرخشی
-  async function logMonitoring(ph: number, ecMsCm?: number | null, note?: string | null): Promise<boolean> {
-    const reportStore = useReportStore();
-    if (!reportStore.currentReportId) {
-      monitoringError.value = 'برای ثبت پایش، ابتدا یک گزارش فعال لازم است.';
-      return false;
-    }
-    isLoggingMonitoring.value = true;
-    monitoringError.value = '';
+  async function refreshAll(): Promise<void> {
+    await Promise.all([loadAdjusters(), loadContext(), loadHistory()]);
+  }
+
+  async function calculate(payload: PhAdjustmentRequest): Promise<boolean> {
+    isCalculating.value = true;
+    errorMessage.value = null;
     try {
-      const payload: PhMonitoringRequest = {
-        report_id: reportStore.currentReportId,
-        ph,
-        ec_ms_cm: ecMsCm ?? undefined,
-        note: note ?? undefined
-      };
-      await apiService.savePhMonitoring(payload);
-      await loadHistory();
+      const reportId = useReportStore().currentReportId;
+      result.value = await apiService.previewPhAdjustment({ ...payload, report_id: reportId ?? null });
       return true;
-    } catch (e: any) {
-      monitoringError.value = e?.response?.data?.detail || 'ثبت اندازه‌گیری با خطا مواجه شد.';
+    } catch (err: any) {
+      result.value = null;
+      errorMessage.value = errorText(err, 'خطا در محاسبه');
       return false;
     } finally {
-      isLoggingMonitoring.value = false;
+      isCalculating.value = false;
     }
   }
 
-  async function deleteHistoryItem(id: number): Promise<void> {
-    await apiService.deletePhHistoryItem(id);
-    history.value = history.value.filter(h => h.id !== id);
+  async function save(payload: Omit<PhAdjustmentSaveRequest, 'report_id'>): Promise<PhAdjustmentItem | null> {
+    const reportId = useReportStore().currentReportId;
+    if (!reportId) {
+      errorMessage.value = 'برای ثبت، ابتدا یک گزارش باز یا ذخیره کنید.';
+      return null;
+    }
+    isSaving.value = true;
+    errorMessage.value = null;
+    try {
+      const item = await apiService.savePhAdjustment({ ...payload, report_id: reportId });
+      await Promise.all([loadHistory(), loadContext()]);
+      return item;
+    } catch (err: any) {
+      errorMessage.value = errorText(err, 'خطا در ثبت');
+      return null;
+    } finally {
+      isSaving.value = false;
+    }
   }
 
-  function clearResult(): void {
+  async function setApplied(id: number, applied: boolean): Promise<boolean> {
+    try {
+      if (applied) await apiService.applyPhAdjustment(id);
+      else await apiService.unapplyPhAdjustment(id);
+      await Promise.all([loadHistory(), loadContext()]);
+      return true;
+    } catch (err: any) {
+      errorMessage.value = errorText(err, 'خطا در تغییر وضعیت اعمال');
+      return false;
+    }
+  }
+
+  async function remove(id: number): Promise<boolean> {
+    try {
+      await apiService.deletePhAdjustment(id);
+      await Promise.all([loadHistory(), loadContext()]);
+      return true;
+    } catch (err: any) {
+      errorMessage.value = errorText(err, 'خطا در حذف');
+      return false;
+    }
+  }
+
+  function clearResult() {
     result.value = null;
-    errorMessage.value = '';
-    needTitrationHint.value = false;
+    errorMessage.value = null;
+  }
+
+  function reset() {
+    result.value = null;
+    history.value = [];
+    context.value = null;
+    errorMessage.value = null;
   }
 
   return {
-    // state
-    acidOptions,
-    context,
-    history,
-    result,
-    isLoadingAcids,
-    isLoadingContext,
-    isCalculating,
-    isLoadingHistory,
-    errorMessage,
-    needTitrationHint,
-    isLoggingMonitoring,
-    monitoringError,
-    // getters
-    hasAcidOptions,
-    // actions
-    loadAcidOptions,
-    loadContext,
-    calculateTheoretical,
-    calculateTitration,
-    loadHistory,
-    logMonitoring,
-    deleteHistoryItem,
-    clearResult
+    adjusters, context, result, history, activeItem,
+    isLoadingAdjusters, isCalculating, isSaving, errorMessage,
+    loadAdjusters, loadContext, loadHistory, refreshAll,
+    calculate, save, setApplied, remove, clearResult, reset
   };
 });

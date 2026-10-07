@@ -1,212 +1,201 @@
 # backend/app/schemas/ph_calculator.py
-"""طرح‌های مربوط به ماشین‌حساب pH"""
-from typing import Dict, List, Literal, Optional
+"""طرح‌های «اصلاح pH» (روش نسبتی: رسپی مشخص یا آزمون روی نمونه)"""
+from __future__ import annotations
+
 from datetime import datetime
-from pydantic import BaseModel, Field
+from typing import Dict, List, Literal, Optional
+
+from pydantic import BaseModel, Field, model_validator
 
 
 # ============================================================
-# ماده‌ی شیمیایی (اسید/باز انتخابی)
+# لیست اسید/بازهای پایگاه‌داده‌ی کود کاربر
 # ============================================================
-class ChemicalInput(BaseModel):
-    """
-    ماده‌ی شیمیایی مورد استفاده در محاسبه.
-    اگر fertilizer_id داده شود، سرور مقادیر mw/z/purity_pct را از
-    پایگاه‌داده‌ی کود واقعی کاربر می‌خواند (density_g_ml اگر داده نشود
-    از جدول مرجع resolve می‌شود). اگر fertilizer_id داده نشود، همه‌ی
-    فیلدها باید دستی وارد شوند (اسید/باز سفارشی).
-    """
-    fertilizer_id: Optional[int] = Field(None, description="شناسه‌ی کود اسیدی/بازی از پایگاه‌داده کود")
-    name: Optional[str] = Field(None, max_length=100)
-    kind: Optional[Literal["acid", "base"]] = None
-    mw: Optional[float] = Field(None, gt=0, description="جرم مولی g/mol (برای ماده‌ی سفارشی الزامی)")
-    z: Optional[float] = Field(None, gt=0, description="ظرفیت مؤثر (برای اسید فسفریک از fertilizer_id خودکار تشخیص داده می‌شود)")
-    purity_pct: Optional[float] = Field(None, gt=0, le=100, description="خلوص وزنی ٪ (اگر ندهید و fertilizer_id بدهید از پایگاه‌داده خوانده می‌شود)")
-    density_g_ml: Optional[float] = Field(None, gt=0, description="چگالی g/mL (اگر ندهید، از جدول مرجع یا پایگاه‌داده تخمین زده می‌شود)")
-
-
-class ChemicalOutput(BaseModel):
-    id: str
-    name: str
-    formula: str
-    kind: str
-    mw: float
-    z: str  # عدد به صورت رشته یا 'phosphoric'
-    purity_pct: float
-    density_g_ml: float
-    source: str
-    fertilizer_id: Optional[int] = None
-    density_is_reference: bool = Field(
-        False, description="اگر True باشد، چگالی از جدول مرجع صنعتی تخمین زده شده (نه از SDS واقعی محصول)"
-    )
-    density_extrapolated: bool = Field(
-        False, description="اگر True باشد، درصد خلوص خارج از بازه‌ی جدول مرجع چگالی بوده است"
-    )
-
-
-# ============================================================
-# لیست اسیدهای/بازهای موجود در پایگاه‌داده کود (dropdown)
-# ============================================================
-class AcidOption(BaseModel):
+class AdjusterOption(BaseModel):
     fertilizer_id: int
     name: str
+    kind: Literal["acid", "base"]
     acid_type: Optional[str] = None
-    concentration: float
     form: Optional[str] = None
-    is_system_default: bool = False
-    recognized: bool = Field(..., description="آیا acid_type در جدول ثابت‌های شیمیایی شناخته‌شده است")
-    suggested_mw: Optional[float] = None
-    suggested_z: Optional[str] = None
-    suggested_density_g_ml: Optional[float] = None
+    concentration: float = Field(..., description="درصد خلوص ثبت‌شده در پایگاه‌داده کود")
+    dose_unit: Literal["ml", "g"] = Field(..., description="واحد مقدار مصرفی: مایع=mL، جامد=g")
+    elements_pct: Dict[str, float] = Field(default_factory=dict, description="درصد وزنی عناصر در محصول تجاری")
+    elements_source: Literal["database", "derived", "missing"] = "database"
+    density_g_ml: Optional[float] = Field(None, description="چگالی مرجع (فقط برای مایعات)")
+    density_is_reference: bool = False
     density_extrapolated: bool = False
+    recognized: bool = Field(False, description="نوع در جدول مشخصات شناخته‌شده است")
+    warnings: List[str] = Field(default_factory=list)
 
 
 # ============================================================
-# درخواست‌های محاسبه
+# درخواست محاسبه / ثبت
 # ============================================================
-class TheoreticalRequest(BaseModel):
-    volume_l: float = Field(..., gt=0)
-    current_ph: float = Field(..., ge=0, le=14)
-    target_ph: float = Field(..., ge=0, le=14)
-    temperature_c: float = Field(25.0, ge=0, le=60)
-    alkalinity_value: float = Field(..., gt=0)
-    alkalinity_unit: Literal["mg_l_caco3", "meq_l"] = "mg_l_caco3"
-    sample_type: Literal["simple", "complex"] = "simple"
-    chemical: ChemicalInput
-    report_id: Optional[int] = None
-    save: bool = False
+class TrialStepInput(BaseModel):
+    amount: float = Field(..., gt=0, description="مقدار اضافه‌شده در همین مرحله (mL یا g)")
+    ph: float = Field(..., ge=0, le=14, description="pH پس از همین مرحله")
+
+
+class AdjustmentRequest(BaseModel):
+    mode: Literal["known", "trial"]
+    fertilizer_id: int
+    tank_volume_l: float = Field(..., gt=0, le=10_000_000)
+    initial_ph: Optional[float] = Field(None, ge=0, le=14)
+    target_ph: Optional[float] = Field(None, ge=0, le=14)
+    density_g_ml: Optional[float] = Field(None, gt=0, le=5, description="چگالی دقیق برگهٔ SDS (فقط مایعات)")
+
+    # --- حالت رسپی ---
+    dose_amount: Optional[float] = Field(None, gt=0, description="مقدار ماده در رسپی (mL یا g)")
+    dose_basis_volume_l: Optional[float] = Field(
+        None, gt=0, description="رسپی برای چند لیتر محلول است (پیش‌فرض: همان حجم مخزن)"
+    )
+
+    # --- حالت آزمون و خطا ---
+    sample_volume_l: Optional[float] = Field(None, gt=0, le=1000)
+    steps: List[TrialStepInput] = Field(default_factory=list, max_length=60)
+
+    report_id: Optional[int] = Field(None, description="برای مقایسه با آلکالینیتی آب و EC پایهٔ گزارش")
+
+    @model_validator(mode="after")
+    def _check_mode_fields(self):
+        if self.mode == "known":
+            if self.dose_amount is None:
+                raise ValueError("در حالت رسپی، مقدار ماده الزامی است.")
+        else:
+            if self.initial_ph is None or self.target_ph is None:
+                raise ValueError("در حالت آزمون و خطا، pH اولیه و pH هدف الزامی‌اند.")
+            if self.sample_volume_l is None:
+                raise ValueError("حجم نمونه الزامی است.")
+            if not self.steps:
+                raise ValueError("حداقل یک مرحله (مقدار و pH) وارد کنید.")
+        return self
+
+
+class AdjustmentSaveRequest(AdjustmentRequest):
+    report_id: int = Field(..., description="گزارشی که این اصلاح روی آن ثبت می‌شود")
     note: Optional[str] = Field(None, max_length=500)
-    ec_ms_cm: Optional[float] = Field(None, ge=0, description="EC اندازه‌گیری‌شده‌ی همین لحظه (mS/cm) - فقط برای ثبت در تاریخچه")
-
-
-class TitrationPointInput(BaseModel):
-    volume_ml: float = Field(..., gt=0)
-    ph: float = Field(..., ge=0, le=14)
-
-
-class TitrationRequest(BaseModel):
-    volume_l: float = Field(..., gt=0)
-    current_ph: float = Field(..., ge=0, le=14)
-    target_ph: float = Field(..., ge=0, le=14)
-    temperature_c: float = Field(25.0, ge=0, le=60)
-    normality: float = Field(..., gt=0)
-    sample_volume_ml: float = Field(..., gt=0)
-    points: List[TitrationPointInput] = Field(..., min_length=1, max_length=40)
-    chemical: ChemicalInput
-    report_id: Optional[int] = None
-    save: bool = False
-    note: Optional[str] = Field(None, max_length=500)
-    ec_ms_cm: Optional[float] = Field(None, ge=0, description="EC اندازه‌گیری‌شده‌ی همین لحظه (mS/cm) - فقط برای ثبت در تاریخچه")
+    ec_before: Optional[float] = Field(None, ge=0, le=30, description="EC اندازه‌گیری‌شده قبل از اصلاح (dS/m)")
+    ec_after: Optional[float] = Field(None, ge=0, le=30, description="EC اندازه‌گیری‌شده بعد از اصلاح (dS/m)")
+    apply: bool = Field(False, description="هم‌زمان در چرخهٔ محاسبهٔ گزارش اعمال شود")
 
 
 # ============================================================
 # پاسخ محاسبه
 # ============================================================
-class TheoreticalDetail(BaseModel):
-    ct_mmol_l: float
-    initial_alk_mg_l: float
-    target_alk_mg_l: float
-    delta_meq_l: float
-    pK1: float
-    pK2: float
+class ChemicalSnapshot(BaseModel):
+    fertilizer_id: Optional[int] = None
+    name: str
+    kind: Literal["acid", "base"]
+    acid_type: Optional[str] = None
+    form: Optional[str] = None
+    purity_pct: float
+    density_g_ml: Optional[float] = None
+    density_is_reference: bool = False
+    elements_pct: Dict[str, float] = Field(default_factory=dict)
+    elements_source: str = "database"
 
 
-class TitrationDetail(BaseModel):
-    from_volume_ml: float
-    to_volume_ml: float
-    dose_ml: float
-    meq_per_l: float
+class CurvePoint(BaseModel):
+    amount: float
+    ph: float
 
 
-class Sensitivity(BaseModel):
-    min_l: float
-    max_l: float
-
-
-class DoseResponse(BaseModel):
+class AdjustmentResult(BaseModel):
     ok: bool = True
-    method: Literal["theoretical", "titration", "no-adjustment"]
-    direction: Literal["acid", "base", "none"]
-    total_meq: float
-    effective_z: float
-    pure_mass_g: float
-    commercial_mass_g: float
-    commercial_volume_l: float
-    warnings: List[str] = []
-    sensitivity: Optional[Sensitivity] = None
-    theoretical: Optional[TheoreticalDetail] = None
-    titration: Optional[TitrationDetail] = None
-    chemical: ChemicalOutput
-    saved_id: Optional[int] = None
-    element_contributions_mg_l: Optional[Dict[str, float]] = Field(
-        None,
-        description=(
-            "غلظت اضافه‌شده‌ی هر عنصر (mg/L) در محلول نهایی، ناشی از همین دوز اصلاحی؛ "
-            "فقط وقتی ماده از پایگاه‌داده‌ی کود انتخاب شده باشد قابل‌محاسبه است. "
-            "این مقدار باید به «تأمین‌شده‌ی» همان عنصر در نتیجه‌ی محاسبه‌ی کود اضافه شود."
-        ),
-    )
+    mode: Literal["known", "trial"]
+    kind: Literal["acid", "base"]
+    chemical: ChemicalSnapshot
+    dose_unit: Literal["ml", "g"]
+    tank_volume_l: float
+    initial_ph: Optional[float] = None
+    target_ph: Optional[float] = None
+    final_ph: Optional[float] = None
 
+    dose_tank: float = Field(..., description="مقدار برای کل مخزن (mL یا g)")
+    dose_per_1000l: float
+    commercial_mass_g: float = Field(..., description="جرم محصول تجاری (g)")
+    pure_mass_g: float = Field(..., description="جرم ماده‌ی خالص (g)")
+    stage_first: float = Field(..., description="مقدار مرحلهٔ اول (۷۰٪ دوز)")
+    stage_rest: float
 
-class DoseErrorResponse(BaseModel):
-    ok: bool = False
-    error: str
-    need_titration: bool = False
+    # trial
+    sample_volume_l: Optional[float] = None
+    scale_factor: Optional[float] = None
+    sample_dose: Optional[float] = None
+    trial_method: Optional[Literal["interpolated", "measured"]] = None
+    curve: List[CurvePoint] = Field(default_factory=list)
+    # known
+    dose_basis_volume_l: Optional[float] = None
+
+    element_contributions: Dict[str, float] = Field(default_factory=dict, description="mg/L در محلول نهایی")
+    strength_meq_l: float = 0.0
+    water_alkalinity_meq_l: Optional[float] = None
+    ec_delta: float = 0.0
+    base_ec: Optional[float] = Field(None, description="EC آخرین محاسبهٔ گزارش (بدون این اصلاح)")
+    predicted_ec: Optional[float] = None
+    warnings: List[str] = Field(default_factory=list)
 
 
 # ============================================================
-# 🆕 ثبت سریع «پایش» (بدون محاسبه‌ی دوز) - برای سیستم‌های بازچرخشی
+# رکورد ذخیره‌شده (تاریخچه)
 # ============================================================
-class MonitoringRequest(BaseModel):
+class AdjustmentItem(BaseModel):
+    id: int
     report_id: int
-    ph: float = Field(..., ge=0, le=14)
-    ec_ms_cm: Optional[float] = Field(None, ge=0)
-    note: Optional[str] = Field(None, max_length=500)
-
-
-class MonitoringResponse(BaseModel):
-    ok: bool = True
-    id: int
-    created_at: datetime
-
-
-# ============================================================
-# تاریخچه
-# ============================================================
-class PhHistoryItem(BaseModel):
-    id: int
-    report_id: Optional[int] = None
-    record_type: Literal["correction", "monitoring"] = "correction"
-    method: Optional[str] = None
-    direction: Optional[str] = None
-    chemical_name: Optional[str] = None
-    ec_ms_cm: Optional[float] = None
-    inputs: dict
-    outputs: dict
+    mode: Literal["known", "trial"]
+    kind: Literal["acid", "base"]
+    fertilizer_id: Optional[int] = None
+    chemical_name: str
+    chemical: dict
+    tank_volume_l: float
+    initial_ph: Optional[float] = None
+    target_ph: Optional[float] = None
+    final_ph: Optional[float] = None
+    sample_volume_l: Optional[float] = None
+    trial_steps: Optional[List[dict]] = None
+    dose_unit: Literal["ml", "g"]
+    dose_tank: float
+    dose_per_1000l: float
+    element_contributions: Dict[str, float]
+    ec_delta: Optional[float] = None
+    ec_before: Optional[float] = None
+    ec_after: Optional[float] = None
     note: Optional[str] = None
+    is_active: bool = False
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
+class ActiveAdjustmentSummary(BaseModel):
+    """خلاصهٔ اصلاح فعال - برای نمایش در صفحهٔ محاسبهٔ کود و پاسخ بهینه‌ساز"""
+    id: int
+    chemical_name: str
+    kind: Literal["acid", "base"]
+    mode: Literal["known", "trial"]
+    dose_unit: Literal["ml", "g"]
+    dose_tank: float
+    dose_per_1000l: float
+    tank_volume_l: float
+    initial_ph: Optional[float] = None
+    target_ph: Optional[float] = None
+    final_ph: Optional[float] = None
+    element_contributions: Dict[str, float]
+    ec_delta: Optional[float] = None
+    updated_at: Optional[datetime] = None
+
+
 # ============================================================
-# داده‌ی زمینه (context) - برای پیش‌پرکردن/نمایش اطلاعاتی صفحه
-# بدون دست‌کاری صفحات آنالیز آب و عناصر هدف
+# زمینهٔ صفحهٔ PH
 # ============================================================
 class PhContextResponse(BaseModel):
-    water_salinity: Optional[float] = None
-    water_values: Optional[Dict[str, float]] = None
-    target_elements: Optional[Dict[str, float]] = None
-    target_unit: Optional[str] = None
-    is_likely_complex_solution: bool = Field(
-        False,
-        description="اگر عناصر هدف شامل فسفات/آمونیوم/... باشند که ظرفیت اسیدی/بازی را تحت تأثیر قرار می‌دهند، True است و پیشنهاد می‌شود sample_type روی complex باشد"
-    )
-    complex_indicator_elements: List[str] = []
-    latest_reservoir_c: Optional[List[dict]] = Field(
-        None, description="اسیدهای مخزن C از آخرین محاسبه‌ی ذخیره‌شده‌ی این گزارش (فقط اطلاعاتی)"
-    )
-    is_recirculating_system: Optional[bool] = Field(
-        None, description="آیا این گزارش به‌عنوان سیستم بازچرخشی (هیدروپونیک بسته) علامت خورده"
-    )
+    plant_name: Optional[str] = None
+    tank_volume_l: Optional[float] = Field(None, description="حجم مخزن اصلی از آخرین محاسبهٔ گزارش")
+    water_ph: Optional[float] = None
+    water_alkalinity_ppm: Optional[float] = None
+    base_ec: Optional[float] = Field(None, description="EC آخرین محاسبه (dS/m)، بدون اصلاح فعال")
+    suggested_target_ph: float = 6.0
+    target_ph_range: List[float] = [5.5, 6.5]
+    active: Optional[ActiveAdjustmentSummary] = None

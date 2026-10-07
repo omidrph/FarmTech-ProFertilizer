@@ -17,7 +17,6 @@ export interface ReportData {
   date: string;
   createdAt: string | null;
   updatedAt: string | null;
-  isRecirculatingSystem: boolean | null;
 }
 
 export interface ReportListItem {
@@ -47,8 +46,7 @@ export const useReportStore = defineStore('report', () => {
     growthStage: '',
     date: getCurrentShamsiDate(),
     createdAt: null,
-    updatedAt: null,
-    isRecirculatingSystem: null
+    updatedAt: null
   });
   const reports = ref<ReportListItem[]>([]);
   const isLoading = ref(false);
@@ -82,8 +80,7 @@ export const useReportStore = defineStore('report', () => {
       growthStage: '',
       date: getCurrentShamsiDate(),
       createdAt: null,
-      updatedAt: null,
-      isRecirculatingSystem: null
+      updatedAt: null
     };
     
     currentReportId.value = null;
@@ -130,8 +127,7 @@ export const useReportStore = defineStore('report', () => {
         growthStage: report.growth_stage || '',
         date: report.report_date || getCurrentShamsiDate(),
         createdAt: report.created_at || null,
-        updatedAt: report.updated_at || null,
-        isRecirculatingSystem: report.is_recirculating_system ?? null
+        updatedAt: report.updated_at || null
       };
       
       currentReportId.value = report.id;
@@ -411,22 +407,6 @@ export const useReportStore = defineStore('report', () => {
     };
   }
 
-  // 🆕 تنظیم/تغییر نوع سیستم (بازچرخشی یا نه) - فقط از تب PH صدا زده می‌شود.
-  // این یک ستون مستقل روی خود گزارش است؛ به آنالیز آب یا عناصر هدف کاری ندارد.
-  async function setRecirculatingSystem(value: boolean): Promise<boolean> {
-    if (!currentReportId.value) return false;
-    try {
-      const updated = await apiService.updateReport(String(currentReportId.value), {
-        is_recirculating_system: value
-      });
-      reportData.value.isRecirculatingSystem = updated?.is_recirculating_system ?? value;
-      return true;
-    } catch (err) {
-      console.error('خطا در ذخیره‌ی نوع سیستم:', err);
-      return false;
-    }
-  }
-
   function setCurrentReportId(id: number | null) {
     currentReportId.value = id;
     if (id === null) {
@@ -459,21 +439,9 @@ export const useReportStore = defineStore('report', () => {
     loadReports,
     deleteReport,
     updateReportData,
-    setRecirculatingSystem,
     setCurrentReportId,
     clearError
   };
 });
 
 export default useReportStore;
-
-
-
-
-
-
-
-
-
-
-

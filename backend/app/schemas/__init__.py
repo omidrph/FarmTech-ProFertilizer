@@ -229,50 +229,31 @@ __all__ = [
     'validate_element_name',
     'validate_code',
 
-    # 🆕 pH Calculator
-    'ChemicalInput',
-    'ChemicalOutput',
-    'AcidOption',
-    'TheoreticalRequest',
-    'TitrationPointInput',
-    'TitrationRequest',
-    'TheoreticalDetail',
-    'TitrationDetail',
-    'Sensitivity',
-    'DoseResponse',
-    'DoseErrorResponse',
-    'PhHistoryItem',
+    # 🆕 اصلاح pH
+    'AdjusterOption',
+    'TrialStepInput',
+    'AdjustmentRequest',
+    'AdjustmentSaveRequest',
+    'ChemicalSnapshot',
+    'CurvePoint',
+    'AdjustmentResult',
+    'AdjustmentItem',
+    'ActiveAdjustmentSummary',
     'PhContextResponse',
-    'MonitoringRequest',
-    'MonitoringResponse',
 ]
 
 # ============================================================
 # 🆕 Export از ph_calculator.py
 # ============================================================
 from .ph_calculator import (
-    ChemicalInput,
-    ChemicalOutput,
-    AcidOption,
-    TheoreticalRequest,
-    TitrationPointInput,
-    TitrationRequest,
-    TheoreticalDetail,
-    TitrationDetail,
-    Sensitivity,
-    DoseResponse,
-    DoseErrorResponse,
-    PhHistoryItem,
+    AdjusterOption,
+    TrialStepInput,
+    AdjustmentRequest,
+    AdjustmentSaveRequest,
+    ChemicalSnapshot,
+    CurvePoint,
+    AdjustmentResult,
+    AdjustmentItem,
+    ActiveAdjustmentSummary,
     PhContextResponse,
-    MonitoringRequest,
-    MonitoringResponse,
 )
-
-
-
-
-
-
-
-
-

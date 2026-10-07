@@ -43,6 +43,7 @@ from app.core import (
     ALL_ELEMENTS,
 )
 from app.core.optimizer.matrix_builder import prepare_fertilizer_data, calculate_full_solution_concentrations
+from app.core.ph_calculator import load_active_for_cycle, merge_into_water
 
 logger = logging.getLogger(__name__)
 
@@ -115,8 +116,14 @@ def recalculate_manual_weights(
 
         water_values = request.water_values or {}
 
+        # 🆕 اصلاح pH فعال گزارش (همان منطق مسیر optimize): عناصر اسید/باز مثل آب منبع پایه‌اند
+        ph_contrib, ph_summary = load_active_for_cycle(db, crud, current_user.id, request.report_id)
+        effective_water = merge_into_water(
+            water_values, ph_contrib, (ph_summary or {}).get('alkalinity_shift_ppm')
+        )
+
         final_concentrations = _calculate_concentrations_from_weights(
-            prepared, weights_per_1000L, water_values
+            prepared, weights_per_1000L, effective_water
         )
 
         # 🆕 مثل مسیر optimize: تعادل یونی/EC/رسوب باید بر مبنای ترکیب
@@ -125,7 +132,7 @@ def recalculate_manual_weights(
         import numpy as np
         weights_array = np.array([weights_per_1000L.get(f['id'], 0.0) for f in prepared])
         full_concentrations = calculate_full_solution_concentrations(
-            weights_array, fertilizers, water_values
+            weights_array, fertilizers, effective_water
         )
 
         # هزینه کل بر مبنای وزن واقعی
@@ -263,6 +270,7 @@ def recalculate_manual_weights(
                         'summary': 'نتیجه با وزن ویرایش‌شدهٔ دستی محاسبه شد.',
                         'ec': ec_result['ec'],
                         'ec_status': ec_result['status_label'],
+                        'ph_adjustment': ph_summary,
                         'stock_info': {'tank_volume': tank_volume, 'manual_edit': True}
                     }
 
@@ -309,6 +317,7 @@ def recalculate_manual_weights(
             summary='نتیجه با وزن ویرایش‌شدهٔ دستی محاسبه شد.',
             ec=ec_result['ec'],
             ec_status=ec_result['status_label'],
+            ph_adjustment=ph_summary,
             stock_info={
                 'tank_volume': tank_volume,
                 'manual_edit': True
@@ -324,7 +333,3 @@ def recalculate_manual_weights(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در محاسبه مجدد: {str(e)}"
         )
-
-
-
-

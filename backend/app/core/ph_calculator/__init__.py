@@ -1,69 +1,48 @@
+# backend/app/core/ph_calculator/__init__.py
 """
-موتور محاسباتی «ماشین‌حساب pH»
+موتور محاسباتی «اصلاح pH» (نسخهٔ جدید - روش نسبتی/آزمون روی نمونه)
 ============================================================
-این پکیج جایگزین منطق قدیمیِ فرانت‌اندی (frontend/.../widgets/ph/*.ts)
-است. تمام محاسبات شیمیایی اکنون در بک‌اند (پایتون) انجام می‌شود؛
-فرانت‌اند فقط UI است و از طریق API این نتایج را می‌گیرد.
+جایگزین کامل نسخهٔ قبلی (مدل تئوریک کربنات + تیتراسیون چندنقطه‌ای).
 
 ماژول‌ها:
-    chemistry.py - تعادل کربنات/فسفات، تبدیل واحد آلکالینیتی
-    acids.py     - ثابت‌های شیمیایی اسید/باز (MW، ظرفیت، چگالی مرجع)
-    dose.py      - محاسبه‌ی دوز (مسیر تئوریک و مسیر تیتراسیون واقعی)
-
-مرجع: «گزارش فنی اصلاح‌شده – سیستم اصلاح pH» نسخه ۳٫۰ (همان مرجعی
-که پیاده‌سازی قبلی فرانت‌اند بر اساس آن نوشته شده بود). فرمول‌های
-تعادل کربنات و فسفات بدون تغییر پایتونی شدند و با تست واحد در برابر
-پیاده‌سازی قبلی و مقادیر مرجع اعتبارسنجی شدند (به تست‌ها مراجعه کنید:
-backend/tests/test_ph_calculator.py).
+    adjusters.py     - مشخصات اسید/باز، چگالی مرجع، درصد عناصر
+    engine.py        - حل منحنی آزمون روی نمونه، مقیاس‌دهی به مخزن
+    contributions.py - عناصر واردشده (ppm)، meq/L، ΔEC، مقایسه با آلکالینیتی
 """
-from .chemistry import (
-    CarbonateConstants,
-    carbonate_constants,
-    carbonate_fractions,
-    alkalinity_from_ct,
-    total_carbon_from_alkalinity,
-    phosphate_fractions,
-    phosphoric_effective_z,
-    mgl_caco3_to_meql,
-    meql_to_mgl_caco3,
-    normalize_alkalinity_to_mgl,
-)
-from .acids import (
-    ChemicalKind,
-    ChemicalSpec,
-    KNOWN_ACID_BASE_CONSTANTS,
+from .adjusters import (
+    AdjusterSpec,
+    DISCOURAGED,
+    KNOWN_ADJUSTERS,
+    default_dose_unit,
+    derive_elements_pct,
+    get_spec,
     resolve_density_g_ml,
 )
-from .dose import (
-    DoseInputBase,
-    TheoreticalInput,
-    TitrationInput,
-    TitrationPoint,
-    calculate_theoretical,
-    calculate_titration,
-    equivalents_to_commercial,
+from .contributions import (
+    alkalinity_check,
+    ec_delta_ds_m,
+    element_contributions_mg_l,
+    ion_meq_l,
+    neutralization_strength_meq_l,
+)
+from .integration import load_active_for_cycle, merge_into_water, summary_from_record
+from .engine import (
+    AdjustmentError,
+    TankDose,
+    TrialSolution,
+    TrialStep,
+    check_direction,
+    direction_of,
+    scale_to_tank,
+    solve_trial,
 )
 
 __all__ = [
-    "CarbonateConstants",
-    "carbonate_constants",
-    "carbonate_fractions",
-    "alkalinity_from_ct",
-    "total_carbon_from_alkalinity",
-    "phosphate_fractions",
-    "phosphoric_effective_z",
-    "mgl_caco3_to_meql",
-    "meql_to_mgl_caco3",
-    "normalize_alkalinity_to_mgl",
-    "ChemicalKind",
-    "ChemicalSpec",
-    "KNOWN_ACID_BASE_CONSTANTS",
-    "resolve_density_g_ml",
-    "DoseInputBase",
-    "TheoreticalInput",
-    "TitrationInput",
-    "TitrationPoint",
-    "calculate_theoretical",
-    "calculate_titration",
-    "equivalents_to_commercial",
+    "AdjusterSpec", "DISCOURAGED", "KNOWN_ADJUSTERS", "default_dose_unit", "derive_elements_pct",
+    "get_spec", "resolve_density_g_ml",
+    "alkalinity_check", "ec_delta_ds_m", "element_contributions_mg_l", "ion_meq_l",
+    "neutralization_strength_meq_l",
+    "AdjustmentError", "TankDose", "TrialSolution", "TrialStep", "check_direction",
+    "direction_of", "scale_to_tank", "solve_trial",
+    "load_active_for_cycle", "merge_into_water", "summary_from_record",
 ]
