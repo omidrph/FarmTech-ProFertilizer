@@ -47,6 +47,11 @@ class OptimizationOptions(BaseModel):
         True,
         description="🆕 اولویت با کمترین خطا نسبت به اهداف (دقیق‌ترین حالت، پیش‌فرض فعلی سیستم)"
     )
+    cheapest_tolerance_pct: float = Field(
+        2.5, ge=0.5, le=20,
+        description="🆕 حالت «کم‌هزینه‌ترین»: هر عنصر هدف حداکثر چند درصد می‌تواند با هدف فاصله داشته باشد "
+                    "(پیش‌فرض ۲٫۵٪؛ داخل مرز «دقیق» ±۳٪ صفحهٔ نتیجه). هرگز بدتر از «دقیق‌ترین ترکیب» نمی‌شود."
+    )
 
 
 class OptimizationFertilizerInput(BaseModel):
@@ -59,7 +64,10 @@ class OptimizationFertilizerInput(BaseModel):
     purity: float = Field(100.0, ge=0, le=100, description="درصد خلوص")
     is_acid: bool = Field(False, description="آیا اسید است؟")
     is_system_default: bool = Field(False, description="آیا کود سیستمی است؟")
-    fixed_weight: Optional[float] = Field(None, ge=0, description="وزن ثابت (اگر کاربر تعیین کرده باشد)")
+    fixed_weight: Optional[float] = Field(None, ge=0, description="وزن ثابت به گرم برای هر ۱۰۰۰ لیتر (محاسبه‌شده توسط سرور از fixed_amount)")
+    density_g_ml: Optional[float] = Field(None, gt=0, le=5, description="🆕 چگالی (برای کودهای مایع؛ تبدیل لیتر/میلی‌لیتر به گرم)")
+    fixed_amount: Optional[float] = Field(None, ge=0, description="🆕 مقداری که کاربر خودش برای کل مخزن تعیین کرده (بدون بهینه‌سازی) — معمولاً اسید/باز")
+    fixed_unit: Optional[str] = Field(None, description="🆕 واحد fixed_amount: g, kg, ml, l")
 
 
 class OptimizationRequest(BaseModel):
@@ -104,6 +112,15 @@ class OptimizationResponse(BaseModel):
     # و بازطراحی این بخش در آینده جداگانه انجام می‌شود). محاسبه داخلی pH
     # همچنان برای هشدارهای شیمیایی (رسوب، تداخل تغذیه‌ای) در سمت سرور
     # استفاده می‌شود، فقط دیگر به کاربر نمایش داده نمی‌شود.
+    fixed_fertilizers: Optional[Dict[str, Any]] = Field(
+        None,
+        description="🆕 کودهایی که کاربر مقدارشان را خودش تعیین کرده است: {id: {amount, unit, total_g}}"
+    )
+    ph_adjustment: Optional[Dict[str, Any]] = Field(
+        None,
+        description="🆕 اصلاح pH فعال گزارش که در این محاسبه اعمال شده (عناصر اسید/باز مثل آب به‌عنوان "
+                    "منبع پایه لحاظ می‌شوند). شامل id، نام ماده، دوز، سهم عناصر (mg/L) و ΔEC."
+    )
     stock_info: Optional[Dict[str, Any]] = Field(
         None,
         description="🆕 اطلاعات مخزن/استوک برای این نتیجه: شامل tank_volume, "
@@ -180,9 +197,3 @@ class PrecipitationCheckResponse(BaseModel):
     is_safe: bool = Field(..., description="آیا ترکیب ایمن است؟")
     risks: List[PrecipitationRiskItem] = Field(default_factory=list, description="خطرات احتمالی")
     suggestions: List[str] = Field(default_factory=list, description="پیشنهادات اصلاحی")
-
-
-
-
-
-

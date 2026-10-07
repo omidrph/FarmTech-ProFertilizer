@@ -55,6 +55,9 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
             
             // فیلدهای اسید و pH
             isAcid: item.is_acid ?? item.isAcid ?? false,
+            isBase: item.is_base ?? item.isBase ?? false,
+            densityGMl: item.density_g_ml ?? item.densityGMl ?? undefined,
+            priceUnit: item.price_unit ?? item.priceUnit ?? undefined,
             acidType: item.acid_type ?? item.acidType ?? undefined,
             phLevel: item.ph_level ?? item.phLevel ?? undefined,
             
@@ -98,6 +101,15 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
         }
         if ('isAcid' in fertilizerData && fertilizerData.isAcid !== undefined) {
             result.is_acid = fertilizerData.isAcid;
+        }
+        if ('isBase' in fertilizerData && (fertilizerData as any).isBase !== undefined) {
+            result.is_base = (fertilizerData as any).isBase;
+        }
+        if ('densityGMl' in fertilizerData) {
+            result.density_g_ml = (fertilizerData as any).densityGMl || null;
+        }
+        if ('priceUnit' in fertilizerData) {
+            result.price_unit = (fertilizerData as any).priceUnit || null;
         }
         if ('acidType' in fertilizerData && fertilizerData.acidType !== undefined) {
             result.acid_type = fertilizerData.acidType || null;

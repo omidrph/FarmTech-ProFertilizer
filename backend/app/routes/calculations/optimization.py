@@ -28,6 +28,8 @@ from app.core import (
     get_plant_ec_range,
 )
 from app.core.optimizer.result_processor import validate_optimization_result
+from app.core.ph_calculator import load_active_for_cycle, merge_into_water
+from app.core.optimizer.fixed_amounts import apply_fixed_amounts, FixedAmountError
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,16 @@ def optimize_fertilizers_endpoint(
         # ۱. آماده‌سازی داده‌ها
         target_values = request.target_values
         water_values = request.water_values or {}
+
+        # 🆕 اصلاح pH فعال گزارش (اسید/باز تب PH): عناصر واردشده مثل آب یک منبع پایه‌اند؛
+        # با افزودن آن‌ها به water_values، سهم کودهای دیگر خودکار کم می‌شود و غلظت نهایی،
+        # تعادل یونی، EC و رسوب با لحاظ اسید محاسبه می‌شوند.
+        ph_contrib, ph_summary = load_active_for_cycle(db, crud, current_user.id, request.report_id)
+        effective_water = merge_into_water(
+            water_values, ph_contrib, (ph_summary or {}).get('alkalinity_shift_ppm')
+        )
+        if ph_summary:
+            logger.info(f"   🧪 pH adjustment applied: {ph_summary['chemical_name']} -> {list(ph_contrib)}")
         
         # تبدیل کودها به فرمت مورد نیاز
         fertilizers = []
@@ -64,8 +76,17 @@ def optimize_fertilizers_endpoint(
                 'purity': fert.purity,
                 'is_acid': fert.is_acid,
                 'is_system_default': fert.is_system_default,
-                'fixed_weight': fert.fixed_weight if hasattr(fert, 'fixed_weight') else None
+                'fixed_weight': fert.fixed_weight if hasattr(fert, 'fixed_weight') else None,
+                'density_g_ml': fert.density_g_ml,
+                'fixed_amount': fert.fixed_amount,
+                'fixed_unit': fert.fixed_unit,
             })
+
+        # 🆕 مقدار ثابت تعیین‌شده توسط کاربر (مثلاً اسید) → گرم برای هر ۱۰۰۰ لیتر
+        try:
+            fertilizers = apply_fixed_amounts(fertilizers, request.tank_volume)
+        except FixedAmountError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         
         # تنظیمات بهینه‌سازی
         options = request.options.dict() if request.options else {}
@@ -90,7 +111,7 @@ def optimize_fertilizers_endpoint(
         result = core_optimize_fertilizers(
             target_values=target_values,
             fertilizers=fertilizers,
-            water_values=water_values,
+            water_values=effective_water,
             options=options,
             tank_volume=request.tank_volume
         )
@@ -132,6 +153,16 @@ def optimize_fertilizers_endpoint(
             }
         except Exception as e:
             logger.warning(f"Could not compute stock_info: {e}")
+
+        # 🆕 کودهایی که مقدارشان را کاربر تعیین کرده (برای نمایش «مقدار شما» در جدول نتیجه)
+        fixed_info = {
+            str(f['id']): {
+                'amount': f.get('fixed_amount'), 'unit': f.get('fixed_unit'),
+                'total_g': round(f.get('fixed_total_g', 0.0), 3)
+            }
+            for f in fertilizers if (f.get('fixed_amount') or 0) > 0
+        }
+        result['fixed_fertilizers'] = fixed_info or None
 
         # ۳. اعتبارسنجی نتایج
         validation = validate_optimization_result(result)
@@ -290,6 +321,8 @@ def optimize_fertilizers_endpoint(
                         'summary': result.get('summary'),
                         'ec': ec_result['ec'],
                         'ec_status': ec_result['status_label'],
+                        'ph_adjustment': ph_summary,
+                        'fixed_fertilizers': result.get('fixed_fertilizers'),
                         'stock_info': stock_info
                     }
 
@@ -341,6 +374,8 @@ def optimize_fertilizers_endpoint(
             # 🆕 فیلد EC (pH دیگر در این پاسخ نمایش داده نمی‌شود)
             ec=ec_result['ec'],
             ec_status=ec_result['status_label'],
+            ph_adjustment=ph_summary,
+            fixed_fertilizers=result.get('fixed_fertilizers'),
             stock_info=stock_info
         )
         
@@ -361,9 +396,3 @@ def optimize_fertilizers_endpoint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"خطا در بهینه‌سازی: {str(e)}"
         )
-
-
-
-
-
-

@@ -148,14 +148,15 @@ const initialFormData = {
   price_per_kg: 0,
   elements: {} as Record<string, number>,
   is_acid: false,
+  is_base: false,
   acid_type: '',
   ph_level: null as number | null,
   description: '',
   is_system_default: false,
   source_system_id: null as number | null,
-  liquid_volume: undefined as number | undefined,
-  specific_gravity: undefined as number | undefined,
-  active_concentration: undefined as number | undefined
+  // 🆕 کود مایع: چگالی (g/mL) و واحد قیمت؛ price_per_kg در فرم «به همان واحد انتخاب‌شده» است
+  density_g_ml: null as number | null,
+  price_unit: 'kg' as 'kg' | 'l'
 };
 
 const formData = reactive({ ...initialFormData });
@@ -200,6 +201,14 @@ const closeModal = () => {
   resetForm();
 };
 
+// قیمت ذخیره‌شده همیشه به‌ازای کیلوگرم است؛ برای مایع با واحد «لیتر» در فرم به‌ازای لیتر نشان می‌دهیم
+const displayPrice = (f: any): number => {
+  const perKg = Number(f.pricePerKg || f.price_per_kg || 0);
+  const density = Number(f.densityGMl || f.density_g_ml || 0);
+  if (f.priceUnit === 'l' && density > 0) return Math.round(perKg * density * 100) / 100;
+  return perKg;
+};
+
 const editFertilizer = (fertilizer: any) => {
   isEditing.value = true;
   Object.assign(formData, {
@@ -209,17 +218,17 @@ const editFertilizer = (fertilizer: any) => {
     category: fertilizer.category || '',
     form: fertilizer.form || '',
     concentration: fertilizer.concentration || 100,
-    price_per_kg: fertilizer.pricePerKg || fertilizer.price_per_kg || 0,
+    price_per_kg: displayPrice(fertilizer),
     elements: { ...(fertilizer.elements || {}) },
     is_acid: fertilizer.isAcid || fertilizer.is_acid || false,
+    is_base: fertilizer.isBase || fertilizer.is_base || false,
     acid_type: fertilizer.acidType || fertilizer.acid_type || '',
     ph_level: fertilizer.phLevel || fertilizer.ph_level || null,
     description: fertilizer.description || '',
     is_system_default: fertilizer.isSystemDefault || fertilizer.is_system_default || false,
     source_system_id: fertilizer.sourceSystemId || fertilizer.source_system_id || null,
-    liquid_volume: fertilizer.liquidVolume || fertilizer.liquid_volume || undefined,
-    specific_gravity: fertilizer.specificGravity || fertilizer.specific_gravity || undefined,
-    active_concentration: fertilizer.activeConcentration || fertilizer.active_concentration || undefined
+    density_g_ml: fertilizer.densityGMl || fertilizer.density_g_ml || null,
+    price_unit: fertilizer.priceUnit === 'l' && (fertilizer.densityGMl || fertilizer.density_g_ml) ? 'l' : 'kg'
   });
   showModal.value = true;
 };
@@ -240,6 +249,16 @@ const saveFertilizer = async () => {
     return;
   }
 
+  const isLiquid = formData.form === 'liquid';
+  if (isLiquid && formData.price_unit === 'l' && !(Number(formData.density_g_ml) > 0)) {
+    showToast('برای قیمت هر لیتر، چگالی کود را وارد کنید', 'error');
+    return;
+  }
+  if (formData.is_acid && formData.is_base) {
+    showToast('یک ماده همزمان اسید و باز نیست؛ فقط یکی را انتخاب کنید', 'error');
+    return;
+  }
+
   isSaving.value = true;
 
   try {
@@ -251,22 +270,28 @@ const saveFertilizer = async () => {
       }
     }
 
+    // قیمت همیشه به‌ازای کیلوگرم ذخیره می‌شود: قیمت هر لیتر ÷ چگالی
+    const density = isLiquid && Number(formData.density_g_ml) > 0 ? Number(formData.density_g_ml) : null;
+    const usePerLiter = isLiquid && formData.price_unit === 'l' && density !== null;
+    const pricePerKg = usePerLiter ? Number(formData.price_per_kg) / (density as number) : Number(formData.price_per_kg);
+
     const payload = {
       name: formData.name,
       brand: formData.brand || undefined,
       category: formData.category || undefined,
       form: formData.form || undefined,
       concentration: formData.concentration,
-      pricePerKg: Number(formData.price_per_kg),
+      pricePerKg,
       elements: cleanElements,
       isAcid: formData.is_acid,
-      acidType: formData.acid_type || undefined,
+      isBase: formData.is_base,
+      acidType: (formData.is_acid || formData.is_base) ? (formData.acid_type || undefined) : undefined,
       phLevel: formData.ph_level || undefined,
       description: formData.description || undefined,
-      liquidVolume: formData.liquid_volume || undefined,
-      specificGravity: formData.specific_gravity || undefined,
-      activeConcentration: formData.active_concentration || undefined
-    };
+      // کود غیرمایع: چگالی/واحد قیمت پاک می‌شود تا داده‌ی قدیمی باقی نماند
+      densityGMl: density,
+      priceUnit: isLiquid ? (usePerLiter ? 'l' : 'kg') : null
+    } as any;
 
     let success = false;
 

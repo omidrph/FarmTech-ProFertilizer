@@ -34,80 +34,33 @@
         @update-weight="$emit('update-weight', $event)"
       />
 
-      <!-- 🆕 آخرین اصلاح pH (از تب PH) - بلوکی کاملاً جدا از جدول استوک بالا -->
-      <PhCorrectionBanner v-if="phCorrection" :correction="phCorrection" class="mt-3" />
-    </ResultAccordion>
-
-    <!-- ============================================================ -->
-    <!-- دقت عناصر -->
-    <!-- ============================================================ -->
-    <ResultAccordion
-      title="عناصر تأمین‌شده در برابر هدف"
-      subtitle="قابل تغییر به ppm یا درصد"
-      tone="success"
-      :badge="elementsBadge"
-      :default-open="true"
-    >
-      <template #icon>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="8" stroke-width="2" />
-          <circle cx="12" cy="12" r="4" stroke-width="2" />
-          <circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none" />
-        </svg>
-      </template>
-
-      <ResultElementsGrid
-        :target-values="targetValues"
-        :concentrations="adjustedConcentrations"
-      />
-      <p v-if="phCorrection && hasElementAdjustment" class="mt-2 text-[11px] text-sky-700 dark:text-sky-400">
-        این مقادیر شامل سهم آخرین اصلاح pH هم هستند (جزئیات در کارت «مقدار کودها» بالا).
-      </p>
-    </ResultAccordion>
-
-    <!-- ============================================================ -->
-    <!-- تعادل یونی -->
-    <!-- ============================================================ -->
-    <ResultAccordion
-      v-if="result.ion_balance"
-      title="تعادل یونی"
-      :subtitle="ionBalanceSubtitle"
-      :tone="result.ion_balance.isBalanced ? 'success' : 'warning'"
-      :badge="result.ion_balance.isBalanced ? 'متعادل' : 'نامتعادل'"
-    >
-      <template #icon>
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v3m0 0l-6 12a5 5 0 0010 0L12 6zm0 0l6 12a5 5 0 01-10 0M4 9h4m8 0h4" />
-        </svg>
-      </template>
-
-      <div class="space-y-2">
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
-            <p class="text-[11px] text-gray-500 dark:text-gray-400">کاتیون</p>
-            <p class="text-sm font-bold text-blue-600 dark:text-blue-400 tabular-nums">{{ toFixed(result.ion_balance.cation, 2) }}</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
-            <p class="text-[11px] text-gray-500 dark:text-gray-400">آنیون</p>
-            <p class="text-sm font-bold text-purple-600 dark:text-purple-400 tabular-nums">{{ toFixed(result.ion_balance.anion, 2) }}</p>
-          </div>
-          <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
-            <p class="text-[11px] text-gray-500 dark:text-gray-400">اختلاف</p>
-            <p class="text-sm font-bold tabular-nums" :class="result.ion_balance.isBalanced ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">
-              {{ toFixed(ionDifference, 2) }}
-            </p>
-          </div>
-        </div>
-
-        <div class="relative h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex">
-          <div class="h-full bg-blue-500 transition-all duration-500" :style="{ width: ionPercent('cation') + '%' }"></div>
-          <div class="h-full bg-purple-500 transition-all duration-500" :style="{ width: ionPercent('anion') + '%' }"></div>
-        </div>
-        <p class="text-[11px] text-gray-500 dark:text-gray-400">
-          واحد اعداد meq/L است. اختلاف زیاد بین کاتیون و آنیون یعنی فرمول از نظر شیمیایی متوازن نیست.
-        </p>
+      <!-- 🆕 اصلاح pH اعمال‌شده در این محاسبه (از تب PH) -->
+      <PhAdjustmentBanner v-if="result.ph_adjustment" :adjustment="result.ph_adjustment" class="mt-3" />
+      <div
+        v-if="phStale"
+        class="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs leading-6 text-amber-800 dark:text-amber-200"
+      >
+        {{ phStaleText }}
       </div>
     </ResultAccordion>
+
+    <!-- ============================================================ -->
+    <!-- عناصر هدف (همان ظاهر صفحهٔ خانه: حلقه‌های دایره‌ای؛ ۸ مورد و «نمایش همه») -->
+    <!-- ============================================================ -->
+    <HomeElementRings :target-values="targetValues" :concentrations="result.concentrations" />
+    <p v-if="result.ph_adjustment" class="-mt-1 px-1 text-[11px] text-sky-700 dark:text-sky-400">
+      این مقادیر (و تعادل یونی و EC) شامل سهم اسید/باز تنظیم pH هم هستند.
+    </p>
+
+    <!-- ============================================================ -->
+    <!-- تعادل یونی (همان ظاهر صفحهٔ خانه: کاتیون آبی، آنیون قرمز) -->
+    <!-- ============================================================ -->
+    <HomeIonBalance
+      v-if="result.ion_balance"
+      :cation="Number(result.ion_balance.cation) || 0"
+      :anion="Number(result.ion_balance.anion) || 0"
+      :balanced="!!result.ion_balance.isBalanced"
+    />
 
     <!-- ============================================================ -->
     <!-- هشدارها (بازطراحی کامل) -->
@@ -144,10 +97,11 @@ import type { OptimizationResponse } from '@/types';
 import ResultKpiBar from './ResultKpiBar.vue';
 import ResultAccordion from './ResultAccordion.vue';
 import ResultFertilizerTable from './ResultFertilizerTable.vue';
-import ResultElementsGrid from './ResultElementsGrid.vue';
+import HomeElementRings from '../home/HomeElementRings.vue';
+import HomeIonBalance from '../home/HomeIonBalance.vue';
 import ResultWarnings from './ResultWarnings.vue';
-import PhCorrectionBanner from './PhCorrectionBanner.vue';
-import type { PhHistoryItem } from '@/services/apiService';
+import PhAdjustmentBanner from './PhAdjustmentBanner.vue';
+import type { PhActiveSummary } from '@/services/apiService';
 
 const props = withDefaults(
   defineProps<{
@@ -155,9 +109,9 @@ const props = withDefaults(
     fertilizers: any[];
     targetValues: Record<string, number>;
     tankVolume?: number;
-    phCorrection?: PhHistoryItem | null;
+    activePh?: PhActiveSummary | null;
   }>(),
-  { tankVolume: 1000, phCorrection: null }
+  { tankVolume: 1000, activePh: null }
 );
 
 defineEmits<{
@@ -167,24 +121,21 @@ defineEmits<{
 
 const result = computed(() => props.result);
 
-// 🆕 غلظت عناصر با احتساب سهم آخرین اصلاح pH (مثلاً N از HNO3) - رفع
-// همان مشکلی که بدون آن، «تأمین‌شده» عناصر نادرست نمایش داده می‌شد.
-const hasElementAdjustment = computed(() => {
-  const contrib = props.phCorrection?.outputs?.element_contributions_mg_l;
-  return !!contrib && Object.keys(contrib).length > 0;
+// 🆕 آیا اصلاح pH فعال گزارش با آنچه در این نتیجه اعمال شده یکی است؟
+// (اگر کاربر در تب PH اصلاحی را اعمال/لغو/عوض کرده باشد، نتیجه باید دوباره محاسبه شود)
+const phStale = computed(() => {
+  const applied = result.value?.ph_adjustment ?? null;
+  const active = props.activePh ?? null;
+  if (!applied && !active) return false;
+  if (!applied || !active) return true;
+  return applied.id !== active.id || (applied.updated_at ?? null) !== (active.updated_at ?? null);
 });
 
-const adjustedConcentrations = computed<Record<string, number>>(() => {
-  const base = { ...(result.value?.concentrations || {}) };
-  const contrib = props.phCorrection?.outputs?.element_contributions_mg_l as Record<string, number> | undefined;
-  if (!contrib) return base;
-  for (const [el, val] of Object.entries(contrib)) {
-    if (Number.isFinite(val)) {
-      base[el] = (base[el] || 0) + val;
-    }
-  }
-  return base;
-});
+const phStaleText = computed(() =>
+  props.activePh
+    ? 'اصلاح pH فعال این گزارش با این نتیجه هم‌خوان نیست؛ برای اعمال آن دوباره «محاسبه» را بزنید.'
+    : 'اصلاح pH که در این نتیجه اعمال شده بود دیگر فعال نیست؛ برای حذف سهم آن دوباره «محاسبه» را بزنید.'
+);
 
 const toFixed = (value: unknown, digits = 2): string => {
   const parsed = Number(value);
@@ -274,6 +225,3 @@ const ionPercent = (type: 'cation' | 'anion'): number => {
   font-variant-numeric: tabular-nums;
 }
 </style>
-
-
-

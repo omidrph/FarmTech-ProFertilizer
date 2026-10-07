@@ -414,7 +414,11 @@ export const useCalcStore = defineStore('calc', () => {
                     price_per_kg: f.pricePerKg || 0,
                     purity: f.concentration || 100,
                     is_acid: f.isAcid || false,
-                    is_system_default: f.isSystemDefault || false
+                    is_system_default: f.isSystemDefault || false,
+                    // 🆕 مقدار ثابتِ تعیین‌شده توسط کاربر (اسید/باز) و چگالی کود مایع
+                    density_g_ml: f.densityGMl || null,
+                    fixed_amount: f.fixedAmount ?? null,
+                    fixed_unit: f.fixedUnit ?? null
                 })),
                 options: options || {
                     method: 'nnls',
@@ -508,6 +512,87 @@ export const useCalcStore = defineStore('calc', () => {
      * می‌کند، سپس نتیجه و ردیف‌های محاسبه را به‌روزرسانی و در گزارش جاری
      * ذخیره می‌کند.
      */
+    /**
+     * 🆕 محاسبهٔ دستی: کاربر خودش کودها و مقدار هرکدام (گرم برای کل مخزن) را مشخص کرده؛
+     * بهینه‌ساز اجرا نمی‌شود، ولی غلظت‌ها، تعادل یونی، EC، رسوب، هزینه و مخازن همان‌طور
+     * که در حالت خودکار محاسبه می‌شوند.
+     */
+    async function calculateManual(
+        fertilizers: any[],
+        weightsGrams: Record<string, number>,
+        targetValues: Record<string, number>,
+        waterValues: Record<string, number>,
+        tankVolume: number,
+        stockVolume: number,
+        injectionRatio: number
+    ): Promise<boolean> {
+        isLoading.value = true;
+        lastOptimizationError.value = null;
+        setStockSettings({ tankVolume, stockVolume, injectionRatio });
+        try {
+            const reportStore = useReportStore();
+            const rawResult = await apiService.recalculateManualWeights({
+                fertilizers: fertilizers.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    elements: f.elements || {},
+                    price_per_kg: f.pricePerKg || 0,
+                    purity: f.concentration || 100,
+                    is_acid: f.isAcid || false,
+                    is_system_default: f.isSystemDefault || false
+                })),
+                weights: weightsGrams,
+                target_values: targetValues,
+                water_values: waterValues,
+                tank_volume: tankVolume,
+                stock_volume: stockVolume,
+                report_id: reportStore.currentReportId ? Number(reportStore.currentReportId) : null
+            } as any);
+
+            const result = normalizeOptimizationResult(rawResult);
+            optimizationResult.value = result;
+            lastFertilizersUsed.value = fertilizers;
+            lastWaterValuesUsed.value = waterValues;
+            lastTargetValuesUsed.value = targetValues;
+
+            const newRows: CalculationRow[] = [];
+            let totalCostValue = 0;
+            for (const [fid, weight] of Object.entries(result.weights)) {
+                const fert = fertilizers.find(f => f.id === fid);
+                if (fert && weight > 0) {
+                    const cost = (weight / 1000) * (fert.pricePerKg || 0);
+                    totalCostValue += cost;
+                    newRows.push({
+                        id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                        materialName: fert.name || 'نامشخص',
+                        weight,
+                        purity: fert.concentration || 100,
+                        cost,
+                        elements: fert.elements || {},
+                        isAcid: fert.isAcid || false,
+                        acidType: fert.acidType || null,
+                        fertilizerId: fid,
+                        isFixedRow: false
+                    });
+                }
+            }
+            calculationRows.value = newRows;
+            totalCost.value = totalCostValue;
+            if (result.reservoir_data) reservoirData.value = result.reservoir_data;
+
+            if (reportStore.currentReportId) {
+                await reportStore.saveCurrentReport();
+            }
+            return true;
+        } catch (error: any) {
+            console.error('Error in calculateManual:', error);
+            lastOptimizationError.value = error?.response?.data?.detail || error?.message || 'خطا در محاسبهٔ دستی';
+            return false;
+        } finally {
+            isLoading.value = false;
+        }
+    }
+
     async function recalculateManualWeight(fertilizerId: string, newWeightGrams: number): Promise<boolean> {
         if (!optimizationResult.value) {
             errorMessages.value.push('ابتدا باید یک‌بار محاسبه بهینه انجام شود');
@@ -744,14 +829,9 @@ export const useCalcStore = defineStore('calc', () => {
         setRestoredSelection,
         setRestoredOptimizationOptions,
         restoreOptimizationResult,
-        recalculateManualWeight
+        recalculateManualWeight,
+        calculateManual,
     };
 });
 
 export default useCalcStore;
-
-
-
-
-
-

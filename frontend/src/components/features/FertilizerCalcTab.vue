@@ -78,7 +78,23 @@
         <FertilizerSelector
           :fertilizers="fertilizers"
           :selected-fertilizers="localSelectedFertilizers"
+          :fixed-amounts="fixedAmounts"
+          :include-acids-bases="includeAcidsBases"
+          :tank-volume="mainTankVolume"
           @update:selected-fertilizers="handleSelectionChange"
+          @update:fixed-amounts="fixedAmounts = $event"
+        />
+
+        <!-- 🆕 محاسبهٔ دستی: مقدار هر کود را کاربر مشخص می‌کند -->
+        <ManualAmountsPanel
+          v-if="manualMode"
+          :fertilizers="selectedFertilizerObjects"
+          :amounts="manualAmounts"
+          :fixed-amounts="fixedAmounts"
+          :tank-volume="mainTankVolume"
+          :targets="targetStore.targetElements"
+          :water="waterStore.waterValues"
+          @update:amounts="manualAmounts = $event"
         />
 
         <!-- حالت بهینه‌سازی -->
@@ -97,7 +113,10 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div v-if="manualMode" class="rounded-lg bg-primary-50/70 dark:bg-primary-900/10 border border-primary-200 dark:border-primary-800 px-3 py-2.5 text-xs leading-6 text-primary-800 dark:text-primary-200">
+            محاسبهٔ دستی فعال است: مقدار هر کود را در کادر بالا خودتان می‌نویسید و بهینه‌ساز اجرا نمی‌شود. نرم‌افزار بقیهٔ مراحل (غلظت عناصر، تعادل یونی، EC، رسوب، هزینه و مخازن) را انجام می‌دهد.
+          </div>
+          <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               v-for="mode in optimizationModes"
               :key="mode.key"
@@ -116,6 +135,31 @@
           <!-- تنظیمات پیشرفته -->
           <Transition name="step">
             <div v-show="showAdvanced" class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+              <!-- 🆕 محاسبهٔ دستی -->
+              <label class="flex items-start gap-2 cursor-pointer">
+                <input type="checkbox" v-model="manualMode" class="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500" />
+                <span class="min-w-0">
+                  <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">محاسبهٔ دستی</span>
+                  <span class="block text-[11px] text-gray-500 dark:text-gray-400">
+                    کودها را خودم انتخاب می‌کنم و مقدار هرکدام را خودم می‌نویسم؛ نرم‌افزار فقط نتیجه (عناصر، تعادل یونی، EC، هزینه و مخازن) را محاسبه می‌کند. پیش‌فرض: خاموش.
+                  </span>
+                </span>
+              </label>
+
+              <!-- 🆕 افزودن اسید/باز با «افزودن همه» -->
+              <div>
+                <label class="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" v-model="includeAcidsBases" class="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500" />
+                  <span class="min-w-0">
+                    <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">اسیدها و بازها هم با «افزودن همه» اضافه شوند</span>
+                    <span class="block text-[11px] text-gray-500 dark:text-gray-400">پیش‌فرض: خاموش.</span>
+                  </span>
+                </label>
+                <p v-if="includeAcidsBases" class="mt-2 text-[11px] leading-5 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+                  هشدار: اسید و باز هم عنصر تأمین می‌کنند و هم pH را تغییر می‌دهند، و مقدار درست آن به pH واقعی محلول بستگی دارد. با روشن‌بودن این گزینه، «افزودن همه» برای هر اسید/باز از شما مقدار مصرفی را می‌پرسد؛ اگر مقدار را نمی‌دانید آن‌ها را اضافه نکنید و بعد از ساخت محلول در تب «PH» pH را تنظیم کنید.
+                </p>
+              </div>
+
               <label class="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -157,7 +201,7 @@
           :fertilizers="fertilizers"
           :target-values="targetStore.targetElements"
           :tank-volume="mainTankVolume"
-          :ph-correction="phCorrection"
+          :active-ph="activePh"
           @update-weight="handleWeightEdit"
           @go-to-selection="goToStep(2)"
         />
@@ -328,15 +372,18 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useCalcStore } from '@/store/modules/calcStore';
 import { useTargetStore } from '@/store/modules/targetStore';
+import { useWaterStore } from '@/store/modules/waterStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
 import { apiService } from '@/services/apiService';
-import type { PhHistoryItem } from '@/services/apiService';
+import type { PhActiveSummary } from '@/services/apiService';
 
 import AppModal from '@/components/common/AppModal.vue';
 import StockSettings from './calc/StockSettings.vue';
 import FertilizerSelector from './calc/FertilizerSelector.vue';
+import ManualAmountsPanel from './calc/ManualAmountsPanel.vue';
+import { amountToGrams, type AmountUnit } from '@/utils/fertilizerUnits';
 import OptimizationResult from './calc/OptimizationResult.vue';
 
 // ===== Props / Emits (بدون تغییر نسبت به نسخه قبل) =====
@@ -361,7 +408,8 @@ const emit = defineEmits<{
 const calcStore = useCalcStore();
 const targetStore = useTargetStore();
 const reportStore = useReportStore();
-const { optimizeFertilizers, isOptimizing } = useCalculations();
+const { optimizeFertilizers, calculateManualAmounts, isOptimizing } = useCalculations();
+const waterStore = useWaterStore();
 const { exportOptimizationPdf, isExporting } = usePdfExport();
 
 // ===== تنظیمات استوک (از store) =====
@@ -391,6 +439,17 @@ const currentStep = ref<StepId>(1);
 
 // ===== State =====
 const localSelectedFertilizers = ref<string[]>([...props.selectedFertilizers]);
+
+// 🆕 مقدار ثابت اسید/باز (کل مخزن) و تنظیمات پیشرفتهٔ مرحلهٔ انتخاب کود
+const fixedAmounts = ref<Record<string, { amount: number; unit: AmountUnit }>>({});
+const includeAcidsBases = ref(false);
+const manualMode = ref(false);
+const manualAmounts = ref<Record<string, { amount: number | null; unit: AmountUnit }>>({});
+const selectedFertilizerObjects = computed(() =>
+  localSelectedFertilizers.value
+    .map((id) => props.fertilizers.find((f) => f.id === id))
+    .filter(Boolean) as any[]
+);
 const toastMessage = ref<string | null>(null);
 const toastType = ref<'success' | 'error'>('success');
 const showResetConfirm = ref(false);
@@ -419,6 +478,11 @@ const hasTargets = computed(() =>
 // پیش‌نیازهای محاسبه (عناصر هدف، آنالیز آب، پایگاه‌داده کود) حالا در صفحه «خانه» و در بخش «مراحل محاسبه کود» نمایش داده می‌شوند.
 
 const canOptimize = computed(() => hasTargets.value && localSelectedFertilizers.value.length > 0);
+
+// اسید/بازِ انتخاب‌شده‌ای که مقدارش تعیین نشده (مثلاً بعد از بازیابی یک گزارش قدیمی)
+const adjustersMissingAmount = computed(() =>
+  selectedFertilizerObjects.value.filter((f: any) => (f.isAcid || f.isBase) && !fixedAmounts.value[f.id])
+);
 
 const optimizeBlockReason = computed(() => {
   if (!hasTargets.value) return 'ابتدا عناصر هدف را وارد کنید';
@@ -451,7 +515,7 @@ onMounted(() => {
   // دوباره روی «محاسبه»، همان وضعیت بازیابی و مستقیم مرحله ۳ نمایش
   // داده می‌شود.
   syncRestoredState();
-  loadPhCorrection();
+  loadActivePh();
 
   window.addEventListener('report-changed', handleReportChanged);
 });
@@ -460,25 +524,22 @@ onBeforeUnmount(() => {
   window.removeEventListener('report-changed', handleReportChanged);
 });
 
-// 🆕 آخرین «اصلاح pH» ثبت‌شده برای این گزارش (فقط خواندنی؛ از تب PH
-// می‌آید). بازتریگر بهینه‌ساز نمی‌کند - فقط برای نمایش کنار مخزن C.
-const phCorrection = ref<PhHistoryItem | null>(null);
-const loadPhCorrection = async () => {
+// 🆕 اصلاح pH «فعال» این گزارش (از تب PH). خود محاسبه در بک‌اند آن را اعمال
+// می‌کند (عناصر اسید/باز مثل آب منبع پایه‌اند)؛ اینجا فقط برای تشخیص این‌که
+// نتیجهٔ نمایش‌داده‌شده با اصلاح فعلی هم‌خوان است یا باید دوباره محاسبه شود.
+const activePh = ref<PhActiveSummary | null>(null);
+const loadActivePh = async () => {
   const reportId = reportStore.currentReportId;
   if (!reportId) {
-    phCorrection.value = null;
+    activePh.value = null;
     return;
   }
-  try {
-    phCorrection.value = await apiService.getPhLatestCorrection(reportId);
-  } catch {
-    phCorrection.value = null;
-  }
+  activePh.value = await apiService.getPhActive(reportId);
 };
 
 const handleReportChanged = () => {
   syncRestoredState();
-  loadPhCorrection();
+  loadActivePh();
 };
 
 // 🆕 همگام‌سازی کودهای انتخاب‌شده، حالت بهینه‌سازی و مرحله جاری از روی
@@ -492,6 +553,16 @@ const syncRestoredState = () => {
     if (!same) {
       handleSelectionChange(restored);
     }
+  }
+
+  // 🆕 مقدار اسید/بازهای ثابت از نتیجهٔ ذخیره‌شده
+  const savedFixed = (calcStore.optimizationResult as any)?.fixed_fertilizers;
+  if (savedFixed && typeof savedFixed === 'object') {
+    const restoredFixed: Record<string, { amount: number; unit: AmountUnit }> = {};
+    for (const [fid, v] of Object.entries<any>(savedFixed)) {
+      if (v && v.amount > 0 && v.unit) restoredFixed[fid] = { amount: v.amount, unit: v.unit };
+    }
+    if (Object.keys(restoredFixed).length) fixedAmounts.value = restoredFixed;
   }
 
   const restoredOptions = calcStore.restoredOptimizationOptions;
@@ -556,9 +627,24 @@ const handleOptimize = async () => {
     return;
   }
 
-  const selectedFerts = props.fertilizers.filter((f) =>
-    localSelectedFertilizers.value.includes(f.id)
-  );
+  // 🆕 اسید/بازی که مقدارش تعیین نشده
+  if (!manualMode.value && adjustersMissingAmount.value.length > 0) {
+    showToast(`مقدار «${adjustersMissingAmount.value[0].name}» را مشخص کنید (روی برچسب «تعیین مقدار» بزنید) یا آن را حذف کنید`, 'error');
+    return;
+  }
+
+  // 🆕 مقدار ثابت اسید/باز به همراه مشخصات کود برای بک‌اند فرستاده می‌شود
+  const selectedFerts = props.fertilizers
+    .filter((f) => localSelectedFertilizers.value.includes(f.id))
+    .map((f) => {
+      const fa = fixedAmounts.value[f.id];
+      return fa && (f.isAcid || f.isBase) ? { ...f, fixedAmount: fa.amount, fixedUnit: fa.unit } : f;
+    });
+
+  if (manualMode.value) {
+    await handleManualCalculate(selectedFerts);
+    return;
+  }
 
   try {
     const options = {
@@ -578,6 +664,42 @@ const handleOptimize = async () => {
     );
 
     if (result) {
+      showToast('محاسبه با موفقیت انجام شد', 'success');
+      goToStep(3);
+    } else {
+      showToast(calcStore.lastOptimizationError || 'خطا در محاسبه', 'error');
+    }
+  } catch (error: any) {
+    showToast(error?.message || 'خطا در محاسبه', 'error');
+  }
+};
+
+// 🆕 محاسبهٔ دستی: مقدار هر کود (گرم برای کل مخزن) از ورودی‌های کاربر
+const handleManualCalculate = async (selectedFerts: any[]) => {
+  const weights: Record<string, number> = {};
+  for (const f of selectedFerts) {
+    const row = manualAmounts.value[f.id];
+    if (!row || !row.amount || row.amount <= 0) continue;
+    const grams = amountToGrams(row.amount, row.unit, f.densityGMl);
+    if (grams == null) {
+      showToast(`برای «${f.name}» مصرف حجمی ممکن نیست؛ چگالی کود ثبت نشده است`, 'error');
+      return;
+    }
+    weights[f.id] = grams;
+  }
+  if (Object.keys(weights).length === 0) {
+    showToast('برای حداقل یک کود مقدار وارد کنید', 'error');
+    return;
+  }
+  try {
+    const ok = await calculateManualAmounts(
+      selectedFerts.filter((f) => weights[f.id] > 0),
+      weights,
+      mainTankVolume.value,
+      stockVolume.value,
+      injectionRatio.value
+    );
+    if (ok) {
       showToast('محاسبه با موفقیت انجام شد', 'success');
       goToStep(3);
     } else {
@@ -630,6 +752,8 @@ const resetAll = () => {
   emit('update:calcRows', []);
   emit('update:calcErrors', []);
   localSelectedFertilizers.value = [];
+  fixedAmounts.value = {};
+  manualAmounts.value = {};
   emit('update:selectedFertilizers', []);
   calcStore.setStockSettings({ tankVolume: 5000, stockVolume: 25, injectionRatio: 100 });
   calcStore.clearOptimizationResult();
@@ -682,6 +806,3 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
   opacity: 0;
 }
 </style>
-
-
-

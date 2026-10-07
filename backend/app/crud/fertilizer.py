@@ -42,8 +42,11 @@ def create_fertilizer(db: Session, fertilizer_data: FertilizerCreate, user_id: i
             elements=fertilizer_data.elements or {},
             price_per_kg=fertilizer_data.price_per_kg or 0.0,
             is_acid=fertilizer_data.is_acid,
+            is_base=getattr(fertilizer_data, 'is_base', False),
             acid_type=fertilizer_data.acid_type,
             ph_level=fertilizer_data.ph_level,
+            density_g_ml=getattr(fertilizer_data, 'density_g_ml', None),
+            price_unit=getattr(fertilizer_data, 'price_unit', None),
             description=fertilizer_data.description,
             is_system_default=fertilizer_data.is_system_default,
             source_system_id=fertilizer_data.source_system_id
@@ -211,8 +214,11 @@ def copy_system_fertilizer_to_user(db: Session, system_fertilizer_id: int, user_
             elements=system_fert.elements,
             price_per_kg=system_fert.price_per_kg,
             is_acid=system_fert.is_acid,
+            is_base=bool(getattr(system_fert, 'is_base', False)),
             acid_type=system_fert.acid_type,
             ph_level=system_fert.ph_level,
+            density_g_ml=getattr(system_fert, 'density_g_ml', None),
+            price_unit=getattr(system_fert, 'price_unit', None),
             description=system_fert.description,
             is_system_default=False,
             source_system_id=system_fertilizer_id

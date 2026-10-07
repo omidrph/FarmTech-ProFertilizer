@@ -353,6 +353,78 @@ def optimize_with_cost(
         }
 
 
+def optimize_min_cost_within_tolerance(
+    A: np.ndarray,
+    b: np.ndarray,
+    costs: np.ndarray,
+    tolerance_pct: float = 2.5,
+) -> Dict[str, Any]:
+    """
+    «کم‌هزینه‌ترین» به‌معنای واقعی: ارزان‌ترین ترکیبی که همهٔ عناصر هدف را در محدودهٔ استاندارد تأمین کند.
+
+    مسئله (برنامه‌ریزی خطی):
+        min  Σ cost_j · x_j
+        s.t. lower_i ≤ A_i·x ≤ upper_i      (برای هر عنصر هدف)
+             x ≥ 0
+
+    محدوده‌ها از روی «دقیق‌ترین ترکیب» (NNLS) ساخته می‌شوند تا مسئله همیشه شدنی باشد و هرگز بدتر از آن نشود:
+        lower_i = min((1 - tol)·b_i, A_i·x0)
+        upper_i = max((1 + tol)·b_i, A_i·x0)
+    (x0 جواب NNLS است). یعنی اگر عنصری به‌خاطر ترکیب کودها اصلاً به ±tol نمی‌رسد، از همان وضعیت NNLS بدتر نمی‌شود.
+    عنصری که هدفش کاملاً توسط آب تأمین شده (b_i = 0) نباید بیشتر از NNLS اضافه شود.
+    """
+    from scipy.optimize import linprog
+
+    start = time.time()
+    baseline = optimize_with_nnls(A, b)
+    x0 = np.asarray(baseline['weights'], dtype=float)
+
+    if not np.any(costs > 0):
+        baseline['method'] = 'nnls'
+        baseline['cheapest_note'] = 'no_prices'
+        return baseline
+
+    tol = max(tolerance_pct, 0.0) / 100.0
+    achieved0 = A @ x0
+    eps = 1e-7
+    lower = np.minimum((1 - tol) * b, achieved0) - eps
+    upper = np.maximum((1 + tol) * b, achieved0) + eps
+    lower = np.maximum(lower, 0.0)
+
+    # A_i x ≤ upper  و  -A_i x ≤ -lower
+    A_ub = np.vstack([A, -A])
+    b_ub = np.concatenate([upper, -lower])
+
+    try:
+        res = linprog(c=costs, A_ub=A_ub, b_ub=b_ub, bounds=[(0, None)] * A.shape[1], method='highs')
+    except Exception as e:  # pragma: no cover - کتابخانه
+        logger.error(f"LP failed: {e}")
+        res = None
+
+    if res is None or not res.success or res.x is None:
+        baseline['method'] = 'nnls'
+        baseline['cheapest_note'] = 'lp_failed'
+        return baseline
+
+    x = np.maximum(res.x, 0.0)
+    # هرگز گران‌تر از دقیق‌ترین ترکیب نشود
+    if float(costs @ x) > float(costs @ x0) + 1e-9:
+        x = x0
+
+    return {
+        'weights': x,
+        'residual': float(np.sum((A @ x - b) ** 2) ** 0.5),
+        'iterations': int(getattr(res, 'nit', 0) or 0),
+        'convergence_time_ms': (time.time() - start) * 1000,
+        'is_converged': True,
+        'method': 'lp_min_cost',
+        'status': 'success',
+        'baseline_cost': float(costs @ x0),
+        'optimized_cost': float(costs @ x),
+        'tolerance_pct': tolerance_pct,
+    }
+
+
 def solve_optimization(
     A: np.ndarray,
     b: np.ndarray,
@@ -365,7 +437,8 @@ def solve_optimization(
     active_elements: Optional[List[str]] = None,
     prefer_fewer_fertilizers: bool = False,
     max_fertilizers_count: Optional[int] = None,
-    prefer_cheapest: bool = False
+    prefer_cheapest: bool = False,
+    cheapest_tolerance_pct: float = 2.5
 ) -> Dict[str, Any]:
     """
     حل‌کننده اصلی بهینه‌سازی با انتخاب روش
@@ -408,8 +481,7 @@ def solve_optimization(
     # بالاتر از حالت پیش‌فرض استفاده می‌شود تا واقعاً به‌سمت ارزان‌ترین
     # جواب معقول متمایل شود (نه فقط یک تعدیل جزئی).
     if prefer_cheapest and costs is not None:
-        boosted_cost_weight = max(cost_weight, 0.15)
-        return optimize_with_cost(A, b, costs, boosted_cost_weight, max_iterations, tolerance)
+        return optimize_min_cost_within_tolerance(A, b, costs, cheapest_tolerance_pct)
 
     if method == 'nnls':
         return optimize_with_nnls(A, b, element_weights, active_elements)
@@ -426,5 +498,3 @@ def solve_optimization(
     
     else:
         raise ValueError(f"روش {method} پشتیبانی نمی‌شود")
-
-

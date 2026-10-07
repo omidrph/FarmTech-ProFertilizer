@@ -43,3 +43,23 @@ export function fmtMassG(grams: number): string {
   if (grams >= 1000) return `${fmt(grams / 1000, 2)} کیلوگرم`;
   return `${fmt(grams, grams < 10 ? 2 : 1)} گرم`;
 }
+
+/** مقدار دوز با واحد مناسب: mL → «میلی‌لیتر/لیتر»، g → «گرم/کیلوگرم» */
+export function fmtDose(amount: number, unit: 'ml' | 'g'): string {
+  if (!Number.isFinite(amount)) return '—';
+  if (unit === 'ml') return fmtVolumeL(amount / 1000);
+  return fmtMassG(amount);
+}
+
+/** نام فارسی عناصر برای نمایش سهم اسید/باز */
+export const ELEMENT_LABELS: Record<string, string> = {
+  'N-NO3': 'نیتروژن نیتراتی (N-NO₃)',
+  'N-NH4': 'نیتروژن آمونیومی (N-NH₄)',
+  P: 'فسفر (P)',
+  K: 'پتاسیم (K)',
+  S: 'گوگرد (S)',
+  Ca: 'کلسیم (Ca)',
+  Mg: 'منیزیم (Mg)',
+  Na: 'سدیم (Na)',
+  Cl: 'کلر (Cl)'
+};

@@ -134,55 +134,32 @@
                   </div>
                 </div>
 
-                <!-- فیلدهای مخصوص کود مایع -->
-                <div v-if="formData.form === 'liquid'" class="bg-blue-50/30 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800/30 space-y-2">
-                  <div class="flex items-center gap-2 text-xs font-medium text-blue-700 dark:text-blue-300">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                    </svg>
+                <!-- کود مایع: چگالی و واحد قیمت -->
+                <div v-if="formData.form === 'liquid'" class="bg-sky-50/50 dark:bg-sky-900/10 rounded-lg p-3 border border-sky-200 dark:border-sky-800/40 space-y-2.5">
+                  <div class="flex items-center gap-2 text-xs font-semibold text-sky-700 dark:text-sky-300">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3.5s6 6.2 6 10.5a6 6 0 11-12 0c0-4.3 6-10.5 6-10.5z" /></svg>
                     <span>ویژگی‌های کود مایع</span>
                   </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-0.5">
-                        حجم (لیتر)
-                      </label>
-                      <input 
-                        type="number" 
-                        v-model.number="formData.liquid_volume" 
-                        min="0"
-                        step="0.1"
-                        placeholder="۱" 
-                        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-0.5">
-                        وزن مخصوص (g/cm³)
-                      </label>
-                      <input 
-                        type="number" 
-                        v-model.number="formData.specific_gravity" 
-                        min="0"
-                        step="0.01"
-                        placeholder="۱.۲" 
-                        class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                  </div>
                   <div>
-                    <label class="block text-[10px] font-medium text-gray-600 dark:text-gray-400 mb-0.5">
-                      غلظت ماده موثره (%)
-                    </label>
-                    <input 
-                      type="number" 
-                      v-model.number="formData.active_concentration" 
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      placeholder="۵۰" 
-                      class="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                    <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">چگالی (g/mL)</label>
+                    <input
+                      type="number" v-model.number="formData.density_g_ml" min="0" max="5" step="0.001" placeholder="مثلاً ۱٫۲۰"
+                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
+                  </div>
+                  <p class="text-[11px] leading-5 text-gray-500 dark:text-gray-400">
+                    درصد عناصر زیر را «درصد وزنی» (گرم عنصر در ۱۰۰ گرم محلول) بنویسید؛ همان‌طور که روی برچسب آمده.
+                    با ثبت چگالی، مقدار مصرف این کود در نتیجهٔ محاسبه <strong>به لیتر/میلی‌لیتر</strong> نمایش داده می‌شود و می‌توانید قیمت را هر لیتر وارد کنید.
+                    اگر برچسب «گرم در لیتر» (w/v) دارد، آن را بر چگالی تقسیم کنید.
+                  </p>
+                  <div class="grid grid-cols-2 gap-1.5">
+                    <button v-for="opt in priceUnitOptions" :key="opt.value" type="button" @click="formData.price_unit = opt.value"
+                      class="h-8 rounded-lg border text-xs font-medium transition-colors"
+                      :class="formData.price_unit === opt.value
+                        ? 'border-sky-500 bg-white dark:bg-gray-800 text-sky-700 dark:text-sky-300'
+                        : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400'">
+                      قیمت {{ opt.label }}
+                    </button>
                   </div>
                 </div>
 
@@ -204,7 +181,7 @@
                   </div>
                   <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      قیمت (تومان) <span class="text-danger-500">*</span>
+                      قیمت ({{ priceLabel }}) <span class="text-danger-500">*</span>
                     </label>
                     <div class="relative">
                       <input 
@@ -214,7 +191,7 @@
                         placeholder="۸۵۰۰۰" 
                         class="w-full px-3 sm:px-4 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all pr-14 sm:pr-16"
                       />
-                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] sm:text-xs text-gray-400">تومان</span>
+                      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] sm:text-xs text-gray-400">{{ priceSuffix }}</span>
                     </div>
                   </div>
                 </div>
@@ -238,16 +215,31 @@
               <!-- ============================================================ -->
               <div class="space-y-3 sm:space-y-4">
                 
-                <!-- بخش اسید -->
-                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-200 dark:border-gray-600">
-                  <label class="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      v-model="formData.is_acid" 
-                      class="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
-                    />
-                    <span>اسید است</span>
-                  </label>
+                <!-- اسید / باز تنظیم‌کنندهٔ pH -->
+                <div class="bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-200 dark:border-gray-600 space-y-2.5">
+                  <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <label class="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <input type="checkbox" :checked="formData.is_acid" @change="toggleAcid(($event.target as HTMLInputElement).checked)"
+                        class="w-4 h-4 text-amber-600 rounded border-gray-300 focus:ring-amber-500" />
+                      <span>اسید است</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <input type="checkbox" :checked="formData.is_base" @change="toggleBase(($event.target as HTMLInputElement).checked)"
+                        class="w-4 h-4 text-sky-600 rounded border-gray-300 focus:ring-sky-500" />
+                      <span>باز است</span>
+                    </label>
+                  </div>
+                  <div v-if="formData.is_acid || formData.is_base">
+                    <label class="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">نوع ماده (برای محاسبهٔ دقیق pH)</label>
+                    <select v-model="formData.acid_type"
+                      class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                      <option value="">نامشخص / سفارشی</option>
+                      <option v-for="t in adjusterTypeOptions" :key="t.value" :value="t.value">{{ t.label }}</option>
+                    </select>
+                    <p class="mt-1.5 text-[11px] leading-5 text-gray-500 dark:text-gray-400">
+                      اسیدها و بازها در تب «PH» برای تنظیم pH و در «انتخاب کود» (با تعیین مقدار) قابل استفاده‌اند.
+                    </p>
+                  </div>
                 </div>
 
                 <!-- بخش عناصر -->
@@ -370,17 +362,56 @@ const props = defineProps<{
     price_per_kg: number;
     elements: Record<string, number>;
     is_acid: boolean;
+    is_base: boolean;
     acid_type: string;
     ph_level: number | null;
     description: string;
     is_system_default: boolean;
     source_system_id: number | null;
-    liquid_volume?: number;
-    specific_gravity?: number;
-    active_concentration?: number;
+    density_g_ml: number | null;
+    price_unit: 'kg' | 'l';
   };
   isSaving: boolean;
 }>();
+
+// ============================================================
+// اسید/باز و قیمت (مایع)
+// ============================================================
+const adjusterTypeOptions = computed(() =>
+  props.formData.is_base
+    ? [
+        { value: 'KOH', label: 'پتاسیم هیدروکسید (KOH)' },
+        { value: 'K2CO3', label: 'پتاسیم کربنات (K₂CO₃)' },
+        { value: 'KHCO3', label: 'پتاسیم بی‌کربنات (KHCO₃)' },
+        { value: 'NaOH', label: 'سدیم هیدروکسید (NaOH)' }
+      ]
+    : [
+        { value: 'HNO3', label: 'اسید نیتریک (HNO₃)' },
+        { value: 'H3PO4', label: 'اسید فسفریک (H₃PO₄)' },
+        { value: 'H2SO4', label: 'اسید سولفوریک (H₂SO₄)' },
+        { value: 'HCl', label: 'اسید کلریدریک (HCl)' }
+      ]
+);
+
+const toggleAcid = (checked: boolean) => {
+  props.formData.is_acid = checked;
+  if (checked) props.formData.is_base = false;
+  props.formData.acid_type = '';
+};
+const toggleBase = (checked: boolean) => {
+  props.formData.is_base = checked;
+  if (checked) props.formData.is_acid = false;
+  props.formData.acid_type = '';
+};
+
+const priceUnitOptions: Array<{ value: 'kg' | 'l'; label: string }> = [
+  { value: 'kg', label: 'هر کیلوگرم' },
+  { value: 'l', label: 'هر لیتر' }
+];
+const priceLabel = computed(() =>
+  props.formData.form === 'liquid' && props.formData.price_unit === 'l' ? 'تومان / لیتر' : 'تومان / کیلوگرم'
+);
+const priceSuffix = computed(() => (props.formData.form === 'liquid' && props.formData.price_unit === 'l' ? 'هر لیتر' : 'هر کیلو'));
 
 // ============================================================
 // Emits
@@ -571,5 +602,3 @@ input:focus, select:focus, textarea:focus {
   outline: none;
 }
 </style>
-
-

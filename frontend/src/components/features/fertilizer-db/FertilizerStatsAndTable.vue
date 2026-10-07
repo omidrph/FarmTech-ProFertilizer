@@ -2,170 +2,89 @@
 <template>
   <div>
     <!-- ============================================================ -->
-    <!-- کارت‌های آماری - تعاملی با فیلتر -->
+    <!-- نوار ابزار فشرده: دسته‌ها + جستجو + عملیات (یک نوار باریک) -->
     <!-- ============================================================ -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <!-- همه کودها -->
-      <div
-        @click="setFilter(null)"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
-        :class="activeFilter === null ? 'border-primary-500 dark:border-primary-400' : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'"
-      >
-        <div class="w-10 h-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">همه کودها</p>
-          <p class="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{{ userFertilizers.length }}</p>
-        </div>
-        <span v-if="activeFilter === null" class="mr-auto w-2 h-2 rounded-full bg-primary-500"></span>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-2.5 space-y-2.5">
+      <!-- دسته‌ها (فیلتر سریع): اسیدها و بازها کنار هم -->
+      <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-0.5 px-0.5">
+        <button
+          v-for="chip in categoryChips"
+          :key="chip.key ?? 'all'"
+          type="button"
+          @click="setFilter(chip.key)"
+          class="flex-shrink-0 h-8 px-3 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5"
+          :class="activeFilter === chip.key
+            ? chip.activeClass
+            : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        >
+          <span class="w-1.5 h-1.5 rounded-full" :class="chip.dot"></span>
+          {{ chip.label }}
+          <span class="tabular-nums opacity-70">{{ chip.count }}</span>
+        </button>
       </div>
 
-      <!-- کودهای معمولی -->
-      <div
-        @click="setFilter('normal')"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
-        :class="activeFilter === 'normal' ? 'border-success-500 dark:border-success-400' : 'border-gray-200 dark:border-gray-700 hover:border-success-300 dark:hover:border-success-700'"
-      >
-        <div class="w-10 h-10 rounded-lg bg-success-50 dark:bg-success-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-success-600 dark:text-success-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">معمولی</p>
-          <p class="text-xl font-bold text-success-600 dark:text-success-400 tabular-nums">{{ normalFertilizersCount }}</p>
-        </div>
-        <span v-if="activeFilter === 'normal'" class="mr-auto w-2 h-2 rounded-full bg-success-500"></span>
-      </div>
-
-      <!-- اسیدها -->
-      <div
-        @click="setFilter('acid')"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
-        :class="activeFilter === 'acid' ? 'border-warning-500 dark:border-warning-400' : 'border-gray-200 dark:border-gray-700 hover:border-warning-300 dark:hover:border-warning-700'"
-      >
-        <div class="w-10 h-10 rounded-lg bg-warning-50 dark:bg-warning-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-warning-600 dark:text-warning-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">اسیدها</p>
-          <p class="text-xl font-bold text-warning-600 dark:text-warning-400 tabular-nums">{{ acidFertilizersCount }}</p>
-        </div>
-        <span v-if="activeFilter === 'acid'" class="mr-auto w-2 h-2 rounded-full bg-warning-500"></span>
-      </div>
-
-      <!-- کودهای سیستمی -->
-      <div
-        @click="setFilter('system')"
-        class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 p-4 flex items-center gap-3 cursor-pointer transition-all hover:shadow-md"
-        :class="activeFilter === 'system' ? 'border-indigo-500 dark:border-indigo-400' : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'"
-      >
-        <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-          </svg>
-        </div>
-        <div>
-          <p class="text-xs text-gray-500 dark:text-gray-400">کپی از سیستمی</p>
-          <p class="text-xl font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">{{ systemCopiedCount }}</p>
-        </div>
-        <span v-if="activeFilter === 'system'" class="mr-auto w-2 h-2 rounded-full bg-indigo-500"></span>
-      </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- نوار ابزار -->
-    <!-- ============================================================ -->
-    <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-      <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
-
+      <div class="flex items-center gap-2">
         <!-- جستجو -->
-        <div class="relative flex-1 w-full sm:max-w-xs">
-          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        <div class="relative flex-1 min-w-0">
+          <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
           </svg>
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="جستجو..."
-            class="w-full pr-10 pl-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            placeholder="جستجو در نام، برند یا دسته…"
+            class="w-full h-9 pr-9 pl-8 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
           />
+          <button v-if="searchQuery" type="button" @click="searchQuery = ''" class="absolute left-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded text-gray-400 hover:text-gray-600 text-xs" aria-label="پاک کردن جستجو">✕</button>
         </div>
 
-        <!-- دکمه‌های عملیاتی -->
-        <div class="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
-          <!-- دکمه فیلتر -->
-          <button
-            @click="openFilterModal"
-            class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 border border-gray-200 dark:border-gray-600"
-            :class="hasActiveFilters ? 'border-primary-400 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : ''"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-            </svg>
-            <span>فیلتر</span>
-            <span v-if="hasActiveFilters" class="w-2 h-2 rounded-full bg-primary-500"></span>
-          </button>
+        <!-- فیلتر -->
+        <button
+          type="button"
+          @click="openFilterModal"
+          class="h-9 px-3 rounded-lg border text-sm font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors"
+          :class="advancedFilterCount
+            ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+            : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M6 12h12M10 20h4" /></svg>
+          <span class="hidden sm:inline">فیلتر</span>
+          <span v-if="advancedFilterCount" class="min-w-[18px] h-[18px] px-1 rounded-full bg-primary-600 text-white text-[10px] flex items-center justify-center tabular-nums">{{ advancedFilterCount }}</span>
+        </button>
 
-          <!-- دکمه افزودن کود -->
-          <button
-            @click="$emit('open-modal')"
-            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2 shadow-sm hover:shadow-md"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span class="hidden sm:inline">افزودن کود</span>
-            <span class="sm:hidden">افزودن</span>
-          </button>
+        <!-- افزودن -->
+        <button
+          type="button"
+          @click="$emit('open-modal')"
+          class="h-9 px-3.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" /></svg>
+          <span>افزودن<span class="hidden sm:inline"> کود</span></span>
+        </button>
 
-          <!-- دکمه پاک کردن جدول -->
-          <button
-            v-if="userFertilizers.length > 0"
-            @click="clearTable"
-            class="px-4 py-2 bg-danger-50 dark:bg-danger-900/20 text-danger-600 dark:text-danger-400 rounded-lg hover:bg-danger-100 dark:hover:bg-danger-900/40 transition-colors flex items-center gap-2 border border-danger-200 dark:border-danger-800"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-            <span class="hidden sm:inline">پاک کردن</span>
-          </button>
-        </div>
+        <!-- پاک کردن همهٔ کودها -->
+        <button
+          v-if="userFertilizers.length > 0"
+          type="button"
+          @click="clearTable"
+          class="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-rose-600 hover:border-rose-300 dark:hover:border-rose-800 flex items-center justify-center flex-shrink-0 transition-colors"
+          title="پاک کردن همهٔ کودهای شخصی"
+          aria-label="پاک کردن همهٔ کودهای شخصی"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.87 12.14A2 2 0 0116.14 21H7.86a2 2 0 01-1.99-1.86L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 px-0.5">
+        <span class="tabular-nums">{{ filteredFertilizers.length.toLocaleString('fa-IR') }} کود نمایش داده می‌شود<template v-if="hasActiveFilters"> (از {{ userFertilizers.length.toLocaleString('fa-IR') }})</template></span>
+        <button v-if="hasActiveFilters" type="button" @click="clearAllFilters" class="text-primary-600 dark:text-primary-400 hover:underline">پاک کردن فیلترها</button>
       </div>
     </div>
 
     <!-- ============================================================ -->
     <!-- نمایش نتایج -->
     <!-- ============================================================ -->
-    <div v-if="filteredFertilizers.length > 0" class="mt-4">
-      <!-- هدر نتایج -->
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-2">
-          <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {{ filteredFertilizers.length }} کود
-          </span>
-          <span
-            v-if="hasActiveFilters"
-            class="text-xs text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 px-2 py-0.5 rounded-full"
-          >
-            فیلتر فعال
-          </span>
-        </div>
-
-        <button
-          v-if="hasActiveFilters"
-          @click="clearAllFilters"
-          class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-        >
-          پاک کردن فیلترها
-        </button>
-      </div>
-
+    <div v-if="filteredFertilizers.length > 0" class="mt-3">
       <!-- ============================================================ -->
       <!-- دسکتاپ: جدول -->
       <!-- ============================================================ -->
@@ -237,6 +156,12 @@
                           >
                             اسید
                           </span>
+                          <span
+                            v-if="fertilizer.isBase"
+                            class="text-[10px] px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded"
+                          >
+                            باز
+                          </span>
 
                           <span
                             v-if="fertilizer.sourceSystemId"
@@ -285,8 +210,9 @@
                   <!-- قیمت -->
                   <td class="px-4 py-3 text-center">
                     <span class="font-semibold text-gray-900 dark:text-white tabular-nums">
-                      {{ Number(fertilizer.pricePerKg || 0).toLocaleString('fa-IR') }}
+                      {{ priceText(fertilizer) }}
                     </span>
+                    <span class="block text-[10px] text-gray-400">{{ priceUnitText(fertilizer) }}</span>
                   </td>
 
                   <!-- عناصر -->
@@ -397,6 +323,13 @@
                   </span>
 
                   <span
+                    v-if="fertilizer.isBase"
+                    class="text-[10px] px-1.5 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 rounded"
+                  >
+                    باز
+                  </span>
+
+                  <span
                     v-if="fertilizer.sourceSystemId"
                     class="text-[10px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded border border-indigo-200 dark:border-indigo-800"
                   >
@@ -446,7 +379,8 @@
             <div>
               <p class="text-[10px] text-gray-400 dark:text-gray-500">قیمت</p>
               <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                {{ Number(fertilizer.pricePerKg || 0).toLocaleString('fa-IR') }}
+                {{ priceText(fertilizer) }}
+                <span class="block text-[10px] font-normal text-gray-400">{{ priceUnitText(fertilizer) }}</span>
               </p>
             </div>
           </div>
@@ -547,7 +481,7 @@
 
                 <select
                   v-model="filterForm"
-                  class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  class="w-full h-10 px-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 >
                   <option value="all">همه فرم‌ها</option>
                   <option value="powder">پودری</option>
@@ -574,7 +508,7 @@
                       type="number"
                       placeholder="۰"
                       min="0"
-                      class="w-full px-3 py-2.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                      class="w-full h-10 px-3 pr-8 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     />
                   </div>
 
@@ -590,7 +524,7 @@
                       type="number"
                       placeholder="∞"
                       min="0"
-                      class="w-full px-3 py-2.5 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                      class="w-full h-10 px-3 pr-8 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
@@ -604,7 +538,7 @@
 
                 <select
                   v-model="filterElement"
-                  class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                  class="w-full h-10 px-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                 >
                   <option value="all">همه عناصر</option>
                   <option value="Ca">کلسیم (Ca)</option>
@@ -622,81 +556,29 @@
                 </select>
               </div>
 
-              <!-- وضعیت اسید -->
+              <!-- نوع کود: اسید و باز کنار هم -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  نوع کود
-                </label>
-
-                <div class="flex gap-3">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      v-model="filterType"
-                      value="all"
-                      class="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">همه</span>
-                  </label>
-
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      v-model="filterType"
-                      value="normal"
-                      class="w-4 h-4 text-success-600 focus:ring-success-500"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">معمولی</span>
-                  </label>
-
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      v-model="filterType"
-                      value="acid"
-                      class="w-4 h-4 text-warning-600 focus:ring-warning-500"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">اسید</span>
-                  </label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">نوع کود</label>
+                <div class="grid grid-cols-4 gap-1.5">
+                  <button v-for="opt in typeOptions" :key="opt.value" type="button" @click="filterType = opt.value"
+                    class="h-9 rounded-lg border text-xs font-medium transition-colors"
+                    :class="filterType === opt.value ? opt.activeClass : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'">
+                    {{ opt.label }}
+                  </button>
                 </div>
               </div>
 
-              <!-- وضعیت سیستمی -->
+              <!-- منشأ کود -->
               <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  منشأ کود
-                </label>
-
-                <div class="flex gap-3">
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      v-model="filterSource"
-                      value="all"
-                      class="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">همه</span>
-                  </label>
-
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      v-model="filterSource"
-                      value="user"
-                      class="w-4 h-4 text-success-600 focus:ring-success-500"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">شخصی</span>
-                  </label>
-
-                  <label class="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      v-model="filterSource"
-                      value="system"
-                      class="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span class="text-sm text-gray-700 dark:text-gray-300">سیستمی</span>
-                  </label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">منشأ کود</label>
+                <div class="grid grid-cols-3 gap-1.5">
+                  <button v-for="opt in sourceOptions" :key="opt.value" type="button" @click="filterSource = opt.value"
+                    class="h-9 rounded-lg border text-xs font-medium transition-colors"
+                    :class="filterSource === opt.value
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'">
+                    {{ opt.label }}
+                  </button>
                 </div>
               </div>
       </div>
@@ -753,24 +635,61 @@ const filterForm = ref<'all' | 'powder' | 'crystal' | 'liquid' | 'granular'>('al
 const priceMin = ref<number | null>(null);
 const priceMax = ref<number | null>(null);
 const filterElement = ref<string>('all');
-const filterType = ref<'all' | 'normal' | 'acid'>('all');
+const filterType = ref<'all' | 'normal' | 'acid' | 'base'>('all');
 const filterSource = ref<'all' | 'user' | 'system'>('all');
 const showFilterModal = ref(false);
 
 // ============================================================
 // Computed
 // ============================================================
-const normalFertilizersCount = computed(() => {
-  return props.userFertilizers.filter((f: any) => !f.isAcid).length;
-});
+const isAdjusterFert = (f: any) => !!(f.isAcid || f.isBase);
 
-const acidFertilizersCount = computed(() => {
-  return props.userFertilizers.filter((f: any) => f.isAcid).length;
-});
+const normalFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => !isAdjusterFert(f)).length);
+const acidFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => f.isAcid).length);
+const baseFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => f.isBase).length);
+const systemCopiedCount = computed(() => props.userFertilizers.filter((f: any) => f.sourceSystemId).length);
 
-const systemCopiedCount = computed(() => {
-  return props.userFertilizers.filter((f: any) => f.sourceSystemId).length;
-});
+// دسته‌های فیلتر سریع (اسید و باز کنار هم)
+const categoryChips = computed(() => [
+  { key: null as string | null, label: 'همه', count: props.userFertilizers.length, dot: 'bg-primary-500', activeClass: 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' },
+  { key: 'normal', label: 'معمولی', count: normalFertilizersCount.value, dot: 'bg-emerald-500', activeClass: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' },
+  { key: 'acid', label: 'اسیدها', count: acidFertilizersCount.value, dot: 'bg-amber-500', activeClass: 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' },
+  { key: 'base', label: 'بازها', count: baseFertilizersCount.value, dot: 'bg-sky-500', activeClass: 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300' },
+  { key: 'system', label: 'کپی از سیستمی', count: systemCopiedCount.value, dot: 'bg-indigo-500', activeClass: 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' }
+]);
+
+const typeOptions: Array<{ value: 'all' | 'normal' | 'acid' | 'base'; label: string; activeClass: string }> = [
+  { value: 'all', label: 'همه', activeClass: 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' },
+  { value: 'normal', label: 'معمولی', activeClass: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' },
+  { value: 'acid', label: 'اسید', activeClass: 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' },
+  { value: 'base', label: 'باز', activeClass: 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300' }
+];
+const sourceOptions: Array<{ value: 'all' | 'user' | 'system'; label: string }> = [
+  { value: 'all', label: 'همه' },
+  { value: 'user', label: 'شخصی' },
+  { value: 'system', label: 'کپی از سیستمی' }
+];
+
+// قیمت: ذخیره همیشه به‌ازای کیلوگرم؛ کود مایع با چگالی به‌ازای لیتر نمایش داده می‌شود
+const priceIsPerLiter = (f: any) => f.form === 'liquid' && f.densityGMl > 0 && f.priceUnit === 'l';
+const priceText = (f: any): string => {
+  const perKg = Number(f.pricePerKg || 0);
+  const v = priceIsPerLiter(f) ? perKg * f.densityGMl : perKg;
+  return Math.round(v).toLocaleString('fa-IR');
+};
+const priceUnitText = (f: any): string => (priceIsPerLiter(f) ? 'هر لیتر' : 'هر کیلوگرم');
+
+// تعداد فیلترهای پیشرفتهٔ فعال (برای نشان روی دکمهٔ فیلتر)
+const advancedFilterCount = computed(() =>
+  [
+    filterForm.value !== 'all',
+    !!priceMin.value,
+    !!priceMax.value,
+    filterElement.value !== 'all',
+    filterType.value !== 'all',
+    filterSource.value !== 'all'
+  ].filter(Boolean).length
+);
 
 const hasActiveFilters = computed(() => {
   return !!(
@@ -790,9 +709,11 @@ const filteredFertilizers = computed(() => {
 
   // فیلتر از کارت‌ها
   if (props.activeFilter === 'normal') {
-    result = result.filter((f: any) => !f.isAcid);
+    result = result.filter((f: any) => !isAdjusterFert(f));
   } else if (props.activeFilter === 'acid') {
     result = result.filter((f: any) => f.isAcid);
+  } else if (props.activeFilter === 'base') {
+    result = result.filter((f: any) => f.isBase);
   } else if (props.activeFilter === 'system') {
     result = result.filter((f: any) => f.sourceSystemId);
   }
@@ -840,8 +761,10 @@ const filteredFertilizers = computed(() => {
   // نوع کود
   if (filterType.value === 'acid') {
     result = result.filter((f: any) => f.isAcid);
+  } else if (filterType.value === 'base') {
+    result = result.filter((f: any) => f.isBase);
   } else if (filterType.value === 'normal') {
-    result = result.filter((f: any) => !f.isAcid);
+    result = result.filter((f: any) => !isAdjusterFert(f));
   }
 
   // منشأ کود
@@ -1043,6 +966,8 @@ const clearTable = () => {
 </script>
 
 <style scoped>
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -1074,5 +999,3 @@ const clearTable = () => {
   background: #4b5563;
 }
 </style>
-
-

@@ -134,21 +134,46 @@ def optimize_fertilizers(
     costs = np.array([fert.get('price_per_kg', 0) / 1000 for fert in fertilizers])
     
     # ===== ۴. اجرای بهینه‌سازی =====
+    # 🆕 کودهایی که کاربر مقدارشان را ثابت کرده (fixed_weight = گرم برای هر ۱۰۰۰ لیتر):
+    # از متغیرهای بهینه‌سازی کنار گذاشته می‌شوند و سهمشان از هدف کم می‌شود.
+    n_total = A.shape[1]
+    fixed_idx = [i for i, f in enumerate(fertilizers) if (f.get('fixed_weight') or 0) > 0]
+    fixed_vals = np.array([float(fertilizers[i]['fixed_weight']) for i in fixed_idx])
+    free_idx = [i for i in range(n_total) if i not in set(fixed_idx)]
+    A_solve, b_solve, costs_solve = A, b, costs
+    if fixed_idx:
+        b_solve = np.maximum(b - A[:, fixed_idx] @ fixed_vals, 0.0)
+        A_solve = A[:, free_idx]
+        costs_solve = costs[free_idx]
+
     try:
-        solver_result = solve_optimization(
-            A=A,
-            b=b,
-            method=method,
-            costs=costs,
-            cost_weight=cost_weight,
-            max_iterations=max_iterations,
-            tolerance=tolerance,
-            element_weights=element_weights,
-            active_elements=active_elements,
-            prefer_fewer_fertilizers=options.get('prefer_fewer_fertilizers', False),
-            max_fertilizers_count=options.get('max_fertilizers_count'),
-            prefer_cheapest=options.get('prefer_cheapest', False)
-        )
+        if fixed_idx and not free_idx:
+            solver_result = {
+                'weights': np.zeros(0), 'residual': float(np.sum(b_solve ** 2) ** 0.5), 'iterations': 0,
+                'convergence_time_ms': 0.0, 'is_converged': True, 'method': 'fixed_only', 'status': 'success'
+            }
+        else:
+            solver_result = solve_optimization(
+                A=A_solve,
+                b=b_solve,
+                method=method,
+                costs=costs_solve,
+                cost_weight=cost_weight,
+                max_iterations=max_iterations,
+                tolerance=tolerance,
+                element_weights=element_weights,
+                active_elements=active_elements,
+                prefer_fewer_fertilizers=options.get('prefer_fewer_fertilizers', False),
+                max_fertilizers_count=options.get('max_fertilizers_count'),
+                prefer_cheapest=options.get('prefer_cheapest', False),
+                cheapest_tolerance_pct=float(options.get('cheapest_tolerance_pct', 2.5) or 2.5)
+            )
+        if fixed_idx:
+            full = np.zeros(n_total)
+            if free_idx:
+                full[free_idx] = np.asarray(solver_result['weights'], dtype=float)
+            full[fixed_idx] = fixed_vals
+            solver_result['weights'] = full
     except Exception as e:
         logger.error(f"Optimization error: {e}")
         return {
@@ -214,5 +239,3 @@ def optimize_fertilizers(
             'is_converged': False,
             'summary': f"❌ خطا در پردازش نتایج: {str(e)}"
         }
-
-

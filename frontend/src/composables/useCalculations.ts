@@ -109,6 +109,38 @@ export function useCalculations() {
         }
     }
 
+    /**
+     * 🆕 محاسبهٔ دستی: مقدار هر کود (گرم برای کل مخزن) را کاربر تعیین کرده است.
+     */
+    async function calculateManualAmounts(
+        fertilizers: any[],
+        weightsGrams: Record<string, number>,
+        tankVolume: number = 1000,
+        stockVolume: number = 100,
+        injectionRatio: number = 100
+    ): Promise<boolean> {
+        isOptimizing.value = true;
+        try {
+            const targetValuesRecord: Record<string, number> = {};
+            for (const [k, v] of Object.entries(targetStore.targetElements)) {
+                if (v > 0) targetValuesRecord[k] = v;
+            }
+            const waterValuesRecord: Record<string, number> = {};
+            for (const [k, v] of Object.entries(waterStore.waterValues)) {
+                if (v > 0) waterValuesRecord[k] = v;
+            }
+            if (!fertilizers.length || !Object.values(weightsGrams).some(w => w > 0)) {
+                throw new Error('برای حداقل یک کود مقدار وارد کنید');
+            }
+            return await calcStore.calculateManual(
+                fertilizers, weightsGrams, targetValuesRecord, waterValuesRecord,
+                tankVolume, stockVolume, injectionRatio
+            );
+        } finally {
+            isOptimizing.value = false;
+        }
+    }
+
     // 🆕 تابع generateInterpretation حذف شد (طبق درخواست): بخش تفسیر
     // موقتاً غیرفعال است و بعداً با یک سرویس هوش مصنوعی از نو پیاده‌سازی
     // خواهد شد. endpoint متناظر آن در بک‌اند نیز حذف شده است.
@@ -226,6 +258,7 @@ export function useCalculations() {
         isCalculating,
         isOptimizing,
         optimizeFertilizers,
+        calculateManualAmounts,
         convertUnits,
         calculateIonBalance,
         calculateReservoir,
@@ -234,5 +267,3 @@ export function useCalculations() {
         getOptimizationHistory
     };
 }
-
-

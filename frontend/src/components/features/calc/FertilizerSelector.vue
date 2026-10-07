@@ -25,10 +25,10 @@
           type="button"
           @click="selectAll"
           :disabled="availableList.length === 0"
-          title="کودهای اسیدی به‌عمد اضافه نمی‌شوند؛ اگر لازم دارید عمداً از لیست انتخاب کنید"
+          :title="includeAcidsBases ? 'اسیدها و بازها هم اضافه می‌شوند (طبق تنظیمات پیشرفته)' : 'اسیدها و بازها اضافه نمی‌شوند؛ برای اضافه‌شدن، گزینهٔ آن را در تنظیمات پیشرفته روشن کنید'"
           class="px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
-          افزودن همه (بدون اسید)
+          افزودن همه
         </button>
         <button
           type="button"
@@ -41,12 +41,14 @@
       </div>
     </div>
 
-    <!-- 🆕 راهنمای نقش دوگانه‌ی کودهای اسیدی -->
+    <!-- 🆕 راهنمای اسید/باز -->
     <div
       v-if="hasAcidFertilizers"
       class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-amber-50/60 dark:bg-amber-900/10 text-[11px] text-amber-800 dark:text-amber-300 leading-5"
     >
-      کودهای اسیدی (برچسب «اسید») هم عنصر تأمین می‌کنند هم روی pH اثر می‌گذارند؛ به همین دلیل در «افزودن همه» گنجانده نشده‌اند. اصلاح دقیق pH بعد از ساخت محلول در تب «PH» انجام می‌شود.
+      اسیدها و بازها (برچسب «اسید» / «باز») هم عنصر تأمین می‌کنند هم روی pH اثر می‌گذارند. هنگام انتخاب هرکدام، مقدار مصرفی برای مخزن را می‌پرسیم.
+      <template v-if="!includeAcidsBases"> «افزودن همه» آن‌ها را اضافه نمی‌کند (قابل تغییر در تنظیمات پیشرفته).</template>
+      اگر مقدار را نمی‌دانید، pH را بعد از ساخت محلول در تب «PH» تنظیم کنید.
     </div>
 
     <!-- ============================================================ -->
@@ -123,13 +125,11 @@
                 <div class="flex items-center gap-1.5 mt-1 flex-wrap">
                   <span
                     class="text-[10px] px-1.5 py-0.5 rounded"
-                    :class="fertilizer.isAcid
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'"
-                    :title="fertilizer.isAcid ? 'این کود اسیدی است؛ هم می‌تواند عنصر تأمین کند هم روی pH اثر بگذارد. اصلاح دقیق pH پس از ساخت محلول در تب «PH» انجام می‌شود.' : undefined"
+                    :class="kindClass(fertilizer)"
                   >
-                    {{ fertilizer.isAcid ? 'اسید' : 'کود' }}
+                    {{ kindLabel(fertilizer) }}
                   </span>
+                  <span v-if="fertilizer.form === 'liquid'" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300">مایع</span>
                   <span v-if="fertilizer.brand" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                     {{ fertilizer.brand }}
                   </span>
@@ -204,10 +204,17 @@
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ fertilizer.name }}</p>
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span
-                    v-if="fertilizer.isAcid"
-                    class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                    title="این کود اسیدی است؛ هم می‌تواند عنصر تأمین کند هم روی pH اثر بگذارد."
-                  >اسید</span>
+                    v-if="isAdjuster(fertilizer)"
+                    class="text-[10px] px-1.5 py-0.5 rounded"
+                    :class="kindClass(fertilizer)"
+                  >{{ kindLabel(fertilizer) }}</span>
+                  <button
+                    v-if="isAdjuster(fertilizer)"
+                    type="button"
+                    @click.stop="openModal(fertilizer, true)"
+                    class="text-[10px] px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50"
+                    title="ویرایش مقدار"
+                  >{{ amountLabel(fertilizer.id) }} ✎</button>
                   <span
                     v-for="el in mainElements(fertilizer)"
                     :key="el.symbol"
@@ -244,11 +251,23 @@
         </div>
       </section>
     </div>
-  </div>
+  
+    <AcidAmountModal
+      :open="modalOpen"
+      :fertilizer="modalFertilizer as any"
+      :tank-volume="tankVolume"
+      :initial="modalFertilizer ? fixedAmounts[modalFertilizer.id] || null : null"
+      :editing="modalEditing"
+      @confirm="onModalConfirmWrapped"
+      @cancel="onModalCancelWrapped"
+    />
+</div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import AcidAmountModal from './AcidAmountModal.vue';
+import { unitLabel, type AmountUnit } from '@/utils/fertilizerUnits';
 
 // ===== Types =====
 interface Fertilizer {
@@ -256,6 +275,9 @@ interface Fertilizer {
   name: string;
   brand?: string;
   isAcid: boolean;
+  isBase?: boolean;
+  form?: string;
+  densityGMl?: number;
   pricePerKg: number;
   concentration?: number;
   elements: Record<string, number>;
@@ -265,13 +287,17 @@ interface Fertilizer {
 type Pane = 'available' | 'selected';
 
 // ===== Props / Emits =====
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   fertilizers: Fertilizer[];
   selectedFertilizers: string[];
-}>();
+  fixedAmounts?: Record<string, { amount: number; unit: AmountUnit }>;
+  includeAcidsBases?: boolean;
+  tankVolume?: number;
+}>(), { fixedAmounts: () => ({}), includeAcidsBases: false, tankVolume: 1000 });
 
 const emit = defineEmits<{
   (e: 'update:selectedFertilizers', value: string[]): void;
+  (e: 'update:fixedAmounts', value: Record<string, { amount: number; unit: AmountUnit }>): void;
 }>();
 
 // ===== State =====
@@ -301,7 +327,44 @@ onBeforeUnmount(() => {
 
 // ===== Computed =====
 const userFertilizers = computed(() => props.fertilizers.filter((f) => !f.isSystemDefault));
-const hasAcidFertilizers = computed(() => userFertilizers.value.some((f) => f.isAcid));
+const isAdjuster = (f: Fertilizer) => !!(f.isAcid || f.isBase);
+const hasAcidFertilizers = computed(() => userFertilizers.value.some(isAdjuster));
+
+const kindLabel = (f: Fertilizer) => (f.isBase ? 'باز' : f.isAcid ? 'اسید' : 'کود');
+const kindClass = (f: Fertilizer) =>
+  f.isBase
+    ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
+    : f.isAcid
+      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+
+const fmtNum = (n: number) => new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 3 }).format(n);
+const amountLabel = (id: string) => {
+  const fa = props.fixedAmounts[id];
+  return fa ? `${fmtNum(fa.amount)} ${unitLabel(fa.unit)}` : 'تعیین مقدار';
+};
+
+// ===== مودال مقدار اسید/باز =====
+const modalFertilizer = ref<Fertilizer | null>(null);
+const modalEditing = ref(false);
+const modalOpen = ref(false);
+
+const openModal = (f: Fertilizer, editing = false) => {
+  modalFertilizer.value = f;
+  modalEditing.value = editing;
+  modalOpen.value = true;
+};
+const closeModal = () => {
+  modalOpen.value = false;
+  modalFertilizer.value = null;
+};
+const onModalConfirm = (v: { amount: number; unit: AmountUnit }) => {
+  const f = modalFertilizer.value;
+  if (!f) return;
+  emit('update:fixedAmounts', { ...props.fixedAmounts, [f.id]: v });
+  if (!props.selectedFertilizers.includes(f.id)) commit([...props.selectedFertilizers, f.id]);
+  closeModal();
+};
 
 const selectedList = computed(() =>
   props.selectedFertilizers
@@ -348,22 +411,59 @@ const commit = (ids: string[]) => emit('update:selectedFertilizers', ids);
 // ===== Actions =====
 const addFertilizer = (id: string) => {
   if (props.selectedFertilizers.includes(id)) return;
+  const f = userFertilizers.value.find((x) => x.id === id);
+  // اسید/باز: ابتدا مقدار مصرفی را می‌پرسیم (کاربر ممکن است انصراف دهد)
+  if (f && isAdjuster(f)) {
+    openModal(f, false);
+    return;
+  }
   commit([...props.selectedFertilizers, id]);
 };
 
 const removeFertilizer = (id: string) => {
   commit(props.selectedFertilizers.filter((item) => item !== id));
+  if (props.fixedAmounts[id]) {
+    const next = { ...props.fixedAmounts };
+    delete next[id];
+    emit('update:fixedAmounts', next);
+  }
 };
 
 const selectAll = () => {
-  // 🆕 کودهای اسیدی عمداً در «افزودن همه» گنجانده نمی‌شوند: این کودها هم
-  // نقش تغذیه‌ای دارند هم نقش اصلاح pH، و انتخاب ناخواسته‌شان می‌تواند
-  // با آنچه در تب PH محاسبه می‌شود تداخل کند. کاربری که می‌داند دارد
-  // چه‌کار می‌کند، همچنان می‌تواند آن‌ها را دستی انتخاب کند.
-  commit(userFertilizers.value.filter((f) => !f.isAcid).map((f) => f.id));
+  // اسید/باز فقط وقتی اضافه می‌شوند که گزینهٔ «تنظیمات پیشرفته» روشن باشد؛
+  // چون مقدار آن‌ها را کاربر باید خودش مشخص کند، «افزودن همه» فقط کودهای معمولی را اضافه
+  // می‌کند و اگر اسید/باز هم روشن باشد، مقدارِ تعیین‌نشده‌ها بعداً با مودال پرسیده می‌شود.
+  const normal = userFertilizers.value.filter((f) => !isAdjuster(f)).map((f) => f.id);
+  const keepAdjusters = props.selectedFertilizers.filter((id) => {
+    const f = userFertilizers.value.find((x) => x.id === id);
+    return f && isAdjuster(f);
+  });
+  commit([...new Set([...normal, ...keepAdjusters])]);
+  if (props.includeAcidsBases) {
+    const pending = userFertilizers.value.filter((f) => isAdjuster(f) && !props.fixedAmounts[f.id]);
+    pendingQueue.value = pending.slice(1);
+    if (pending.length) openModal(pending[0], false);
+  }
 };
 
-const clearAll = () => commit([]);
+// صف اسید/بازهایی که بعد از «افزودن همه» باید مقدارشان پرسیده شود
+const pendingQueue = ref<Fertilizer[]>([]);
+const onModalCancelWrapped = () => {
+  closeModal();
+  const next = pendingQueue.value.shift();
+  if (next) openModal(next, false);
+};
+const onModalConfirmWrapped = (v: { amount: number; unit: AmountUnit }) => {
+  onModalConfirm(v);
+  const next = pendingQueue.value.shift();
+  if (next) openModal(next, false);
+};
+
+const clearAll = () => {
+  pendingQueue.value = [];
+  commit([]);
+  emit('update:fixedAmounts', {});
+};
 
 // ===== Drag & Drop (فقط دسکتاپ) =====
 const onDragStart = (id: string, from: Pane, event: DragEvent) => {
@@ -443,6 +543,3 @@ const onDrop = (pane: Pane) => {
   background: #4b5563;
 }
 </style>
-
-
-

@@ -29,7 +29,7 @@
     <div v-for="group in groups" :key="group.tank" class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
       <div class="px-3 py-2 flex items-center justify-between" :class="tankHeaderClass(group.tank)">
         <span class="text-xs font-bold">{{ group.title }}</span>
-        <span class="text-[11px] opacity-80">{{ group.items.length }} کود • {{ formatNumber(group.totalWeight, 0) }} گرم</span>
+        <span class="text-[11px] opacity-80">{{ group.items.length }} کود</span>
       </div>
 
       <!-- دسکتاپ -->
@@ -50,7 +50,8 @@
           <tr v-for="item in group.items" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
             <td class="px-3 py-2 text-right truncate">
               <span class="font-medium text-gray-900 dark:text-white">{{ item.name }}</span>
-              <span v-if="item.isAcid" class="mr-1.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">اسید</span>
+              <span v-if="item.isAcid || item.isBase" class="mr-1.5 text-[10px] px-1.5 py-0.5 rounded" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
+              <span v-if="item.fixed" class="mr-1 text-[10px] px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300" title="مقدار را خودتان تعیین کرده‌اید">مقدار شما</span>
             </td>
             <td class="px-3 py-2 text-left" dir="ltr">
               <input
@@ -65,8 +66,9 @@
                 @keyup.enter="onWeightCommit(item.id)"
               />
               <span v-else class="tabular-nums font-semibold text-gray-900 dark:text-white">
-                {{ formatNumber(convertWeight(item.weight), 2) }}
+                {{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}
               </span>
+              <span class="mr-1 text-[10px] text-gray-400" dir="rtl">{{ unitText(item) }}<template v-if="litersText(item)"> ({{ litersText(item) }})</template></span>
             </td>
             <td class="px-3 py-2 text-left tabular-nums text-gray-700 dark:text-gray-300" dir="ltr">
               {{ formatCurrency(item.cost) }}
@@ -80,7 +82,7 @@
         <div v-for="item in group.items" :key="item.id" class="p-3">
           <div class="flex items-center justify-between gap-2">
             <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ item.name }}</span>
-            <span v-if="item.isAcid" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 flex-shrink-0">اسید</span>
+            <span v-if="item.isAcid || item.isBase" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
           </div>
           <div class="flex items-center justify-between mt-2 gap-2">
             <label class="text-[11px] text-gray-500 dark:text-gray-400">{{ weightColumnLabel }}</label>
@@ -95,8 +97,9 @@
               @change="onWeightCommit(item.id)"
             />
             <span v-else class="tabular-nums text-sm font-semibold text-gray-900 dark:text-white">
-              {{ formatNumber(convertWeight(item.weight), 2) }}
+              {{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}
             </span>
+            <span class="text-[10px] text-gray-400">{{ unitText(item) }}<template v-if="litersText(item)"> ({{ litersText(item) }})</template></span>
           </div>
           <div class="flex items-center justify-between mt-1">
             <span class="text-[11px] text-gray-500 dark:text-gray-400">هزینه</span>
@@ -128,6 +131,11 @@ interface RowItem {
   id: string;
   name: string;
   isAcid: boolean;
+  isBase: boolean;
+  /** 🆕 کود مایع با چگالی معتبر: مقدار به میلی‌لیتر نمایش داده/ویرایش می‌شود */
+  isVolume: boolean;
+  density: number;
+  fixed: boolean;
   weight: number;
   cost: number;
   tank: string;
@@ -146,8 +154,8 @@ const emit = defineEmits<{
 // ===== واحد نمایش =====
 type Mode = 'stock' | 'per1000';
 const modes: Array<{ key: Mode; label: string }> = [
-  { key: 'stock', label: 'گرم در استوک' },
-  { key: 'per1000', label: 'گرم در ۱۰۰۰ لیتر محلول نهایی' }
+  { key: 'stock', label: 'مقدار در استوک' },
+  { key: 'per1000', label: 'مقدار در ۱۰۰۰ لیتر محلول نهایی' }
 ];
 const activeMode = ref<Mode>('stock');
 
@@ -158,8 +166,24 @@ const activeModeHint = computed(() =>
 );
 
 const weightColumnLabel = computed(() =>
-  activeMode.value === 'stock' ? 'وزن (گرم)' : 'گرم / ۱۰۰۰ لیتر'
+  activeMode.value === 'stock' ? 'مقدار' : 'مقدار / ۱۰۰۰ لیتر'
 );
+
+// 🆕 واحد هر ردیف: جامد → گرم ، مایع → میلی‌لیتر
+const unitText = (item: RowItem): string => (item.isVolume ? 'میلی‌لیتر' : 'گرم');
+
+/** کود مایع بزرگ‌تر از ۱ لیتر: معادل لیتری هم کنار میلی‌لیتر نمایش داده می‌شود */
+const litersText = (item: RowItem): string => {
+  if (!item.isVolume) return '';
+  const ml = convertAmount(item);
+  return ml >= 1000 ? `≈ ${formatNumber(ml / 1000, 2)} لیتر` : '';
+};
+
+/** مقدار نمایشی (در مود استوک یا در ۱۰۰۰ لیتر) با تبدیل جرم → حجم برای مایعات */
+const convertAmount = (item: RowItem): number => {
+  const grams = convertWeight(item.weight);
+  return item.isVolume ? grams / item.density : grams;
+};
 
 const convertWeight = (weight: number): number => {
   if (activeMode.value === 'stock') return weight;
@@ -172,8 +196,9 @@ const convertWeight = (weight: number): number => {
 const editedWeights = ref<Record<string, number>>({});
 watch(() => props.result, () => { editedWeights.value = {}; });
 
+// editedWeights: «مقدار نمایشی» ویرایش‌شده (گرم یا میلی‌لیتر، بسته به نوع کود)
 const displayWeight = (item: RowItem): number =>
-  editedWeights.value[item.id] ?? Number(item.weight.toFixed(3));
+  editedWeights.value[item.id] ?? Number((item.isVolume ? item.weight / item.density : item.weight).toFixed(3));
 
 const onWeightInput = (fertilizerId: string, event: Event) => {
   const value = parseFloat((event.target as HTMLInputElement).value);
@@ -181,8 +206,11 @@ const onWeightInput = (fertilizerId: string, event: Event) => {
 };
 
 const onWeightCommit = (fertilizerId: string) => {
-  const newWeight = editedWeights.value[fertilizerId];
-  if (newWeight === undefined) return;
+  const edited = editedWeights.value[fertilizerId];
+  if (edited === undefined) return;
+  const row = rows.value.find((r) => r.id === fertilizerId);
+  // مایع: میلی‌لیتر → گرم با چگالی ؛ بک‌اند همیشه گرم می‌گیرد
+  const newWeight = row?.isVolume ? edited * row.density : edited;
   const oldWeight = props.result.weights?.[fertilizerId] ?? 0;
   if (Math.abs(newWeight - oldWeight) < 0.0005) return;
   emit('update-weight', { fertilizerId, weight: newWeight });
@@ -216,10 +244,15 @@ const rows = computed<RowItem[]>(() => {
     .filter(([, weight]) => typeof weight === 'number' && weight > 0)
     .map(([id, weight]) => {
       const fert = props.fertilizers.find((f) => f.id === id);
+      const density = Number(fert?.densityGMl) || 0;
       return {
         id,
         name: fert?.name || id,
         isAcid: !!fert?.isAcid,
+        isBase: !!fert?.isBase,
+        isVolume: fert?.form === 'liquid' && density > 0,
+        density,
+        fixed: !!(props.result as any)?.fixed_fertilizers?.[id],
         weight: weight as number,
         cost: fert ? ((weight as number) / 1000) * (fert.pricePerKg || 0) : 0,
         tank: tankMap.value[id] || 'other'

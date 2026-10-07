@@ -128,6 +128,15 @@ export function usePdfExport() {
         </section>`;
     }
 
+    // 🆕 کود مایع با چگالی ثبت‌شده: مقدار به حجم (میلی‌لیتر یا لیتر) نمایش داده می‌شود
+    function amountCell(grams: number, fert: any): string {
+        if (fert?.form === 'liquid' && fert?.densityGMl > 0) {
+            const ml = grams / fert.densityGMl;
+            return ml >= 1000 ? `${num(ml / 1000, 2)} لیتر` : `${num(ml, 1)} میلی‌لیتر`;
+        }
+        return grams >= 1000 ? `${num(grams / 1000, 3)} کیلوگرم` : `${num(grams, 1)} گرم`;
+    }
+
     function buildFertilizerTable(payload: PdfExportPayload): string {
         const { result, fertilizers } = payload;
         const weights = result.weights || {};
@@ -148,9 +157,9 @@ export function usePdfExport() {
                 const tank = tankMap[id] || '—';
                 return `
                 <tr>
-                    <td class="right">${esc(fert?.name || id)}${fert?.isAcid ? ' <span class="tag tag-acid">اسید</span>' : ''}</td>
+                    <td class="right">${esc(fert?.name || id)}${fert?.isAcid ? ' <span class="tag tag-acid">اسید</span>' : ''}${fert?.isBase ? ' <span class="tag tag-acid">باز</span>' : ''}</td>
                     <td><span class="tank tank-${esc(tank)}">${tank === '—' ? '—' : `مخزن ${esc(tank)}`}</span></td>
-                    <td class="mono">${num(weight, 1)}</td>
+                    <td class="mono">${amountCell(weight as number, fert)}</td>
                     <td class="mono">${money(cost)}</td>
                 </tr>`;
             })
@@ -164,7 +173,7 @@ export function usePdfExport() {
                     <tr>
                         <th class="right">نام کود</th>
                         <th>مخزن</th>
-                        <th>وزن (گرم)</th>
+                        <th>مقدار (گرم / میلی‌لیتر)</th>
                         <th>هزینه (تومان)</th>
                     </tr>
                 </thead>

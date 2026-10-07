@@ -1,364 +1,299 @@
 <!-- frontend/src/components/features/PhCalculatorTab.vue -->
 <!--
-  تب «PH» (بین «پایگاه‌داده کود» و «ابزارک‌ها»)
+  تب «PH» — اصلاح pH با اسید/باز (ویزارد ۴ مرحله‌ای، هم‌سبک «محاسبه کود»)
   ------------------------------------------------------------
-  نسخه‌ی جدید: تمام محاسبات شیمیایی در بک‌اند (پایتون) انجام می‌شود
-  (app/core/ph_calculator + app/routes/ph_calculator.py). این کامپوننت
-  فقط UI است و از طریق store/modules/phStore.ts با API صحبت می‌کند.
+  سناریوی گلخانه: استوک ساخته و در مخزن اصلی ریخته شده؛ مقداری از محلول (نمونه، مثلاً ۵ لیتر)
+  برداشته می‌شود، مرحله‌به‌مرحله اسید/باز می‌ریزیم و pH می‌خوانیم تا به هدف برسد؛ مقدار نهایی
+  با نسبت حجم مخزن به نمونه به کل مخزن تعمیم می‌یابد.
 
-  طبق تصمیم محصول این تب عمداً در چرخه‌ی رسمی محاسبه‌ی کود قرار ندارد؛
-  اما به داده‌ی واقعی سیستم وصل است:
-    • اسیدها: مستقیماً از پایگاه‌داده‌ی کود (is_acid=true) - نه لیست ثابت
-    • زمینه: به‌صورت اطلاعاتی از آنالیز آب و عناصر هدف گزارش جاری
-  و می‌تواند تاریخچه‌ی محاسبات خودش را (اختیاری) ذخیره کند.
+    ۱) ماده و مخزن   ۲) نمونه و pH   ۳) آزمون   ۴) نتیجه
+
+  اگر مقدار اسید/باز را از قبل می‌دانید، آن را در «محاسبه کود → انتخاب کود» وارد کنید.
+  همه‌ی محاسبات در بک‌اند (app/core/ph_calculator) انجام می‌شود.
 -->
 <template>
-  <div class="space-y-5 sm:space-y-6">
+  <div>
 
-    <!-- ===================== سربرگ ===================== -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <div class="min-w-0">
-          <h2 class="text-base sm:text-lg font-bold text-gray-900 dark:text-white">ماشین‌حساب PH</h2>
-          <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-            محاسبه‌ی مقدار اسید یا باز لازم برای رساندن pH محلول به مقدار هدف - جدا از چرخه‌ی رسمی محاسبه‌ی کود
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== 🆕 نوع سیستم + پایش سریع (سیستم بازچرخشی) ===================== -->
-    <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 space-y-4">
-      <div class="flex items-start justify-between gap-3 flex-wrap">
-        <div class="min-w-0">
-          <p class="text-sm font-bold text-gray-900 dark:text-white">نوع سیستم آبیاری این گزارش</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-6">
-            بازچرخشی (هیدروپونیک بسته): محلول مدام در چرخش است و pH/EC آن به‌مرور دریفت می‌کند - نیاز به پایش دوره‌ای دارد.
-            باز (drain-to-waste): محلول یک‌بار به ریشه می‌رود و دور ریخته می‌شود - یک اصلاح معمولاً کافی است.
-          </p>
-        </div>
-        <div class="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden flex-shrink-0">
+    <!-- ===================== نوار مراحل ===================== -->
+    <nav class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 mb-4">
+      <ol class="flex items-stretch gap-1.5 sm:gap-2">
+        <li v-for="(step, index) in steps" :key="step.id" class="flex items-start flex-1 min-w-0">
           <button
             type="button"
-            @click="setSystemType(false)"
-            class="px-3 py-1.5 text-xs font-medium transition-colors"
-            :class="reportStore.reportData.isRecirculatingSystem === false
-              ? 'bg-primary-600 text-white'
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-          >باز (drain-to-waste)</button>
-          <button
-            type="button"
-            @click="setSystemType(true)"
-            class="px-3 py-1.5 text-xs font-medium transition-colors border-r border-gray-200 dark:border-gray-700"
-            :class="reportStore.reportData.isRecirculatingSystem === true
-              ? 'bg-primary-600 text-white'
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'"
-          >بازچرخشی</button>
-        </div>
-      </div>
-      <p v-if="!reportStore.hasActiveReport" class="text-xs text-amber-600 dark:text-amber-400">برای ثبت نوع سیستم، ابتدا یک گزارش فعال لازم است.</p>
-
-      <!-- پایش سریع: فقط ثبت اندازه‌گیری، بدون محاسبه‌ی دوز -->
-      <div v-if="reportStore.reportData.isRecirculatingSystem" class="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50/60 dark:bg-sky-900/10 p-3 sm:p-4">
-        <p class="text-xs font-bold text-sky-800 dark:text-sky-300 mb-2">ثبت سریع چک روزانه (بدون محاسبه)</p>
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-          <input v-model="monitorForm.ph" type="text" inputmode="decimal" placeholder="pH اندازه‌گیری‌شده" class="field-input" />
-          <input v-model="monitorForm.ec" type="text" inputmode="decimal" placeholder="EC (mS/cm) - اختیاری" class="field-input" />
-          <input v-model="monitorForm.note" type="text" placeholder="یادداشت - اختیاری" class="field-input sm:col-span-1" />
-          <button
-            type="button"
-            @click="submitMonitoring"
-            :disabled="phStore.isLoggingMonitoring || !monitorForm.ph"
-            class="px-4 py-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-sm font-medium transition-colors"
-          >{{ phStore.isLoggingMonitoring ? 'در حال ثبت...' : 'فقط ثبت کن' }}</button>
-        </div>
-        <p v-if="phStore.monitoringError" class="mt-2 text-xs text-rose-600 dark:text-rose-400">{{ phStore.monitoringError }}</p>
-        <p class="mt-2 text-[11px] text-sky-800/70 dark:text-sky-300/70 leading-5">
-          اگر عدد pH خیلی از هدف فاصله دارد و نیاز به اصلاح دارید، از فرم کامل پایین («محاسبه دوز») استفاده کنید.
-        </p>
-      </div>
-    </section>
-
-    <!-- ===================== راهنمای زمینه (از آنالیز آب/عناصر هدف) ===================== -->
-    <div
-      v-if="phStore.context?.is_likely_complex_solution"
-      class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs sm:text-sm text-amber-900 dark:text-amber-200 leading-6"
-    >
-      عناصر هدفِ گزارش جاری شامل {{ phStore.context.complex_indicator_elements.join('، ') }} است؛ یعنی این احتمالاً یک
-      «محلول غذایی» است، نه آب ساده. برای این حالت روش «تیتراسیون واقعی» دقیق‌تر از مدل تئوریک کربناتی است.
-      <button type="button" @click="method = 'titration'; sampleType = 'complex'" class="underline font-medium">رفتن به تیتراسیون واقعی</button>
-    </div>
-
-    <!-- ===================== انتخاب روش ===================== -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-      <button
-        v-for="m in methods"
-        :key="m.id"
-        type="button"
-        @click="method = m.id"
-        class="text-right rounded-xl border-2 px-4 py-3 transition-colors"
-        :class="method === m.id
-          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'"
-        :aria-pressed="method === m.id"
-      >
-        <span class="flex items-center justify-between gap-2">
-          <span class="text-sm font-bold" :class="method === m.id ? 'text-primary-700 dark:text-primary-300' : 'text-gray-900 dark:text-white'">{{ m.title }}</span>
-          <span v-if="m.badge" class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">{{ m.badge }}</span>
-        </span>
-        <span class="block mt-1 text-xs text-gray-500 dark:text-gray-400 leading-5">{{ m.subtitle }}</span>
-      </button>
-    </div>
-
-    <div
-      v-if="method === 'theoretical'"
-      class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs sm:text-sm text-amber-900 dark:text-amber-200 leading-6"
-    >
-      این مدل فقط برای آب یا محلولی است که ظرفیت اسیدی/بازی آن عمدتاً از کربنات و بی‌کربنات می‌آید. برای محلول غذایی (فسفات، آمونیوم، اسیدهای آلی) از «تیتراسیون واقعی» استفاده کنید.
-    </div>
-    <div
-      v-else
-      class="rounded-xl border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-900/20 px-4 py-3 text-xs sm:text-sm text-primary-900 dark:text-primary-200 leading-6"
-    >
-      از محلول واقعی نمونه‌ای با حجم مشخص بگیرید، {{ direction === 'base' ? 'باز' : 'اسید' }} استاندارد را مرحله‌ای اضافه کنید و پس از اختلاط، pH هر مرحله را ثبت کنید. دوز از منحنی همان نمونه به‌دست می‌آید.
-    </div>
-
-    <!-- ===================== مشخصات محلول ===================== -->
-    <section>
-      <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">مشخصات محلول</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div>
-          <label for="ph-volume" class="field-label">حجم محلول</label>
-          <div class="flex gap-2">
-            <input id="ph-volume" v-model="form.volume" type="text" inputmode="decimal" placeholder="مثلاً ۱۰۰۰" class="field-input flex-1 min-w-0" :class="bad(form.volume) && 'field-invalid'" />
-            <select v-model="form.volumeUnit" class="field-input !w-24 flex-shrink-0" aria-label="واحد حجم">
-              <option value="L">لیتر</option>
-              <option value="m3">متر مکعب</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label for="ph-current" class="field-label">pH فعلی</label>
-          <input id="ph-current" v-model="form.currentPH" type="text" inputmode="decimal" placeholder="مثلاً ۸٫۲" class="field-input" :class="bad(form.currentPH) && 'field-invalid'" />
-        </div>
-        <div>
-          <label for="ph-target" class="field-label">pH هدف</label>
-          <input id="ph-target" v-model="form.targetPH" type="text" inputmode="decimal" placeholder="مثلاً ۶٫۰" class="field-input" :class="bad(form.targetPH) && 'field-invalid'" />
-        </div>
-        <div>
-          <label for="ph-temp" class="field-label">دما (°C)</label>
-          <input id="ph-temp" v-model="form.temperature" type="text" inputmode="decimal" placeholder="۲۵" class="field-input" :class="bad(form.temperature) && 'field-invalid'" />
-        </div>
-        <div>
-          <label for="ph-ec" class="field-label">EC اندازه‌گیری‌شده (mS/cm) <span class="font-normal text-gray-400">- اختیاری</span></label>
-          <input id="ph-ec" v-model="form.ec" type="text" inputmode="decimal" placeholder="مثلاً ۲٫۱" class="field-input" />
-        </div>
-      </div>
-      <p v-if="direction" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        {{ direction === 'acid' ? 'کاهش pH: با «اسید» انجام می‌شود.' : 'افزایش pH: با «باز» انجام می‌شود.' }}
-      </p>
-    </section>
-
-    <!-- ===================== ورودی‌های مدل تئوریک ===================== -->
-    <section v-if="method === 'theoretical'">
-      <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">مشخصات شیمیایی نمونه</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div>
-          <label for="ph-sample-type" class="field-label">نوع نمونه</label>
-          <select id="ph-sample-type" v-model="sampleType" class="field-input">
-            <option value="simple">آب ساده (سیستم کربناتی غالب است)</option>
-            <option value="complex">محلول غذایی یا ترکیبی</option>
-          </select>
-        </div>
-        <div>
-          <label for="ph-alk" class="field-label">
-            آلکالینیتی
-            <span class="font-normal text-gray-400">(فیلدی مستقل - در صفحه‌ی آنالیز آب ذخیره نمی‌شود)</span>
-          </label>
-          <div class="flex gap-2">
-            <input id="ph-alk" v-model="form.alkalinity" type="text" inputmode="decimal" placeholder="مثلاً ۲۰۰" class="field-input flex-1 min-w-0" :class="sampleType === 'simple' && bad(form.alkalinity) && 'field-invalid'" />
-            <select v-model="form.alkUnit" class="field-input !w-40 flex-shrink-0" aria-label="واحد آلکالینیتی">
-              <option value="mg_l_caco3">mg/L as CaCO₃</option>
-              <option value="meq_l">meq/L</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="sampleType === 'complex'" class="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-        <p class="text-xs sm:text-sm text-amber-900 dark:text-amber-200 leading-6">برای محلول غذایی یا ترکیبی، مدل کربناتی قابل اتکا نیست.</p>
-        <button type="button" @click="method = 'titration'" class="text-xs font-medium text-amber-900 dark:text-amber-200 underline flex-shrink-0 text-right">رفتن به تیتراسیون واقعی</button>
-      </div>
-    </section>
-
-    <!-- ===================== ورودی‌های تیتراسیون ===================== -->
-    <section v-else>
-      <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">داده‌های تیتراسیون</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div>
-          <label for="ph-normality" class="field-label">نرمالیته‌ی تیترانت (N)</label>
-          <input id="ph-normality" v-model="form.normality" type="text" inputmode="decimal" placeholder="۰٫۱" class="field-input" :class="bad(form.normality) && 'field-invalid'" />
-        </div>
-        <div>
-          <label for="ph-sample-vol" class="field-label">حجم نمونه‌ی تیتراسیون (mL)</label>
-          <input id="ph-sample-vol" v-model="form.sampleVolumeMl" type="text" inputmode="decimal" placeholder="۱۰۰" class="field-input" :class="bad(form.sampleVolumeMl) && 'field-invalid'" />
-        </div>
-      </div>
-
-      <div class="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div class="grid grid-cols-[1fr_1fr_2.25rem] gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-700/40 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-          <span>حجم تجمعی تیترانت (mL)</span>
-          <span>pH</span>
-          <span></span>
-        </div>
-
-        <div class="grid grid-cols-[1fr_1fr_2.25rem] gap-2 px-3 py-2 border-t border-gray-100 dark:border-gray-700 items-center">
-          <span class="field-input !bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:text-gray-400 tabular-nums">۰ (نقطه‌ی اولیه)</span>
-          <span class="field-input !bg-gray-100 dark:!bg-gray-700 text-gray-500 dark:text-gray-400 tabular-nums">{{ form.currentPH || 'pH فعلی' }}</span>
-          <span></span>
-        </div>
-
-        <div v-for="(row, i) in rows" :key="row.id" class="px-3 py-2 border-t border-gray-100 dark:border-gray-700">
-          <div class="grid grid-cols-[1fr_1fr_2.25rem] gap-2 items-center">
-            <input v-model="row.volume" type="text" inputmode="decimal" :placeholder="`نقطه ${(i + 1).toLocaleString('fa-IR')}`" class="field-input" :class="rowBad(row, 'volume') && 'field-invalid'" :aria-label="`حجم تیترانت نقطه ${i + 1}`" />
-            <input v-model="row.pH" type="text" inputmode="decimal" placeholder="pH" class="field-input" :class="rowBad(row, 'pH') && 'field-invalid'" :aria-label="`pH نقطه ${i + 1}`" />
-            <button
-              type="button"
-              @click="removeRow(row.id)"
-              :disabled="rows.length <= 1"
-              class="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              :aria-label="`حذف نقطه ${i + 1}`"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="px-3 py-2.5 border-t border-gray-100 dark:border-gray-700">
-          <button type="button" @click="addRow" :disabled="rows.length >= MAX_ROWS" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 dark:text-primary-400 hover:underline disabled:opacity-40 disabled:no-underline">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
-            </svg>
-            افزودن نقطه
+            @click="goToStep(step.id)"
+            :disabled="!isStepReachable(step.id)"
+            class="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-1 sm:gap-2 min-w-0 w-full text-center sm:text-right rounded-lg border px-2 py-2 sm:py-2.5 min-h-[52px] transition-colors disabled:cursor-not-allowed"
+            :class="currentStep === step.id
+              ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 shadow-sm'
+              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-50 dark:hover:bg-gray-700/40 disabled:hover:bg-white dark:disabled:hover:bg-gray-800'"
+          >
+            <span class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 transition-colors" :class="stepCircleClass(step.id)">
+              <svg v-if="isStepDone(step.id)" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
+              <template v-else>{{ index + 1 }}</template>
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[11px] sm:text-sm font-semibold truncate leading-tight" :class="currentStep === step.id ? 'text-primary-700 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'">{{ step.title }}</span>
+              <span class="hidden sm:block text-[11px] text-gray-400 truncate">{{ step.subtitle }}</span>
+            </span>
           </button>
+          <span v-if="index < steps.length - 1" class="h-0.5 flex-1 mx-1 sm:mx-2 mt-3.5 sm:mt-4 rounded-full transition-colors" :class="isStepDone(step.id) ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'"></span>
+        </li>
+      </ol>
+    </nav>
+
+    <!-- پیام‌های وضعیت گزارش -->
+    <div v-if="!reportStore.hasActiveReport" class="mb-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs leading-6 text-amber-800 dark:text-amber-200">
+      گزارشی باز نیست؛ محاسبه کار می‌کند ولی ثبت در تاریخچه و اعمال در محاسبهٔ کود نیاز به یک گزارش دارد.
+    </div>
+    <div v-if="activeBanner" class="mb-3 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 text-xs leading-6 text-emerald-800 dark:text-emerald-200">
+      اصلاح فعال این گزارش: <strong>{{ activeBanner.chemical_name }}</strong> — {{ fmtDose(activeBanner.dose_tank, activeBanner.dose_unit) }} برای {{ fmt(activeBanner.tank_volume_l, 0) }} لیتر؛ در «محاسبه کود» لحاظ می‌شود.
+    </div>
+
+    <Transition name="step" mode="out-in">
+
+      <!-- ===================== مرحله ۱: ماده و مخزن ===================== -->
+      <div v-if="currentStep === 1" key="s1" class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <section class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 space-y-4">
+            <header class="flex items-center gap-2">
+              <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3h6M10 3v6l-5 9a2 2 0 001.8 3h10.4a2 2 0 001.8-3l-5-9V3" /></svg>
+              </span>
+              <div class="min-w-0">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">اسید یا باز</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">از پایگاه‌داده کود شما</p>
+              </div>
+            </header>
+
+            <p v-if="phStore.isLoadingAdjusters" class="text-sm text-gray-500">در حال بارگذاری…</p>
+            <div v-else-if="phStore.adjusters.length === 0" class="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 px-4 py-6 text-center">
+              <p class="text-sm text-gray-700 dark:text-gray-200">هنوز اسید یا بازی در پایگاه‌داده کود شما ثبت نشده است.</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-6">از «پایگاه‌داده کود» یک اسید (مثل نیتریک) یا باز (مثل KOH) اضافه کنید و تیک «اسید است» یا «باز است» را بزنید.</p>
+            </div>
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                v-for="opt in phStore.adjusters" :key="opt.fertilizer_id" type="button" @click="selectAdjuster(opt.fertilizer_id)"
+                class="text-right rounded-xl border px-3 py-2.5 transition-colors"
+                :class="form.fertilizerId === opt.fertilizer_id
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 ring-1 ring-primary-500'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700'"
+              >
+                <span class="flex items-center gap-2">
+                  <span class="text-[10px] px-1.5 py-0.5 rounded font-medium" :class="opt.kind === 'acid' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'">{{ opt.kind === 'acid' ? 'اسید' : 'باز' }}</span>
+                  <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ opt.name }}</span>
+                </span>
+                <span class="block text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  خلوص {{ fmt(opt.concentration, 1) }}٪ · مصرف به {{ opt.dose_unit === 'ml' ? 'میلی‌لیتر' : 'گرم' }}
+                </span>
+              </button>
+            </div>
+
+            <div v-if="selected && selected.warnings.length" class="space-y-1.5">
+              <div v-for="(w, i) in selected.warnings" :key="i" class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs leading-6 text-amber-800 dark:text-amber-200">{{ w }}</div>
+            </div>
+
+            <div class="pt-1">
+              <label class="field-label">حجم مخزن اصلی (لیتر)</label>
+              <input v-model="form.tankVolume" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched1 && !isPos(form.tankVolume) }" placeholder="مثلاً ۵۰۰۰" />
+              <p v-if="phStore.context?.tank_volume_l" class="text-[11px] text-gray-400 mt-1">از محاسبهٔ کود این گزارش برداشته شد؛ در صورت نیاز تغییر دهید.</p>
+            </div>
+          </section>
+
+          <div class="lg:col-span-2">
+            <PhSchematic :tank-volume="num(form.tankVolume)" :kind="selected?.kind ?? null" caption="مخزن اصلی که استوک در آن ریخته شده است" />
+          </div>
         </div>
       </div>
 
-      <div v-if="chartPoints.length >= 2" class="mt-4">
-        <PhTitrationChart :points="chartPoints" :target-p-h="targetPHValue" :dose-ml="chartDoseMl" />
-      </div>
-    </section>
+      <!-- ===================== مرحله ۲: نمونه و pH ===================== -->
+      <div v-else-if="currentStep === 2" key="s2" class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <section class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 space-y-4">
+            <header class="flex items-center gap-2">
+              <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16l-2 11a2 2 0 01-2 1.7H8A2 2 0 016 19L4 8zm2-3h12" /></svg>
+              </span>
+              <div class="min-w-0">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">نمونه و pH</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">مقداری از محلول مخزن را در یک سطل بردارید</p>
+              </div>
+            </header>
 
-    <!-- ===================== ماده شیمیایی ===================== -->
-    <section>
-      <h3 class="text-sm font-bold text-gray-900 dark:text-white mb-3">ماده شیمیایی</h3>
+            <div>
+              <label class="field-label">حجم نمونه (لیتر)</label>
+              <div class="flex flex-wrap items-center gap-2">
+                <input v-model="form.sampleVolume" inputmode="decimal" class="field-input !w-32" :class="{ 'field-invalid': touched2 && !isPos(form.sampleVolume) }" placeholder="۵" />
+                <button v-for="v in samplePresets" :key="v" type="button" @click="form.sampleVolume = String(v)"
+                  class="h-[42px] px-3 rounded-lg border text-xs font-medium transition-colors"
+                  :class="num(form.sampleVolume) === v ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'">
+                  {{ fmt(v) }} لیتر
+                </button>
+              </div>
+              <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 leading-5">نمونهٔ بزرگ‌تر دقت بیشتری می‌دهد، چون خطای کوچک اندازه‌گیری در مخزن چند برابر نمی‌شود.</p>
+              <p v-if="scale" class="mt-2 text-xs text-gray-600 dark:text-gray-300">ضریب مقیاس‌دهی به مخزن: <strong class="tabular-nums text-gray-900 dark:text-white">×{{ fmt(scale, scale < 10 ? 1 : 0) }}</strong></p>
+            </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-        <div class="sm:col-span-2">
-          <label for="ph-chem" class="field-label">
-            ماده
-            <span class="font-normal text-gray-400">(از اسیدهای واقعی پایگاه‌داده‌ی کود شما)</span>
-          </label>
-          <select id="ph-chem" v-model="selectedAcidKey" class="field-input" :disabled="phStore.isLoadingAcids">
-            <optgroup label="اسیدهای پایگاه‌داده کود" v-if="filteredAcidOptions.length">
-              <option v-for="a in filteredAcidOptions" :key="a.fertilizer_id" :value="`fert-${a.fertilizer_id}`">
-                {{ a.name }} ({{ fmt(a.concentration, 1) }}٪{{ a.is_system_default ? ' · سیستمی' : '' }})
-              </option>
-            </optgroup>
-            <option value="custom">ماده‌ی سفارشی (وارد کردن دستی مشخصات)</option>
-          </select>
-          <p v-if="phStore.isLoadingAcids" class="mt-1 text-xs text-gray-400">در حال دریافت لیست اسیدها...</p>
-          <p v-else-if="!filteredAcidOptions.length" class="mt-1 text-xs text-amber-600 dark:text-amber-400">
-            هیچ کود اسیدی در پایگاه‌داده‌ی کود شما ثبت نشده؛ از «ماده‌ی سفارشی» استفاده کنید یا ابتدا یک اسید در تب «پایگاه‌داده کود» ثبت کنید.
-          </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="field-label">pH فعلی محلول (در نمونه)</label>
+                <input v-model="form.initialPh" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched2 && !phOk(form.initialPh) }" placeholder="مثلاً ۷٫۸" />
+              </div>
+              <div>
+                <label class="field-label">pH هدف</label>
+                <input v-model="form.targetPh" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched2 && !phOk(form.targetPh) }" placeholder="مثلاً ۶٫۰" />
+                <p v-if="phRangeText" class="text-[11px] text-gray-400 mt-1">بازهٔ مطلوب معمول: {{ phRangeText }}</p>
+              </div>
+            </div>
+
+            <div v-if="directionWarning" class="rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 px-3 py-2 text-xs leading-6 text-rose-800 dark:text-rose-200">{{ directionWarning }}</div>
+          </section>
+
+          <div class="lg:col-span-2">
+            <PhSchematic :tank-volume="num(form.tankVolume)" :sample-volume="num(form.sampleVolume)" :scale="scale" :ph="num(form.initialPh)" :target-ph="num(form.targetPh)" :kind="selected?.kind ?? null" caption="نمونه را از مخزن اصلی بردارید و pH آن را بخوانید" />
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
-        <div>
-          <label for="ph-purity" class="field-label">خلوص تجاری (٪ وزنی)</label>
-          <input id="ph-purity" v-model="chemFields.purity" type="text" inputmode="decimal" class="field-input" :class="bad(chemFields.purity) && 'field-invalid'" />
+      <!-- ===================== مرحله ۳: آزمون ===================== -->
+      <div v-else-if="currentStep === 3" key="s3" class="space-y-4">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <section class="lg:col-span-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5 space-y-4">
+            <header class="flex items-center gap-2">
+              <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3.5s6 6.2 6 10.5a6 6 0 11-12 0c0-4.3 6-10.5 6-10.5z" /></svg>
+              </span>
+              <div class="min-w-0">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">آزمون روی نمونه</h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400">کمی {{ unitWord }} بریزید، هم بزنید، pH را بخوانید و ثبت کنید</p>
+              </div>
+            </header>
+
+            <!-- وضعیت لحظه‌ای -->
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">pH فعلی</p>
+                <p class="text-base font-bold tabular-nums" :class="phStatusClass">{{ latestPh != null ? fmt(latestPh, 2) : '—' }}</p>
+              </div>
+              <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">هدف</p>
+                <p class="text-base font-bold tabular-nums text-gray-900 dark:text-white">{{ fmt(num(form.targetPh) ?? 0, 2) }}</p>
+              </div>
+              <div class="rounded-lg border border-gray-200 dark:border-gray-700 p-2">
+                <p class="text-[11px] text-gray-500 dark:text-gray-400">مصرف تاکنون</p>
+                <p class="text-base font-bold tabular-nums text-gray-900 dark:text-white">{{ fmt(cumulative, 2) }} <span class="text-[10px] font-normal text-gray-400">{{ unitShort }}</span></p>
+              </div>
+            </div>
+
+            <div v-if="nextHint" class="rounded-lg bg-primary-50/70 dark:bg-primary-900/10 border border-primary-200 dark:border-primary-800 px-3 py-2 text-xs leading-6 text-primary-800 dark:text-primary-200">{{ nextHint }}</div>
+
+            <!-- مراحل -->
+            <div class="space-y-2">
+              <div v-for="(row, i) in form.steps" :key="row.id" class="grid grid-cols-[1.5rem_1fr_1fr_auto] gap-2 items-center">
+                <span class="text-[11px] text-gray-400 text-center tabular-nums">{{ fmt(i + 1) }}</span>
+                <div class="relative">
+                  <input v-model="row.amount" inputmode="decimal" class="field-input !pl-11" :class="{ 'field-invalid': touched3 && rowInvalid(row, true) }" :placeholder="`اضافه شد (${unitShort})`" />
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400">{{ unitShort }}</span>
+                </div>
+                <input v-model="row.ph" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched3 && rowInvalid(row, true) }" placeholder="pH بعد از افزودن" />
+                <button type="button" @click="removeStep(row.id)" :disabled="form.steps.length === 1" class="w-8 h-8 rounded-lg text-gray-400 hover:text-rose-500 disabled:opacity-30" aria-label="حذف مرحله">✕</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <button type="button" @click="addStep" :disabled="form.steps.length >= MAX_STEPS" class="text-xs font-medium text-primary-600 dark:text-primary-400 disabled:opacity-40">+ مرحلهٔ بعد</button>
+              <span class="text-[11px] text-gray-400">مقدار هر مرحله «اضافه‌شده در همان مرحله» است</span>
+            </div>
+
+            <PhCurveChart v-if="livePoints.length >= 2 && num(form.targetPh) != null" :points="livePoints" :target-ph="num(form.targetPh) as number" :unit-label="unitShort" />
+          </section>
+
+          <div class="lg:col-span-2 space-y-4">
+            <PhSchematic :tank-volume="num(form.tankVolume)" :sample-volume="num(form.sampleVolume)" :scale="scale" :ph="latestPh" :target-ph="num(form.targetPh)" :kind="selected?.kind ?? null" :show-dropper="true" caption="اسید/باز را کم‌کم و همراه با هم‌زدن اضافه کنید" />
+            <details v-if="selected && selected.dose_unit === 'ml'" class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
+              <summary class="cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-300 select-none">چگالی دقیق ماده (اختیاری)</summary>
+              <div class="mt-2">
+                <input v-model="form.density" inputmode="decimal" class="field-input" :placeholder="selected.density_g_ml ? `ثبت‌شده/مرجع: ${fmt(selected.density_g_ml, 3)} g/mL` : 'از برگهٔ مشخصات (SDS)'" />
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 leading-5">فقط برای تبدیل میلی‌لیتر به گرم و محاسبهٔ عناصر واردشده است. بهتر است آن را یک‌بار در پایگاه‌داده کود ثبت کنید.</p>
+              </div>
+            </details>
+          </div>
         </div>
-        <div>
-          <label for="ph-density" class="field-label">
-            چگالی (g/mL)
-            <span v-if="isCustomAcid || selectedAcidRecognized" class="font-normal text-gray-400">{{ densityHint }}</span>
-          </label>
-          <input id="ph-density" v-model="chemFields.density" type="text" inputmode="decimal" class="field-input" :class="bad(chemFields.density) && 'field-invalid'" />
+      </div>
+
+      <!-- ===================== مرحله ۴: نتیجه ===================== -->
+      <div v-else key="s4" class="space-y-4">
+        <div v-if="phStore.errorMessage" ref="errorRef" role="alert" class="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 px-4 py-3">
+          <p class="text-sm text-rose-800 dark:text-rose-200 leading-6">{{ phStore.errorMessage }}</p>
+          <button type="button" @click="goToStep(3)" class="mt-2 text-xs font-medium text-rose-700 dark:text-rose-300 underline">بازگشت به آزمون</button>
         </div>
-        <template v-if="isCustomAcid || !selectedAcidRecognized">
-          <div>
-            <label for="ph-mw" class="field-label">جرم مولی (g/mol)</label>
-            <input id="ph-mw" v-model="chemFields.mw" type="text" inputmode="decimal" class="field-input" :class="bad(chemFields.mw) && 'field-invalid'" />
+
+        <template v-if="phStore.result">
+          <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            <div class="lg:col-span-3 space-y-4">
+              <PhResultPanel :result="phStore.result" />
+            </div>
+            <div class="lg:col-span-2 space-y-4">
+              <PhSchematic :tank-volume="phStore.result.tank_volume_l" :sample-volume="phStore.result.sample_volume_l ?? null" :scale="phStore.result.scale_factor ?? null" :ph="phStore.result.final_ph ?? null" :target-ph="phStore.result.target_ph ?? null" :kind="phStore.result.kind" :dose-label="doseLabel" caption="مقدار نهایی را مرحله‌ای در مخزن اصلی بریزید و pH را بخوانید" />
+
+              <section class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">ثبت این اصلاح</h3>
+                <div>
+                  <label class="field-label">یادداشت (اختیاری)</label>
+                  <input v-model="saveForm.note" maxlength="500" class="field-input" placeholder="مثلاً: آب چاه، ساخت دوم" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="field-label">EC قبل (اختیاری)</label>
+                    <input v-model="saveForm.ecBefore" inputmode="decimal" class="field-input" placeholder="dS/m" />
+                  </div>
+                  <div>
+                    <label class="field-label">EC بعد (اختیاری)</label>
+                    <input v-model="saveForm.ecAfter" inputmode="decimal" class="field-input" placeholder="dS/m" />
+                  </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                  <button type="button" @click="save(true)" :disabled="!canSave" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium transition-colors">
+                    {{ phStore.isSaving ? 'در حال ثبت…' : 'ثبت و اعمال در محاسبهٔ کود' }}
+                  </button>
+                  <button type="button" @click="save(false)" :disabled="!canSave" class="px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">فقط ثبت در تاریخچه</button>
+                </div>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-5">«اعمال» یعنی در محاسبهٔ بعدی کود، عناصر این اسید/باز مثل آب منبع پایه لحاظ شوند: سهم کودهای دیگر کم می‌شود و تعادل یونی و EC دوباره محاسبه می‌گردد. در هر گزارش فقط یک اصلاح فعال است.</p>
+                <p v-if="!reportStore.hasActiveReport" class="text-[11px] text-amber-700 dark:text-amber-300">برای ثبت، ابتدا یک گزارش باز یا ذخیره کنید.</p>
+                <p v-if="saveMessage" class="text-xs text-emerald-700 dark:text-emerald-300">{{ saveMessage }}</p>
+              </section>
+            </div>
           </div>
         </template>
+
+        <!-- تاریخچه -->
+        <PhHistoryPanel v-if="reportStore.hasActiveReport" :items="phStore.history" @reuse="reuse" @apply="(id) => toggleApply(id, true)" @unapply="(id) => toggleApply(id, false)" @delete="onDelete" />
       </div>
-      <div v-if="isCustomAcid || !selectedAcidRecognized" class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
-        <div>
-          <label for="ph-kind" class="field-label">نوع</label>
-          <select id="ph-kind" v-model="chemFields.kind" class="field-input">
-            <option value="acid">اسید</option>
-            <option value="base">باز</option>
-          </select>
-        </div>
-        <div>
-          <label for="ph-z" class="field-label">ظرفیت مؤثر (z)</label>
-          <input id="ph-z" v-model="chemFields.z" type="text" inputmode="decimal" class="field-input" :class="bad(chemFields.z) && 'field-invalid'" />
-        </div>
-        <div v-if="isCustomAcid">
-          <label for="ph-name" class="field-label">نام</label>
-          <input id="ph-name" v-model="chemFields.name" type="text" class="field-input" placeholder="مثلاً اسید سیتریک" />
-        </div>
-      </div>
+    </Transition>
 
-      <p class="mt-2 text-xs text-gray-500 dark:text-gray-400 leading-6">
-        مقادیر چگالی/خلوص پیش‌فرض تقریبی‌اند؛ مقدار واقعی محصول خود را از برگه‌ی مشخصات وارد کنید. تغییر این مقادیر در
-        همین صفحه ذخیره می‌شود و پایگاه‌داده‌ی کود شما را تغییر نمی‌دهد.
-      </p>
-    </section>
-
-    <!-- ===================== ذخیره‌سازی ===================== -->
-    <section class="rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3">
-      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200 cursor-pointer">
-        <input type="checkbox" v-model="saveToHistory" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500" :disabled="!reportStore.hasActiveReport" />
-        این محاسبه در تاریخچه‌ی این گزارش ذخیره شود
-      </label>
-      <p v-if="!reportStore.hasActiveReport" class="mt-1 text-xs text-gray-400">برای ذخیره، ابتدا یک گزارش فعال انتخاب یا ایجاد کنید.</p>
-      <input v-if="saveToHistory" v-model="noteText" type="text" placeholder="یادداشت اختیاری (مثلاً «استخر مادر - بعد از اختلاط استوک A و B»)" class="field-input mt-2" />
-    </section>
-
-    <!-- ===================== عملیات ===================== -->
-    <div class="flex flex-col-reverse sm:flex-row sm:items-center gap-2 sm:gap-3">
-      <button type="button" @click="reset" class="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        پاک‌سازی
+    <!-- ===================== ناوبری ===================== -->
+    <div class="flex items-center gap-2 mt-5">
+      <button v-if="currentStep > 1" type="button" @click="goToStep(currentStep - 1)"
+        class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+        قبلی
       </button>
-      <button type="button" @click="calculate" :disabled="phStore.isCalculating" class="w-full sm:w-auto px-8 py-3 sm:py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white text-sm font-medium transition-colors">
-        {{ phStore.isCalculating ? 'در حال محاسبه...' : 'محاسبه دوز' }}
+      <div class="flex-1"></div>
+      <button type="button" @click="resetAll" class="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M5.6 15A8 8 0 0018.4 9M18.4 9A8 8 0 005.6 15" /></svg>
+        <span class="hidden sm:inline">شروع دوباره</span>
       </button>
-    </div>
-
-    <!-- ===================== خطا ===================== -->
-    <div v-if="phStore.errorMessage" ref="errorRef" class="rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 px-4 py-3" role="alert">
-      <p class="text-sm text-rose-800 dark:text-rose-200 leading-6">{{ phStore.errorMessage }}</p>
-      <button v-if="phStore.needTitrationHint && method === 'theoretical'" type="button" @click="method = 'titration'" class="mt-2 text-sm font-medium text-rose-800 dark:text-rose-200 underline">
-        رفتن به تیتراسیون واقعی
+      <button v-if="currentStep === 1" type="button" @click="next1" class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+        ادامه: نمونه و pH
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
       </button>
+      <button v-else-if="currentStep === 2" type="button" @click="next2" class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+        ادامه: آزمون
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+      </button>
+      <button v-else-if="currentStep === 3" type="button" @click="calculate" :disabled="phStore.isCalculating" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-60 rounded-lg transition-colors">
+        {{ phStore.isCalculating ? 'در حال محاسبه…' : 'محاسبه مقدار برای مخزن' }}
+      </button>
+      <button v-else type="button" @click="goToStep(3)" class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">ویرایش آزمون</button>
     </div>
-
-    <!-- ===================== نتیجه ===================== -->
-    <div v-if="phStore.result && phStore.result.ok" ref="resultRef">
-      <PhResultPanel :result="phStore.result" :volume-l="lastVolumeL" :target-p-h="lastTargetPH" :stale="stale" />
-    </div>
-
-    <!-- ===================== تاریخچه ===================== -->
-    <PhHistoryPanel v-if="reportStore.hasActiveReport" :items="phStore.history" @delete="onDeleteHistory" />
   </div>
 </template>
 
@@ -366,389 +301,332 @@
 import { ref, reactive, computed, watch, nextTick, onMounted } from 'vue';
 import { usePhStore } from '@/store/modules/phStore';
 import { useReportStore } from '@/store/modules/reportStore';
-import type { PhChemicalInput, PhTheoreticalRequest, PhTitrationRequest } from '@/services/apiService';
-import { parseNum, fmt } from './ph/phFormat';
+import type { PhAdjustmentItem, PhAdjustmentRequest } from '@/services/apiService';
+import { parseNum, fmt, fmtDose } from './ph/phFormat';
 import PhResultPanel from './ph/PhResultPanel.vue';
-import PhTitrationChart from './ph/PhTitrationChart.vue';
+import PhCurveChart from './ph/PhCurveChart.vue';
 import PhHistoryPanel from './ph/PhHistoryPanel.vue';
+import PhSchematic from './ph/PhSchematic.vue';
 
-type Method = 'theoretical' | 'titration';
-
-const MAX_ROWS = 20;
+const MAX_STEPS = 30;
+const samplePresets = [5, 10, 20];
 
 const phStore = usePhStore();
 const reportStore = useReportStore();
 
-const methods: Array<{ id: Method; title: string; subtitle: string; badge?: string }> = [
-  { id: 'theoretical', title: 'مدل تئوریک', subtitle: 'برای آب ساده با غلبه‌ی سیستم کربنات؛ فقط با آلکالینیتی و pH' },
-  { id: 'titration', title: 'تیتراسیون واقعی', subtitle: 'از نمونه‌ی واقعی؛ مناسب محلول‌های غذایی و ترکیبی', badge: 'دقیق‌تر' }
+// ===== مراحل =====
+type StepId = 1 | 2 | 3 | 4;
+const steps: Array<{ id: StepId; title: string; subtitle: string }> = [
+  { id: 1, title: 'ماده و مخزن', subtitle: 'اسید/باز و حجم مخزن' },
+  { id: 2, title: 'نمونه و pH', subtitle: 'نمونه، pH فعلی و هدف' },
+  { id: 3, title: 'آزمون', subtitle: 'افزودن مرحله‌ای و خواندن pH' },
+  { id: 4, title: 'نتیجه', subtitle: 'مقدار مخزن و ثبت' }
 ];
+const currentStep = ref<StepId>(1);
+const touched1 = ref(false);
+const touched2 = ref(false);
+const touched3 = ref(false);
 
-// ============================================================
-// State
-// ============================================================
-const method = ref<Method>('theoretical');
-const sampleType = ref<'simple' | 'complex'>('simple');
-
+// ===== فرم =====
+let rowSeq = 0;
+const newStep = () => ({ id: ++rowSeq, amount: '', ph: '' });
 const defaultForm = () => ({
-  volume: '',
-  volumeUnit: 'L' as 'L' | 'm3',
-  currentPH: '',
-  targetPH: '',
-  temperature: '25',
-  ec: '',
-  alkalinity: '',
-  alkUnit: 'mg_l_caco3' as 'mg_l_caco3' | 'meq_l',
-  normality: '0.1',
-  sampleVolumeMl: '100'
-});
-const form = reactive(defaultForm());
-
-// 🆕 فرم پایش سریع (بدون محاسبه‌ی دوز)
-const monitorForm = reactive({ ph: '', ec: '', note: '' });
-
-const selectedAcidKey = ref('custom');
-const chemFields = reactive({
-  name: '',
-  kind: 'acid' as 'acid' | 'base',
-  mw: '',
-  z: '',
-  purity: '',
+  fertilizerId: null as number | null,
+  tankVolume: '',
+  sampleVolume: '5',
+  initialPh: '',
+  targetPh: '',
+  steps: [newStep(), newStep()],
   density: ''
 });
-
-let rowSeq = 0;
-const newRow = () => ({ id: ++rowSeq, volume: '', pH: '' });
-const rows = ref([newRow(), newRow(), newRow(), newRow()]);
-
-const saveToHistory = ref(false);
-const noteText = ref('');
-
-const submitted = ref(false);
+const form = reactive(defaultForm());
+const saveForm = reactive({ note: '', ecBefore: '', ecAfter: '' });
+const saveMessage = ref('');
 const stale = ref(false);
-const lastVolumeL = ref(1);
-const lastTargetPH = ref(7);
-
-const resultRef = ref<HTMLElement | null>(null);
 const errorRef = ref<HTMLElement | null>(null);
 
-// ============================================================
-// Computed
-// ============================================================
-const currentPHValue = computed(() => parseNum(form.currentPH));
-const targetPHValue = computed(() => parseNum(form.targetPH));
-
-const direction = computed<'acid' | 'base' | null>(() => {
-  const a = currentPHValue.value;
-  const b = targetPHValue.value;
-  if (a === null || b === null || Math.abs(a - b) < 0.005) return null;
-  return b < a ? 'acid' : 'base';
-});
-
-const filteredAcidOptions = computed(() => {
-  // فقط اسیدها (این ماشین‌حساب فعلاً روی مسیر اسیدی/بازی محدود به اسیدهای واقعی پایگاه‌داده است)
-  return phStore.acidOptions;
-});
-
-const isCustomAcid = computed(() => selectedAcidKey.value === 'custom');
-
-const selectedAcidOption = computed(() => {
-  if (isCustomAcid.value) return null;
-  const id = Number(selectedAcidKey.value.replace('fert-', ''));
-  return phStore.acidOptions.find(a => a.fertilizer_id === id) || null;
-});
-
-const selectedAcidRecognized = computed(() => !!selectedAcidOption.value?.recognized);
-
-const densityHint = computed(() => {
-  const a = selectedAcidOption.value;
-  if (!a) return '';
-  return a.density_extrapolated ? ' (تخمین برون‌یابی‌شده - مرجع نیست)' : ' (تخمین مرجع - در صورت وجود SDS جایگزین کنید)';
-});
-
-// نقاط معتبر برای نمودار
-const validRows = computed(() =>
-  rows.value
-    .map(r => ({ id: r.id, volumeMl: parseNum(r.volume), pH: parseNum(r.pH) }))
-    .filter((r): r is { id: number; volumeMl: number; pH: number } => r.volumeMl !== null && r.pH !== null && r.volumeMl > 0)
-);
-
-const chartPoints = computed(() => {
-  if (currentPHValue.value === null) return [];
-  return [{ volumeMl: 0, pH: currentPHValue.value }, ...validRows.value.map(r => ({ volumeMl: r.volumeMl, pH: r.pH }))];
-});
-
-const chartDoseMl = computed(() => {
-  const r = phStore.result;
-  return r && r.ok && r.titration && !stale.value ? r.titration.dose_ml : null;
-});
-
-// ============================================================
-// وقتی اسید انتخابی عوض می‌شود، فیلدهای خلوص/چگالی/mw/z را پرمی‌کنیم
-// ============================================================
-watch(selectedAcidKey, () => {
-  const a = selectedAcidOption.value;
-  if (!a) {
-    chemFields.name = '';
-    chemFields.kind = 'acid';
-    chemFields.mw = '';
-    chemFields.z = '';
-    chemFields.purity = '';
-    chemFields.density = '';
-    return;
-  }
-  chemFields.purity = String(a.concentration);
-  chemFields.density = a.suggested_density_g_ml !== null && a.suggested_density_g_ml !== undefined ? String(a.suggested_density_g_ml) : '';
-  chemFields.mw = a.suggested_mw !== null && a.suggested_mw !== undefined ? String(a.suggested_mw) : '';
-  chemFields.z = a.suggested_z && a.suggested_z !== 'phosphoric' ? a.suggested_z : '';
-  chemFields.kind = 'acid';
-}, { immediate: false });
-
-watch(() => phStore.acidOptions, opts => {
-  if (opts.length && selectedAcidKey.value === 'custom') {
-    selectedAcidKey.value = `fert-${opts[0].fertilizer_id}`;
-  }
-}, { immediate: true });
-
-// ============================================================
-// اعتبارسنجی نمایشی
-// ============================================================
-const bad = (value: string) => submitted.value && parseNum(value) === null;
-
-const rowBad = (row: { volume: string; pH: string }, field: 'volume' | 'pH') => {
-  if (!submitted.value) return false;
-  const touched = row.volume.trim() !== '' || row.pH.trim() !== '';
-  return touched && parseNum(row[field]) === null;
+// ===== کمکی =====
+const num = (v: string | number | null | undefined): number | null =>
+  v === null || v === undefined ? null : typeof v === 'number' ? v : parseNum(v);
+const isPos = (v: string): boolean => {
+  const n = parseNum(v);
+  return n !== null && n > 0;
+};
+const phOk = (v: string): boolean => {
+  const n = parseNum(v);
+  return n !== null && n >= 0 && n <= 14;
+};
+const rowInvalid = (r: { amount: string; ph: string }, strict = false): boolean => {
+  const empty = r.amount.trim() === '' && r.ph.trim() === '';
+  if (empty) return strict ? false : false;
+  const a = parseNum(r.amount);
+  return !(a !== null && a > 0 && phOk(r.ph));
 };
 
-// ============================================================
-// Rows
-// ============================================================
-const addRow = () => { if (rows.value.length < MAX_ROWS) rows.value.push(newRow()); };
-const removeRow = (id: number) => { if (rows.value.length > 1) rows.value = rows.value.filter(r => r.id !== id); };
+// ===== مشتقات =====
+const selected = computed(() => phStore.adjusters.find((a) => a.fertilizer_id === form.fertilizerId) || null);
+const unitShort = computed(() => (selected.value?.dose_unit === 'g' ? 'g' : 'mL'));
+const unitWord = computed(() => (selected.value?.kind === 'base' ? 'باز' : 'اسید'));
+const activeBanner = computed(() => phStore.context?.active || null);
+const phRangeText = computed(() => {
+  const r = phStore.context?.target_ph_range;
+  return r && r.length === 2 ? `${fmt(r[0], 1)} تا ${fmt(r[1], 1)}` : '';
+});
+const scale = computed(() => {
+  const t = num(form.tankVolume);
+  const s = num(form.sampleVolume);
+  return t && s && t > 0 && s > 0 ? t / s : null;
+});
 
-// ============================================================
-// ساخت payload ماده‌ی شیمیایی برای API
-// ============================================================
-function buildChemicalInput(): PhChemicalInput | null {
-  const purity = parseNum(chemFields.purity);
-  const density = parseNum(chemFields.density);
-  if (purity === null) return null;
+const directionWarning = computed(() => {
+  const i = num(form.initialPh);
+  const t = num(form.targetPh);
+  const kind = selected.value?.kind;
+  if (i == null || t == null || !kind) return '';
+  if (Math.abs(i - t) < 1e-9) return 'pH فعلی و هدف یکسان‌اند؛ اصلاحی لازم نیست.';
+  if (t < i && kind === 'base') return 'برای کاهش pH باید «اسید» انتخاب کنید؛ به مرحلهٔ ۱ برگردید.';
+  if (t > i && kind === 'acid') return 'برای افزایش pH باید «باز» انتخاب کنید؛ به مرحلهٔ ۱ برگردید.';
+  return '';
+});
 
-  if (!isCustomAcid.value && selectedAcidOption.value) {
-    const payload: PhChemicalInput = {
-      fertilizer_id: selectedAcidOption.value.fertilizer_id,
-      purity_pct: purity,
-      density_g_ml: density ?? undefined
-    };
-    if (!selectedAcidRecognized.value) {
-      const mw = parseNum(chemFields.mw);
-      const z = parseNum(chemFields.z);
-      if (mw === null || z === null) return null;
-      payload.mw = mw;
-      payload.z = z;
-    }
-    return payload;
+const validRows = computed(() =>
+  form.steps
+    .map((r) => ({ amount: parseNum(r.amount), ph: parseNum(r.ph) }))
+    .filter((r) => r.amount !== null && (r.amount as number) > 0 && r.ph !== null && r.ph >= 0 && r.ph <= 14) as Array<{ amount: number; ph: number }>
+);
+
+const livePoints = computed(() => {
+  const init = num(form.initialPh);
+  if (init == null) return [];
+  const pts = [{ amount: 0, ph: init }];
+  let total = 0;
+  for (const r of form.steps) {
+    const a = parseNum(r.amount);
+    const p = parseNum(r.ph);
+    if (a == null || a <= 0 || p == null) break;
+    total += a;
+    pts.push({ amount: total, ph: p });
   }
+  return pts;
+});
+const latestPh = computed(() => (livePoints.value.length ? livePoints.value[livePoints.value.length - 1].ph : num(form.initialPh)));
+const cumulative = computed(() => (livePoints.value.length ? livePoints.value[livePoints.value.length - 1].amount : 0));
 
-  // ماده‌ی کاملاً سفارشی
-  const mw = parseNum(chemFields.mw);
-  const z = parseNum(chemFields.z);
-  if (mw === null || z === null || density === null) return null;
+const phStatusClass = computed(() => {
+  const p = latestPh.value;
+  const t = num(form.targetPh);
+  if (p == null || t == null) return 'text-gray-900 dark:text-white';
+  const d = Math.abs(p - t);
+  return d <= 0.1 ? 'text-emerald-600 dark:text-emerald-400' : d <= 0.5 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white';
+});
+
+/** پیشنهاد مقدار مرحلهٔ بعد: از شیب دو نقطهٔ آخر (محافظه‌کارانه تا از هدف رد نشود) */
+const nextHint = computed(() => {
+  const t = num(form.targetPh);
+  const pts = livePoints.value;
+  if (t == null || pts.length === 0) return '';
+  const last = pts[pts.length - 1];
+  const kind = selected.value?.kind;
+  if (pts.length === 1) return `با مقدار کم شروع کنید (مثلاً ۱ ${unitShort.value} برای نمونه) و بعد از هم‌زدن pH را بخوانید.`;
+  const overshoot = kind === 'acid' ? last.ph < t - 0.05 : kind === 'base' ? last.ph > t + 0.05 : false;
+  if (overshoot) return 'pH از هدف رد شده است. می‌توانید همین داده‌ها را محاسبه کنید (مقدار با میان‌یابی تخمین زده می‌شود) یا یک نمونهٔ تازه بیازمایید.';
+  if (Math.abs(last.ph - t) <= 0.1) return 'به هدف رسیدید. می‌توانید «محاسبه مقدار برای مخزن» را بزنید.';
+  const prev = pts[pts.length - 2];
+  const slope = (last.ph - prev.ph) / (last.amount - prev.amount);
+  if (!Number.isFinite(slope) || Math.abs(slope) < 1e-9) return '';
+  const remaining = (t - last.ph) / slope;
+  if (!(remaining > 0)) return '';
+  const suggested = Math.max(remaining * (Math.abs(last.ph - t) > 0.4 ? 0.6 : 0.9), 0);
+  return `برای مرحلهٔ بعد حدود ${fmt(suggested, 2)} ${unitShort.value} اضافه کنید (تخمین از شیب قبلی؛ منحنی pH خطی نیست، پس محتاطانه است).`;
+});
+
+const doseLabel = computed(() => (phStore.result ? fmtDose(phStore.result.dose_tank, phStore.result.dose_unit) : ''));
+const canSave = computed(() => !!phStore.result && !stale.value && reportStore.hasActiveReport && !phStore.isSaving);
+
+// ===== ناوبری مراحل =====
+const step1Done = computed(() => !!form.fertilizerId && isPos(form.tankVolume));
+const step2Done = computed(() => step1Done.value && isPos(form.sampleVolume) && phOk(form.initialPh) && phOk(form.targetPh) && !directionWarning.value);
+const step3Done = computed(() => !!phStore.result && !stale.value);
+
+const isStepDone = (id: StepId): boolean => (id === 1 ? step1Done.value && currentStep.value > 1 : id === 2 ? step2Done.value && currentStep.value > 2 : id === 3 ? step3Done.value : step3Done.value && currentStep.value === 4);
+const isStepReachable = (id: StepId): boolean => {
+  if (id === 1) return true;
+  if (id === 2) return step1Done.value;
+  if (id === 3) return step2Done.value;
+  return !!phStore.result;
+};
+const stepCircleClass = (id: StepId): string => {
+  if (isStepDone(id)) return 'bg-emerald-500 text-white';
+  if (currentStep.value === id) return 'bg-primary-600 text-white';
+  return 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400';
+};
+const goToStep = (id: number) => {
+  const target = id as StepId;
+  if (!isStepReachable(target)) return;
+  currentStep.value = target;
+  nextTick(() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' }));
+};
+
+const next1 = () => {
+  touched1.value = true;
+  if (!form.fertilizerId) {
+    phStore.errorMessage = 'ابتدا اسید یا باز را انتخاب کنید.';
+    return;
+  }
+  phStore.errorMessage = null;
+  if (step1Done.value) goToStep(2);
+};
+const next2 = () => {
+  touched2.value = true;
+  if (step2Done.value) goToStep(3);
+};
+
+// ===== اقدامات =====
+function selectAdjuster(id: number) {
+  form.fertilizerId = id;
+  form.density = '';
+  phStore.errorMessage = null;
+}
+function addStep() {
+  if (form.steps.length < MAX_STEPS) form.steps.push(newStep());
+}
+function removeStep(id: number) {
+  if (form.steps.length > 1) form.steps.splice(form.steps.findIndex((r) => r.id === id), 1);
+}
+
+function buildPayload(): PhAdjustmentRequest | null {
+  const tank = num(form.tankVolume);
+  const sample = num(form.sampleVolume);
+  const initial = num(form.initialPh);
+  const target = num(form.targetPh);
+  if (!form.fertilizerId || !tank || !sample || initial == null || target == null) {
+    phStore.errorMessage = 'مراحل قبل را کامل کنید.';
+    return null;
+  }
+  const filled = form.steps.filter((r) => r.amount.trim() !== '' || r.ph.trim() !== '');
+  if (filled.length === 0 || filled.some((r) => rowInvalid(r))) {
+    touched3.value = true;
+    phStore.errorMessage = 'هر مرحله باید هم مقدار (بزرگ‌تر از صفر) و هم pH معتبر داشته باشد.';
+    return null;
+  }
   return {
-    name: chemFields.name || undefined,
-    kind: chemFields.kind,
-    mw,
-    z,
-    purity_pct: purity,
-    density_g_ml: density
+    mode: 'trial',
+    fertilizer_id: form.fertilizerId,
+    tank_volume_l: tank,
+    initial_ph: initial,
+    target_ph: target,
+    density_g_ml: num(form.density),
+    sample_volume_l: sample,
+    steps: filled.map((r) => ({ amount: parseNum(r.amount) as number, ph: parseNum(r.ph) as number }))
   };
 }
 
-// ============================================================
-// Actions
-// ============================================================
 async function calculate() {
-  submitted.value = true;
-  phStore.clearResult();
+  touched3.value = true;
+  phStore.errorMessage = null;
+  saveMessage.value = '';
+  const payload = buildPayload();
+  if (!payload) return;
+  const ok = await phStore.calculate(payload);
   stale.value = false;
+  currentStep.value = 4;
+  await nextTick();
+  if (!ok) errorRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  else if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-  const volume = parseNum(form.volume);
-  const currentPH = currentPHValue.value;
-  const targetPH = targetPHValue.value;
-  const temperatureC = parseNum(form.temperature);
-
-  if (volume === null || currentPH === null || targetPH === null || temperatureC === null) {
-    phStore.errorMessage = 'حجم، pH فعلی، pH هدف و دما را کامل و معتبر وارد کنید.';
-    await nextTick();
-    errorRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-    return;
-  }
-
-  const chemical = buildChemicalInput();
-  if (!chemical) {
-    phStore.errorMessage = 'مشخصات ماده‌ی شیمیایی (خلوص/چگالی/جرم مولی/ظرفیت) کامل نیست.';
-    await nextTick();
-    errorRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-    return;
-  }
-
-  const volumeL = form.volumeUnit === 'm3' ? volume * 1000 : volume;
-  const reportId = reportStore.currentReportId ?? undefined;
-
-  let ok = false;
-  if (method.value === 'theoretical') {
-    const alk = parseNum(form.alkalinity);
-    if (alk === null && sampleType.value === 'simple') {
-      phStore.errorMessage = 'آلکالینیتی نمونه را وارد کنید.';
-      await nextTick();
-      errorRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    const payload: PhTheoreticalRequest = {
-      volume_l: volumeL,
-      current_ph: currentPH,
-      target_ph: targetPH,
-      temperature_c: temperatureC,
-      alkalinity_value: alk ?? 0,
-      alkalinity_unit: form.alkUnit,
-      sample_type: sampleType.value,
-      chemical,
-      report_id: saveToHistory.value ? reportId : undefined,
-      save: saveToHistory.value && !!reportId,
-      note: noteText.value || undefined,
-      ec_ms_cm: parseNum(form.ec) ?? undefined
-    };
-    ok = await phStore.calculateTheoretical(payload);
-  } else {
-    const normality = parseNum(form.normality);
-    const sampleVolumeMl = parseNum(form.sampleVolumeMl);
-    if (normality === null || sampleVolumeMl === null) {
-      phStore.errorMessage = 'نرمالیته و حجم نمونه‌ی تیتراسیون را وارد کنید.';
-      await nextTick();
-      errorRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-      return;
-    }
-    const points: Array<{ volume_ml: number; ph: number }> = [];
-    for (const [i, row] of rows.value.entries()) {
-      const empty = row.volume.trim() === '' && row.pH.trim() === '';
-      if (empty) continue;
-      const v = parseNum(row.volume);
-      const p = parseNum(row.pH);
-      if (v === null || p === null) {
-        phStore.errorMessage = `نقطه‌ی ${(i + 1).toLocaleString('fa-IR')} کامل یا معتبر نیست (هم حجم و هم pH لازم است).`;
-        await nextTick();
-        errorRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-        return;
-      }
-      points.push({ volume_ml: v, ph: p });
-    }
-    const payload: PhTitrationRequest = {
-      volume_l: volumeL,
-      current_ph: currentPH,
-      target_ph: targetPH,
-      temperature_c: temperatureC,
-      normality,
-      sample_volume_ml: sampleVolumeMl,
-      points,
-      chemical,
-      report_id: saveToHistory.value ? reportId : undefined,
-      save: saveToHistory.value && !!reportId,
-      note: noteText.value || undefined,
-      ec_ms_cm: parseNum(form.ec) ?? undefined
-    };
-    ok = await phStore.calculateTitration(payload);
-  }
-
-  if (ok) {
-    lastVolumeL.value = volumeL;
-    lastTargetPH.value = targetPH;
-    await nextTick();
-    resultRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  } else {
-    await nextTick();
-    errorRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+async function save(apply: boolean) {
+  const payload = buildPayload();
+  if (!payload) return;
+  const item = await phStore.save({
+    ...payload,
+    note: saveForm.note.trim() || null,
+    ec_before: num(saveForm.ecBefore),
+    ec_after: num(saveForm.ecAfter),
+    apply
+  });
+  if (item) {
+    saveMessage.value = apply
+      ? 'ثبت شد و اعمال می‌شود؛ در «محاسبه کود» دوباره «محاسبه» را بزنید.'
+      : 'در تاریخچه ثبت شد.';
   }
 }
 
-const reset = () => {
+async function toggleApply(id: number, applied: boolean) {
+  const ok = await phStore.setApplied(id, applied);
+  if (ok) saveMessage.value = applied ? 'اعمال شد؛ در «محاسبه کود» دوباره «محاسبه» را بزنید.' : 'اعمال لغو شد؛ محاسبهٔ بعدی بدون آن انجام می‌شود.';
+}
+async function onDelete(id: number) {
+  await phStore.remove(id);
+}
+
+function reuse(item: PhAdjustmentItem) {
+  if (item.mode !== 'trial') return;
   Object.assign(form, defaultForm());
-  sampleType.value = 'simple';
-  rows.value = [newRow(), newRow(), newRow(), newRow()];
-  submitted.value = false;
-  stale.value = false;
-  saveToHistory.value = false;
-  noteText.value = '';
+  form.fertilizerId = item.fertilizer_id ?? null;
+  form.tankVolume = String(item.tank_volume_l);
+  form.sampleVolume = item.sample_volume_l != null ? String(item.sample_volume_l) : '5';
+  form.initialPh = item.initial_ph != null ? String(item.initial_ph) : '';
+  form.targetPh = item.target_ph != null ? String(item.target_ph) : '';
+  form.steps = (item.trial_steps || []).map((s) => ({ id: ++rowSeq, amount: String(s.amount), ph: String(s.ph) }));
+  if (form.steps.length === 0) form.steps = [newStep()];
   phStore.clearResult();
-};
-
-async function onDeleteHistory(id: number) {
-  await phStore.deleteHistoryItem(id);
+  currentStep.value = 3;
+  if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 🆕 تنظیم نوع سیستم (باز/بازچرخشی) روی خود گزارش
-async function setSystemType(isRecirculating: boolean) {
-  await reportStore.setRecirculatingSystem(isRecirculating);
+function resetAll() {
+  const keepTank = form.tankVolume;
+  const keepFert = form.fertilizerId;
+  Object.assign(form, defaultForm());
+  form.tankVolume = keepTank;
+  form.fertilizerId = keepFert;
+  form.targetPh = phStore.context ? String(phStore.context.suggested_target_ph) : '';
+  saveForm.note = saveForm.ecBefore = saveForm.ecAfter = '';
+  touched1.value = touched2.value = touched3.value = false;
+  stale.value = false;
+  saveMessage.value = '';
+  phStore.clearResult();
+  currentStep.value = 1;
 }
 
-// 🆕 ثبت سریع یک اندازه‌گیری پایشی (بدون محاسبه‌ی دوز)
-async function submitMonitoring() {
-  const ph = parseNum(monitorForm.ph);
-  if (ph === null) return;
-  const ec = parseNum(monitorForm.ec);
-  const ok = await phStore.logMonitoring(ph, ec ?? undefined, monitorForm.note || undefined);
-  if (ok) {
-    monitorForm.ph = '';
-    monitorForm.ec = '';
-    monitorForm.note = '';
-  }
-}
-
-// اگر بعد از محاسبه ورودی‌ها عوض شدند، نتیجه «قدیمی» علامت می‌خورد
-const signature = computed(() =>
-  JSON.stringify([method.value, sampleType.value, form, selectedAcidKey.value, chemFields, rows.value])
-);
-watch(signature, () => {
+// تغییر ورودی‌ها بعد از محاسبه → نتیجهٔ قبلی قدیمی می‌شود
+watch(() => JSON.stringify(form), () => {
   if (phStore.result) stale.value = true;
+  saveMessage.value = '';
 });
 
-// ============================================================
-// بارگذاری اولیه
-// ============================================================
+function prefillFromContext() {
+  const ctx = phStore.context;
+  if (!ctx) return;
+  if (!form.tankVolume && ctx.tank_volume_l) form.tankVolume = String(ctx.tank_volume_l);
+  if (!form.targetPh) form.targetPh = String(ctx.suggested_target_ph);
+}
+
 onMounted(async () => {
-  await Promise.all([phStore.loadAcidOptions(), phStore.loadContext()]);
-  if (reportStore.hasActiveReport) {
-    await phStore.loadHistory();
-  }
+  phStore.clearResult();
+  await phStore.refreshAll();
+  prefillFromContext();
 });
 
 watch(() => reportStore.currentReportId, async () => {
-  await phStore.loadContext();
-  if (reportStore.hasActiveReport) {
-    await phStore.loadHistory();
-  } else {
-    phStore.history.splice(0, phStore.history.length);
-  }
+  phStore.reset();
+  form.tankVolume = '';
+  form.targetPh = '';
+  currentStep.value = 1;
+  await phStore.refreshAll();
+  prefillFromContext();
 });
 </script>
 
 <style scoped>
-.field-label {
-  @apply block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5;
-}
+.field-label { @apply block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5; }
 .field-input {
-  @apply w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-700 transition-all;
+  @apply w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition;
 }
-.field-invalid {
-  @apply border-rose-400 dark:border-rose-500 bg-rose-50/60 dark:bg-rose-900/10;
-}
-select.field-input {
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: left 0.75rem center;
-  background-size: 0.9rem;
-  padding-left: 2rem;
-}
+.field-invalid { @apply border-rose-400 dark:border-rose-500 bg-rose-50/60 dark:bg-rose-900/10; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.step-enter-active, .step-leave-active { transition: opacity .18s ease, transform .18s ease; }
+.step-enter-from { opacity: 0; transform: translateY(6px); }
+.step-leave-to { opacity: 0; transform: translateY(-6px); }
 </style>
