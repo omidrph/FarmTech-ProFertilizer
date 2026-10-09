@@ -32,77 +32,58 @@
         <span class="text-[11px] opacity-80">{{ group.items.length }} کود</span>
       </div>
 
-      <!-- دسکتاپ -->
-      <table class="w-full text-sm hidden sm:table" style="table-layout: fixed">
-        <colgroup>
-          <col />
-          <col style="width: 132px" />
-          <col style="width: 132px" />
-        </colgroup>
-        <thead>
-          <tr class="bg-gray-50 dark:bg-gray-700/40 text-xs text-gray-600 dark:text-gray-300">
-            <th class="px-3 py-2 text-right font-semibold">نام کود</th>
-            <th class="px-3 py-2 text-left font-semibold">{{ weightColumnLabel }}</th>
-            <th class="px-3 py-2 text-left font-semibold">هزینه (تومان)</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-          <tr v-for="item in group.items" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-            <td class="px-3 py-2 text-right truncate">
-              <span class="font-medium text-gray-900 dark:text-white">{{ item.name }}</span>
-              <span v-if="item.isAcid || item.isBase" class="mr-1.5 text-[10px] px-1.5 py-0.5 rounded" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
-              <span v-if="item.fixed" class="mr-1 text-[10px] px-1.5 py-0.5 rounded bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300" title="مقدار را خودتان تعیین کرده‌اید">مقدار شما</span>
-            </td>
-            <td class="px-3 py-2 text-left" dir="ltr">
-              <input
-                v-if="activeMode === 'stock'"
-                type="number"
-                step="0.001"
-                min="0"
-                class="w-24 text-left tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary-500 focus:bg-white dark:focus:bg-gray-900 rounded px-1 py-0.5 outline-none transition-colors text-gray-900 dark:text-white font-semibold"
-                :value="displayWeight(item)"
-                @input="onWeightInput(item.id, $event)"
-                @change="onWeightCommit(item.id)"
-                @keyup.enter="onWeightCommit(item.id)"
-              />
-              <span v-else class="tabular-nums font-semibold text-gray-900 dark:text-white">
-                {{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}
-              </span>
-              <span class="mr-1 text-[10px] text-gray-400" dir="rtl">{{ unitText(item) }}<template v-if="litersText(item)"> ({{ litersText(item) }})</template></span>
-            </td>
-            <td class="px-3 py-2 text-left tabular-nums text-gray-700 dark:text-gray-300" dir="ltr">
-              {{ formatCurrency(item.cost) }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- دسکتاپ: ردیف‌های هم‌ارتفاع (۵۲px) در هر دو حالت نمایش -->
+      <div class="hidden sm:block">
+        <div class="grid grid-cols-[minmax(0,1fr)_230px_140px] bg-gray-50 dark:bg-gray-700/40 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          <div class="px-4 py-2.5 text-right">نام کود</div>
+          <div class="px-3 py-2.5 text-center">{{ weightColumnLabel }}</div>
+          <div class="px-4 py-2.5 text-left">هزینه (تومان)</div>
+        </div>
+        <div class="divide-y divide-gray-100 dark:divide-gray-700">
+          <div v-for="item in group.items" :key="item.id" class="grid grid-cols-[minmax(0,1fr)_230px_140px] items-center h-[52px] hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+            <div class="px-4 flex items-center gap-1.5 min-w-0">
+              <span class="font-medium text-sm text-gray-900 dark:text-white truncate">{{ item.name }}</span>
+              <span v-if="item.isAcid || item.isBase" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
+              <span v-if="item.fixed" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300" title="مقدار را خودتان تعیین کرده‌اید">مقدار شما</span>
+            </div>
+            <div class="px-3 flex items-center justify-center gap-2">
+              <span v-if="litersText(item)" class="text-[10px] text-gray-400 whitespace-nowrap">{{ litersText(item) }}</span>
+              <div class="amount-pill" :class="activeMode === 'stock' ? 'amount-pill-edit' : ''">
+                <input
+                  v-if="activeMode === 'stock'"
+                  type="number" step="0.001" min="0" dir="ltr"
+                  class="w-20 text-center tabular-nums bg-transparent outline-none text-sm font-semibold text-gray-900 dark:text-white"
+                  :value="displayWeight(item)"
+                  @input="onWeightInput(item.id, $event)"
+                  @change="onWeightCommit(item.id)"
+                  @keyup.enter="onWeightCommit(item.id)"
+                />
+                <span v-else class="w-20 text-center tabular-nums text-sm font-semibold text-gray-900 dark:text-white" dir="ltr">{{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}</span>
+                <span class="amount-unit">{{ unitText(item) }}</span>
+              </div>
+            </div>
+            <div class="px-4 text-left tabular-nums text-sm text-gray-700 dark:text-gray-300" dir="ltr">{{ formatCurrency(item.cost) }}</div>
+          </div>
+        </div>
+      </div>
 
       <!-- موبایل -->
       <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
-        <div v-for="item in group.items" :key="item.id" class="p-3">
+        <div v-for="item in group.items" :key="item.id" class="px-3 py-3">
           <div class="flex items-center justify-between gap-2">
             <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ item.name }}</span>
             <span v-if="item.isAcid || item.isBase" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
           </div>
           <div class="flex items-center justify-between mt-2 gap-2">
-            <label class="text-[11px] text-gray-500 dark:text-gray-400">{{ weightColumnLabel }}</label>
-            <input
-              v-if="activeMode === 'stock'"
-              type="number"
-              step="0.001"
-              min="0"
-              class="w-28 text-center tabular-nums rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 text-sm font-semibold text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
-              :value="displayWeight(item)"
-              @input="onWeightInput(item.id, $event)"
-              @change="onWeightCommit(item.id)"
-            />
-            <span v-else class="tabular-nums text-sm font-semibold text-gray-900 dark:text-white">
-              {{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}
-            </span>
-            <span class="text-[10px] text-gray-400">{{ unitText(item) }}<template v-if="litersText(item)"> ({{ litersText(item) }})</template></span>
+            <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ weightColumnLabel }}</span>
+            <div class="amount-pill" :class="activeMode === 'stock' ? 'amount-pill-edit' : ''">
+              <input v-if="activeMode === 'stock'" type="number" step="0.001" min="0" dir="ltr" class="w-20 text-center tabular-nums bg-transparent outline-none text-sm font-semibold text-gray-900 dark:text-white" :value="displayWeight(item)" @input="onWeightInput(item.id, $event)" @change="onWeightCommit(item.id)" />
+              <span v-else class="w-20 text-center tabular-nums text-sm font-semibold text-gray-900 dark:text-white" dir="ltr">{{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}</span>
+              <span class="amount-unit">{{ unitText(item) }}</span>
+            </div>
           </div>
-          <div class="flex items-center justify-between mt-1">
-            <span class="text-[11px] text-gray-500 dark:text-gray-400">هزینه</span>
+          <div class="flex items-center justify-between mt-1.5">
+            <span class="text-[11px] text-gray-500 dark:text-gray-400">هزینه<template v-if="litersText(item)"> · {{ litersText(item) }}</template></span>
             <span class="tabular-nums text-xs text-gray-700 dark:text-gray-300">{{ formatCurrency(item.cost) }} تومان</span>
           </div>
         </div>
@@ -316,4 +297,7 @@ const formatCurrency = (value: unknown): string => {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+.amount-pill { @apply inline-flex items-center h-9 pr-2 pl-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40; }
+.amount-pill-edit { @apply bg-white dark:bg-gray-900 hover:border-gray-300 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/30; }
+.amount-unit { @apply text-[11px] text-gray-500 dark:text-gray-400 mr-1.5 min-w-[52px] text-right; }
 </style>

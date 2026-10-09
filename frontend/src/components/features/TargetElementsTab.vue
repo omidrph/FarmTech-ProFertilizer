@@ -150,101 +150,17 @@
     <!-- ============================================================ -->
     <!-- تعادل کاتیون و آنیون -->
     <!-- ============================================================ -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="p-4 sm:p-5">
-        <div v-if="targetStore.isCalculatingBalance" class="flex items-center justify-center py-6">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-          <span class="mr-3 text-gray-600 dark:text-gray-400 text-sm">در حال محاسبه تعادل یونی...</span>
-        </div>
-
-        <div v-else>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <!-- کاتیون -->
-            <div class="bg-blue-50/30 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-100 dark:border-blue-800/20">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">کاتیون</p>
-                  <p class="text-xl font-bold text-blue-600 dark:text-blue-400 tabular-nums">
-                    {{ ionBalance.cation.toFixed(2) }}
-                  </p>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
-                </div>
-              </div>
-              <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">meq/L</p>
-            </div>
-
-            <!-- آنیون -->
-            <div class="bg-purple-50/30 dark:bg-purple-900/10 rounded-lg p-3 border border-purple-100 dark:border-purple-800/20">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">آنیون</p>
-                  <p class="text-xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">
-                    {{ ionBalance.anion.toFixed(2) }}
-                  </p>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                  </svg>
-                </div>
-              </div>
-              <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">meq/L</p>
-            </div>
-
-            <!-- وضعیت نهایی -->
-            <div class="bg-gray-50/30 dark:bg-gray-800/30 rounded-lg p-3 border border-gray-100 dark:border-gray-700/30">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-xs text-gray-400 dark:text-gray-500 font-medium">وضعیت</p>
-                  <p class="text-sm font-bold" :class="ionBalance.isBalanced ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                    {{ ionBalance.isBalanced ? 'متعادل' : 'نامتعادل' }}
-                  </p>
-                </div>
-                <div class="w-8 h-8 rounded-full flex items-center justify-center"
-                  :class="ionBalance.isBalanced ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'"
-                >
-                  <svg class="w-4 h-4" :class="ionBalance.isBalanced ? 'text-green-500' : 'text-red-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path v-if="ionBalance.isBalanced" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                  </svg>
-                </div>
-              </div>
-              <p class="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-                اختلاف: {{ Math.abs(ionBalance.cation - ionBalance.anion).toFixed(2) }} meq/L
-              </p>
-            </div>
-          </div>
-
-          <div class="mt-4">
-            <div class="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 mb-1">
-              <span class="text-blue-500">کاتیون</span>
-              <span class="text-purple-500">آنیون</span>
-            </div>
-            <div class="relative w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div class="absolute inset-0 flex items-center">
-                <div 
-                  class="h-full bg-blue-500 rounded-full transition-all duration-500"
-                  :style="{ width: Math.min((ionBalance.cation / (ionBalance.cation + ionBalance.anion + 0.01)) * 100, 100) + '%' }"
-                ></div>
-                <div 
-                  class="h-full bg-purple-500 rounded-full transition-all duration-500"
-                  :style="{ width: Math.min((ionBalance.anion / (ionBalance.cation + ionBalance.anion + 0.01)) * 100, 100) + '%', marginLeft: 'auto' }"
-                ></div>
-              </div>
-            </div>
-            <div class="flex items-center justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1">
-              <span>0</span>
-              <span>تعادل</span>
-              <span>{{ (ionBalance.cation + ionBalance.anion).toFixed(2) }} meq/L</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="targetStore.isCalculatingBalance" class="flex items-center justify-center py-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      <span class="mr-3 text-gray-600 dark:text-gray-400 text-sm">در حال محاسبه تعادل یونی...</span>
     </div>
+    <!-- همان کارت صفحهٔ خانه و محاسبه کود (کاتیون آبی / آنیون قرمز) -->
+    <HomeIonBalance
+      v-else-if="ionBalance"
+      :cation="Number(ionBalance.cation) || 0"
+      :anion="Number(ionBalance.anion) || 0"
+      :balanced="!!ionBalance.isBalanced"
+    />
 
     <!-- ============================================================ -->
     <!-- بخش مدیریت رسپی‌ها -->
@@ -287,6 +203,7 @@
 </template>
 
 <script setup lang="ts">
+import HomeIonBalance from './home/HomeIonBalance.vue';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useReportStore } from '@/store/modules/reportStore';

@@ -152,7 +152,7 @@
 
                           <span
                             v-if="fertilizer.isAcid"
-                            class="text-[10px] px-1.5 py-0.5 bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400 rounded"
+                            class="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded"
                           >
                             اسید
                           </span>
@@ -220,15 +220,26 @@
                     <div class="flex flex-wrap gap-1 justify-center">
                       <template v-if="hasElements(fertilizer)">
                         <span
-                          v-for="(percentage, element) in getActiveElements(fertilizer)"
+                          v-for="[element, percentage] in topElements(fertilizer)"
                           :key="element"
                           class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border"
                           :class="getElementBadgeClass(element)"
-                          :title="`${element}: ${percentage}%`"
                         >
                           <span class="font-bold">{{ element }}</span>
                           <span class="mx-1 text-gray-400">|</span>
                           <span>{{ percentage }}%</span>
+                        </span>
+                        <!-- بقیهٔ عناصر: با هاور، فهرست کامل -->
+                        <span v-if="elementCount(fertilizer) > 3" class="relative group inline-flex">
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-default bg-gray-50 dark:bg-gray-700/50">
+                            +{{ elementCount(fertilizer) - 3 }}
+                          </span>
+                          <span class="pointer-events-none absolute z-30 bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[260px] rounded-lg bg-gray-900 text-white text-[11px] leading-6 p-2.5 shadow-xl">
+                            <span class="block font-semibold mb-1 text-gray-300">همهٔ عناصر ({{ fertilizer.name }})</span>
+                            <span class="grid grid-cols-2 gap-x-4 gap-y-0.5 tabular-nums">
+                              <span v-for="(pct, el) in getActiveElements(fertilizer)" :key="el" class="flex justify-between gap-2"><span>{{ el }}</span><span>{{ pct }}%</span></span>
+                            </span>
+                          </span>
                         </span>
                       </template>
 
@@ -317,7 +328,7 @@
 
                   <span
                     v-if="fertilizer.isAcid"
-                    class="text-[10px] px-1.5 py-0.5 bg-warning-100 dark:bg-warning-900/30 text-warning-700 dark:text-warning-400 rounded"
+                    class="text-[10px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded"
                   >
                     اسید
                   </span>
@@ -394,13 +405,14 @@
             <div class="flex flex-wrap gap-1">
               <template v-if="hasElements(fertilizer)">
                 <span
-                  v-for="(percentage, element) in getActiveElements(fertilizer)"
+                  v-for="[element, percentage] in topElements(fertilizer)"
                   :key="element"
                   class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border"
                   :class="getElementBadgeClass(element)"
                 >
                   {{ element }}: {{ percentage }}%
                 </span>
+                <span v-if="elementCount(fertilizer) > 3" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] border border-gray-300 dark:border-gray-600 text-gray-500" :title="allElementsText(fertilizer)">+{{ elementCount(fertilizer) - 3 }}</span>
               </template>
 
               <span
@@ -643,6 +655,13 @@ const showFilterModal = ref(false);
 // Computed
 // ============================================================
 const isAdjusterFert = (f: any) => !!(f.isAcid || f.isBase);
+
+// عناصر: ۳ عنصر اصلی (بیشترین درصد) نمایش داده می‌شود و بقیه در پاپ‌اور هاور
+const sortedElements = (f: any): Array<[string, number]> =>
+  Object.entries(getActiveElements(f) as Record<string, number>).sort((a, b) => b[1] - a[1]);
+const topElements = (f: any) => sortedElements(f).slice(0, 3);
+const elementCount = (f: any) => sortedElements(f).length;
+const allElementsText = (f: any) => sortedElements(f).map(([e, p]) => `${e}: ${p}%`).join('، ');
 
 const normalFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => !isAdjusterFert(f)).length);
 const acidFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => f.isAcid).length);

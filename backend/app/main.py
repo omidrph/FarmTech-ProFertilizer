@@ -36,6 +36,7 @@ from app.middleware.rate_limit import RateLimiter
 # ===== Import برای بارگذاری کودهای سیستمی =====
 from app.seeds.fertilizer_seeds import (
     seed_system_fertilizers,
+    SYSTEM_FERTILIZERS,
     get_system_fertilizers_count
 )
 
@@ -335,7 +336,9 @@ async def startup_event():
             fertilizer_count = get_system_fertilizers_count(db)
             logger.info(f"📊 تعداد کودهای سیستمی فعلی: {fertilizer_count}")
             
-            if fertilizer_count == 0:
+            # seed idempotent است (کودهای موجود بر اساس نام رد می‌شوند)؛ پس اگر کودهای سیستمی/شرکتی
+            # جدیدی به لیست اضافه شده باشد، در دیتابیس‌های قدیمی هم اضافه می‌شوند.
+            if fertilizer_count < len(SYSTEM_FERTILIZERS):
                 logger.info("🌱 در حال بارگذاری کودهای سیستمی...")
                 stats = seed_system_fertilizers(db)
                 

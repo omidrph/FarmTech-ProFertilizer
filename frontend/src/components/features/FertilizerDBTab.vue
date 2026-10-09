@@ -16,10 +16,12 @@
     <!-- ============================================================ -->
     <SystemFertilizersSection
       :system-fertilizers="systemFertilizers"
+      :user-fertilizers="userFertilizers"
       :copy-status="copyStatus"
       :is-copying="isCopying"
       @copy-all="handleCopyAllSystemFertilizers"
       @copy-single="handleCopySingleSystemFertilizer"
+      @copy-many="handleCopyManySystemFertilizers"
     />
 
     <!-- ============================================================ -->
@@ -397,6 +399,26 @@ const handleCopyAllSystemFertilizers = async () => {
     }
   } catch (error: any) {
     showToast(error.message || 'خطا در کپی کودهای سیستمی', 'error');
+  } finally {
+    isCopying.value = false;
+  }
+};
+
+// کپی گروهی (فقط مواردی که هنوز کپی نشده‌اند؛ به ترتیب، با همان endpoint کپی تکی)
+const handleCopyManySystemFertilizers = async (ids: string[]) => {
+  if (!ids.length) return;
+  isCopying.value = true;
+  let ok = 0;
+  try {
+    for (const id of ids) {
+      const r = await fertilizerStore.copySystemFertilizer(id);
+      if (r) ok++;
+    }
+    showToast(`${ok.toLocaleString('fa-IR')} کود به بخش شخصی شما اضافه شد`, ok ? 'success' : 'error');
+    await refreshFertilizers();
+    await loadSystemFertilizers();
+  } catch (error: any) {
+    showToast(error.message || 'خطا در کپی کودها', 'error');
   } finally {
     isCopying.value = false;
   }
