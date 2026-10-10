@@ -36,6 +36,7 @@
 
       <!-- 🆕 اصلاح pH اعمال‌شده در این محاسبه (از تب PH) -->
       <PhAdjustmentBanner v-if="result.ph_adjustment" :adjustment="result.ph_adjustment" class="mt-3" />
+      <PhAdjustmentError v-if="result.ph_adjustment" :adjustment="result.ph_adjustment" :concentrations="result.concentrations" :target-values="targetValues" class="mt-3" />
       <div
         v-if="phStale"
         class="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs leading-6 text-amber-800 dark:text-amber-200"
@@ -101,6 +102,7 @@ import HomeElementRings from '../home/HomeElementRings.vue';
 import HomeIonBalance from '../home/HomeIonBalance.vue';
 import ResultWarnings from './ResultWarnings.vue';
 import PhAdjustmentBanner from './PhAdjustmentBanner.vue';
+import PhAdjustmentError from './PhAdjustmentError.vue';
 import type { PhActiveSummary } from '@/services/apiService';
 
 const props = withDefaults(

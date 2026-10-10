@@ -149,7 +149,7 @@
 
         <!-- 🆕 PH Sub Tab (اصلاح pH با اسید/باز؛ نتیجهٔ «اعمال‌شده» وارد چرخهٔ محاسبهٔ کود می‌شود) -->
         <div v-else-if="activeSubTab === 'ph'">
-          <PhCalculatorTab />
+          <PhCalculatorTab @applied="activeSubTab = 'fertilizer-calc'" />
         </div>
 
         <!-- Widgets Sub Tab -->

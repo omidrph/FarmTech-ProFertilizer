@@ -360,12 +360,26 @@ SYSTEM_FERTILIZERS: List[Dict[str, Any]] = [
         "description": "کربنات پتاسیم (Potassium Carbonate) - تامین پتاسیم - افزایش pH محلول - مناسب تنظیم pH - خاصیت قلیایی قوی"
     },
     {
+        "name": "Potassium Bicarbonate 99% (KHCO₃)",
+        "brand": "استاندارد",
+        "category": "ماکرو",
+        "form": "crystal",
+        "concentration": 99.0,
+        "price_per_kg": 650000,
+        "elements": {"K": 39.053},
+        "is_acid": False,
+        "is_base": True,
+        "acid_type": "KHCO3",
+        "ph_level": 8.2,
+        "description": "بی‌کربنات پتاسیم (KHCO₃) - بازِ ملایم برای افزایش pH و منبع پتاسیم - ایمن‌تر و کم‌خطرتر از هیدروکسید پتاسیم - قیمت تخمینی"
+    },
+    {
         "name": "Potassium Hydroxide 90% (KOH)",
         "brand": "استاندارد",
         "category": "ماکرو",
         "form": "crystal",
         "concentration": 90.0,
-        "price_per_kg": 0.0,
+        "price_per_kg": 450000,
         "elements": {"K": 69.682},
         "is_acid": False,
         "is_base": True,
@@ -640,6 +654,14 @@ def seed_system_fertilizers(db: Session) -> Dict[str, int]:
     
     logger.info(f"🌱 شروع Seed کودهای سیستمی - تعداد: {stats['total']}")
     
+    # 🆕 uvicorn با چند worker اجرا می‌شود و هر worker هنگام شروع seed می‌کرد؛ نتیجه: رکوردهای تکراری.
+    # قفل مشورتی تا پایان تراکنش، seed را بین workerها سریالی می‌کند (فقط PostgreSQL).
+    try:
+        from sqlalchemy import text as _text
+        db.execute(_text("SELECT pg_advisory_xact_lock(727001)"))
+    except Exception:
+        db.rollback()
+
     for fert_data in SYSTEM_FERTILIZERS:
         try:
             # بررسی وجود کود با همین نام

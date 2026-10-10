@@ -10,7 +10,7 @@
 <template>
   <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
     <!-- هدر -->
-    <header class="px-4 sm:px-5 py-3.5 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
+    <header :class="compact ? 'px-3.5 py-2' : 'px-4 sm:px-5 py-3.5'" class="border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
       <div class="flex items-center gap-2">
         <span class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center">
           <svg class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,9 +38,9 @@
     </header>
 
     <!-- محتوا -->
-    <div class="p-4 sm:p-5">
+    <div :class="compact ? 'px-3.5 py-3' : 'p-4 sm:p-5'">
       <template v-if="hasData">
-        <div class="space-y-4">
+        <div :class="compact ? 'space-y-2.5' : 'space-y-4'">
           <!-- کاتیون -->
           <div>
             <div class="flex justify-between items-center text-xs mb-1.5">
@@ -52,7 +52,7 @@
                 {{ fmt(cation) }} <span class="text-[10px] text-gray-400">meq/L</span>
               </span>
             </div>
-            <div class="relative h-2.5 rounded-full bg-gray-100 dark:bg-gray-700/60 overflow-hidden">
+            <div :class="compact ? 'h-2' : 'h-2.5'" class="relative rounded-full bg-gray-100 dark:bg-gray-700/60 overflow-hidden">
               <div
                 class="absolute top-0 right-0 h-full rounded-full bg-gradient-to-l from-blue-500 to-blue-400 transition-all duration-700"
                 :style="{ width: cationWidth }"
@@ -71,7 +71,7 @@
                 {{ fmt(anion) }} <span class="text-[10px] text-gray-400">meq/L</span>
               </span>
             </div>
-            <div class="relative h-2.5 rounded-full bg-gray-100 dark:bg-gray-700/60 overflow-hidden">
+            <div :class="compact ? 'h-2' : 'h-2.5'" class="relative rounded-full bg-gray-100 dark:bg-gray-700/60 overflow-hidden">
               <div
                 class="absolute top-0 right-0 h-full rounded-full bg-gradient-to-l from-rose-500 to-rose-400 transition-all duration-700"
                 :style="{ width: anionWidth }"
@@ -81,7 +81,7 @@
         </div>
 
         <!-- خلاصه اختلاف -->
-        <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
+        <div :class="compact ? 'mt-2.5 pt-2' : 'mt-4 pt-3'" class="border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
           <span class="text-gray-500 dark:text-gray-400">اختلاف</span>
           <span
             class="tabular-nums font-bold"
@@ -106,6 +106,8 @@ const props = defineProps<{
   cation: number;
   anion: number;
   balanced: boolean;
+  /** نسخهٔ فشرده برای جاهایی که فضای کم است (تب عناصر هدف) */
+  compact?: boolean;
 }>();
 
 const fmt = (value: number) =>

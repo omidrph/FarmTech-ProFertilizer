@@ -39,7 +39,28 @@
           <span v-if="index < steps.length - 1" class="h-0.5 flex-1 mx-1 sm:mx-2 mt-3.5 sm:mt-4 rounded-full transition-colors" :class="isStepDone(step.id) ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'"></span>
         </li>
       </ol>
+
+      <!-- ناوبری در جای ثابت (بالا): قبلی | شروع دوباره | دکمهٔ اصلی هر مرحله -->
+      <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
+        <button type="button" @click="goToStep(currentStep - 1)" :disabled="currentStep === 1"
+          class="inline-flex items-center gap-1.5 h-10 px-3 sm:px-4 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+          قبلی
+        </button>
+        <button type="button" @click="resetAll" class="inline-flex items-center gap-1.5 h-10 px-3 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M5.6 15A8 8 0 0018.4 9M18.4 9A8 8 0 005.6 15" /></svg>
+          <span class="hidden sm:inline">شروع دوباره</span>
+        </button>
+        <div class="flex-1"></div>
+        <button v-if="currentStep === 1" type="button" @click="next1" class="primary-btn">ادامه: نمونه و pH <span aria-hidden="true">‹</span></button>
+        <button v-else-if="currentStep === 2" type="button" @click="next2" class="primary-btn">ادامه: آزمون <span aria-hidden="true">‹</span></button>
+        <button v-else-if="currentStep === 3" type="button" @click="calculate" :disabled="phStore.isCalculating" class="primary-btn">{{ phStore.isCalculating ? 'در حال محاسبه…' : 'محاسبه مقدار برای مخزن' }}</button>
+        <button v-else type="button" @click="save" :disabled="!canSave" class="primary-btn">{{ phStore.isSaving ? 'در حال ثبت…' : 'ثبت و اعمال در محاسبه کود' }}</button>
+      </div>
     </nav>
+
+    <!-- تاریخچهٔ این گزارش (همیشه در ابتدا؛ قابل ویرایش و حذف) -->
+    <PhHistoryPanel v-if="reportStore.hasActiveReport" class="mb-4" :items="phStore.history" @reuse="reuse" @apply="(id) => toggleApply(id, true)" @unapply="(id) => toggleApply(id, false)" @delete="onDelete" @update="onUpdate" />
 
     <!-- پیام‌های وضعیت گزارش -->
     <div v-if="!reportStore.hasActiveReport" class="mb-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-xs leading-6 text-amber-800 dark:text-amber-200">
@@ -203,7 +224,13 @@
               <span class="text-[11px] text-gray-400">مقدار هر مرحله «اضافه‌شده در همان مرحله» است</span>
             </div>
 
-            <PhCurveChart v-if="livePoints.length >= 2 && num(form.targetPh) != null" :points="livePoints" :target-ph="num(form.targetPh) as number" :unit-label="unitShort" />
+            <details v-if="livePoints.length >= 2 && num(form.targetPh) != null" class="group rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20">
+              <summary class="cursor-pointer select-none px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 flex items-center justify-between">
+                نمودار منحنی pH
+                <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <div class="px-2 pb-2"><PhCurveChart :points="livePoints" :target-ph="num(form.targetPh) as number" :unit-label="unitShort" /></div>
+            </details>
           </section>
 
           <div class="lg:col-span-2 space-y-4">
@@ -250,50 +277,18 @@
                     <input v-model="saveForm.ecAfter" inputmode="decimal" class="field-input" placeholder="dS/m" />
                   </div>
                 </div>
-                <div class="flex flex-col gap-2">
-                  <button type="button" @click="save(true)" :disabled="!canSave" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-medium transition-colors">
-                    {{ phStore.isSaving ? 'در حال ثبت…' : 'ثبت و اعمال در محاسبهٔ کود' }}
-                  </button>
-                  <button type="button" @click="save(false)" :disabled="!canSave" class="px-5 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors">فقط ثبت در تاریخچه</button>
-                </div>
-                <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-5">«اعمال» یعنی در محاسبهٔ بعدی کود، عناصر این اسید/باز مثل آب منبع پایه لحاظ شوند: سهم کودهای دیگر کم می‌شود و تعادل یونی و EC دوباره محاسبه می‌گردد. در هر گزارش فقط یک اصلاح فعال است.</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-5">با دکمهٔ «ثبت و اعمال در محاسبه کود» (بالای صفحه) نتیجه ثبت می‌شود و مستقیماً در محاسبه کود اعمال می‌گردد؛ یعنی عناصر این اسید/باز مثل آب منبع پایه لحاظ شوند: سهم کودهای دیگر کم می‌شود و تعادل یونی و EC دوباره محاسبه می‌گردد. در هر گزارش فقط یک اصلاح فعال است.</p>
                 <p v-if="!reportStore.hasActiveReport" class="text-[11px] text-amber-700 dark:text-amber-300">برای ثبت، ابتدا یک گزارش باز یا ذخیره کنید.</p>
+                <p v-if="saveError" class="text-xs text-rose-600 dark:text-rose-400">{{ saveError }}</p>
                 <p v-if="saveMessage" class="text-xs text-emerald-700 dark:text-emerald-300">{{ saveMessage }}</p>
               </section>
             </div>
           </div>
         </template>
 
-        <!-- تاریخچه -->
-        <PhHistoryPanel v-if="reportStore.hasActiveReport" :items="phStore.history" @reuse="reuse" @apply="(id) => toggleApply(id, true)" @unapply="(id) => toggleApply(id, false)" @delete="onDelete" />
       </div>
     </Transition>
 
-    <!-- ===================== ناوبری ===================== -->
-    <div class="flex items-center gap-2 mt-5">
-      <button v-if="currentStep > 1" type="button" @click="goToStep(currentStep - 1)"
-        class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-        قبلی
-      </button>
-      <div class="flex-1"></div>
-      <button type="button" @click="resetAll" class="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M5.6 15A8 8 0 0018.4 9M18.4 9A8 8 0 005.6 15" /></svg>
-        <span class="hidden sm:inline">شروع دوباره</span>
-      </button>
-      <button v-if="currentStep === 1" type="button" @click="next1" class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
-        ادامه: نمونه و pH
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-      </button>
-      <button v-else-if="currentStep === 2" type="button" @click="next2" class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
-        ادامه: آزمون
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-      </button>
-      <button v-else-if="currentStep === 3" type="button" @click="calculate" :disabled="phStore.isCalculating" class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-60 rounded-lg transition-colors">
-        {{ phStore.isCalculating ? 'در حال محاسبه…' : 'محاسبه مقدار برای مخزن' }}
-      </button>
-      <button v-else type="button" @click="goToStep(3)" class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">ویرایش آزمون</button>
-    </div>
   </div>
 </template>
 
@@ -308,6 +303,7 @@ import PhCurveChart from './ph/PhCurveChart.vue';
 import PhHistoryPanel from './ph/PhHistoryPanel.vue';
 import PhSchematic from './ph/PhSchematic.vue';
 
+const emit = defineEmits<{ (e: 'applied', id: number): void }>();
 const MAX_STEPS = 30;
 const samplePresets = [5, 10, 20];
 
@@ -535,7 +531,9 @@ async function calculate() {
   else if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-async function save(apply: boolean) {
+const saveError = ref('');
+async function save() {
+  saveError.value = '';
   const payload = buildPayload();
   if (!payload) return;
   const item = await phStore.save({
@@ -543,18 +541,22 @@ async function save(apply: boolean) {
     note: saveForm.note.trim() || null,
     ec_before: num(saveForm.ecBefore),
     ec_after: num(saveForm.ecAfter),
-    apply
+    apply: true
   });
   if (item) {
-    saveMessage.value = apply
-      ? 'ثبت شد و اعمال می‌شود؛ در «محاسبه کود» دوباره «محاسبه» را بزنید.'
-      : 'در تاریخچه ثبت شد.';
+    phStore.pendingRecalc = true;       // صفحهٔ محاسبه کود یک‌بار خودکار دوباره محاسبه می‌کند
+    emit('applied', item.id);            // رفتن به «محاسبه کود»
+  } else {
+    saveError.value = phStore.errorMessage || 'ثبت انجام نشد.';
   }
 }
 
 async function toggleApply(id: number, applied: boolean) {
   const ok = await phStore.setApplied(id, applied);
   if (ok) saveMessage.value = applied ? 'اعمال شد؛ در «محاسبه کود» دوباره «محاسبه» را بزنید.' : 'اعمال لغو شد؛ محاسبهٔ بعدی بدون آن انجام می‌شود.';
+}
+async function onUpdate(id: number, data: { note: string | null; ec_before: number | null; ec_after: number | null }) {
+  await phStore.updateMeta(id, data);
 }
 async function onDelete(id: number) {
   await phStore.remove(id);
@@ -625,6 +627,7 @@ watch(() => reportStore.currentReportId, async () => {
   @apply w-full px-3 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition;
 }
 .field-invalid { @apply border-rose-400 dark:border-rose-500 bg-rose-50/60 dark:bg-rose-900/10; }
+.primary-btn { @apply inline-flex items-center gap-1.5 h-10 px-4 sm:px-5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors; }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 .step-enter-active, .step-leave-active { transition: opacity .18s ease, transform .18s ease; }
 .step-enter-from { opacity: 0; transform: translateY(6px); }

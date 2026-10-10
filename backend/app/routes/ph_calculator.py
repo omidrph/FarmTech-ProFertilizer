@@ -46,6 +46,7 @@ from app.schemas import (
     AdjustmentRequest,
     AdjustmentResult,
     AdjustmentSaveRequest,
+    AdjustmentUpdate,
     PhContextResponse,
 )
 from app.security import get_current_user
@@ -400,6 +401,16 @@ def apply_adjustment(adj_id: int, db: Session = Depends(get_db), current_user: U
 def unapply_adjustment(adj_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     rec = _owned_or_404(db, adj_id, current_user)
     return _to_item(crud.set_adjustment_active(db, rec, False))
+
+
+@ph_calculator_router.patch("/adjustments/{adj_id}", response_model=AdjustmentItem)
+def update_adjustment(adj_id: int, payload: AdjustmentUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    rec = _owned_or_404(db, adj_id, current_user)
+    for k, v in payload.model_dump(exclude_unset=True).items():
+        setattr(rec, k, v)
+    db.commit()
+    db.refresh(rec)
+    return _to_item(rec)
 
 
 @ph_calculator_router.delete("/adjustments/{adj_id}")

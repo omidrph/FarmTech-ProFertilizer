@@ -79,6 +79,13 @@ class AdjustmentSaveRequest(AdjustmentRequest):
     apply: bool = Field(False, description="هم‌زمان در چرخهٔ محاسبهٔ گزارش اعمال شود")
 
 
+class AdjustmentUpdate(BaseModel):
+    """ویرایش فیلدهای توصیفی یک رکورد تاریخچه (خود دوز/نتیجه تغییر نمی‌کند؛ برای آن «استفاده مجدد» کنید)"""
+    note: Optional[str] = Field(None, max_length=500)
+    ec_before: Optional[float] = Field(None, ge=0, le=30)
+    ec_after: Optional[float] = Field(None, ge=0, le=30)
+
+
 # ============================================================
 # پاسخ محاسبه
 # ============================================================

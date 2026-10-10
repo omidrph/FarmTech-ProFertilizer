@@ -374,6 +374,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { useCalcStore } from '@/store/modules/calcStore';
+import { usePhStore } from '@/store/modules/phStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
 import { useReportStore } from '@/store/modules/reportStore';
@@ -519,6 +520,20 @@ onMounted(() => {
   // داده می‌شود.
   syncRestoredState();
   loadActivePh();
+
+  // 🆕 «ثبت و اعمال» در تب PH → همین‌جا خودکار دوباره محاسبه شود تا اصلاح pH اعمال شود
+  const ph = usePhStore();
+  if (ph.pendingRecalc) {
+    ph.pendingRecalc = false;
+    nextTick(async () => {
+      if (calcStore.optimizationResult && localSelectedFertilizers.value.length > 0 && hasTargets.value) {
+        await handleOptimize();
+        showToast('اصلاح pH در محاسبه اعمال شد', 'success');
+      } else {
+        showToast('اصلاح pH ثبت شد؛ پس از انتخاب کود و محاسبه، اعمال می‌شود', 'success');
+      }
+    });
+  }
 
   window.addEventListener('report-changed', handleReportChanged);
 });

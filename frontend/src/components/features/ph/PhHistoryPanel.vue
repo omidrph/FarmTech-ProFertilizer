@@ -2,11 +2,18 @@
 <!-- تاریخچهٔ اصلاح‌های ثبت‌شدهٔ این گزارش (آزمون و خطاها و رسپی‌ها) -->
 <template>
   <section class="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
-    <div class="flex items-center justify-between gap-2 mb-3">
-      <h3 class="text-sm font-bold text-gray-900 dark:text-white">تاریخچهٔ اصلاح‌های این گزارش</h3>
-      <span class="text-[11px] text-gray-400">{{ items.length }} مورد</span>
-    </div>
+    <button type="button" class="w-full flex items-center justify-between gap-2 text-right" @click="open = !open" :aria-expanded="open ? 'true' : 'false'">
+      <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <svg class="w-4 h-4 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8m0-5v5h5" /></svg>
+        تاریخچهٔ اصلاح‌های این گزارش
+      </h3>
+      <span class="flex items-center gap-2 text-[11px] text-gray-400">
+        {{ items.length.toLocaleString('fa-IR') }} مورد
+        <svg class="w-4 h-4 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+      </span>
+    </button>
 
+    <div v-show="open" class="mt-3">
     <p v-if="items.length === 0" class="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
       هنوز اصلاحی ثبت نشده است.
     </p>
@@ -42,7 +49,13 @@
               EC اندازه‌گیری‌شده: {{ fmt(item.ec_before, 2) }} ← {{ fmt(item.ec_after, 2) }}
               (Δ {{ fmt(item.ec_after - item.ec_before, 2) }})
             </p>
-            <p v-if="item.note" class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ item.note }}</p>
+            <p v-if="item.note && editId !== item.id" class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ item.note }}</p>
+            <div v-if="editId === item.id" class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input v-model="draft.note" maxlength="500" placeholder="یادداشت" class="sm:col-span-3 h-9 px-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
+              <input v-model="draft.ecBefore" inputmode="decimal" placeholder="EC قبل" class="h-9 px-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
+              <input v-model="draft.ecAfter" inputmode="decimal" placeholder="EC بعد" class="h-9 px-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
+              <div class="flex gap-2"><button type="button" class="btn-sm btn-primary flex-1" @click="saveEdit(item.id)">ذخیره</button><button type="button" class="btn-sm flex-1" @click="editId = null">انصراف</button></div>
+            </div>
             <p class="text-[11px] text-gray-400 mt-1">{{ formatDate(item.created_at) }}</p>
           </div>
 
@@ -55,24 +68,34 @@
               @click="$emit('apply', item.id)"
             >اعمال</button>
             <button v-else type="button" class="btn-sm" @click="$emit('unapply', item.id)">لغو اعمال</button>
+            <button type="button" class="btn-sm" @click="startEdit(item)">ویرایش</button>
             <button type="button" class="btn-sm btn-danger" @click="confirmDelete(item.id)" aria-label="حذف">حذف</button>
           </div>
         </div>
       </li>
     </ul>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { ref, reactive } from 'vue';
 import type { PhAdjustmentItem } from '@/services/apiService';
 import { fmt, fmtDose } from './phFormat';
 
-defineProps<{ items: PhAdjustmentItem[] }>();
+const props = defineProps<{ items: PhAdjustmentItem[] }>();
+const open = ref<boolean>(true);
+const editId = ref<number | null>(null);
+const draft = reactive({ note: '', ecBefore: '', ecAfter: '' });
+const toNum = (t: string) => { const n = Number(t.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/٫/g, '.')); return t.trim() !== '' && Number.isFinite(n) ? n : null; };
+const startEdit = (i: PhAdjustmentItem) => { editId.value = i.id; draft.note = i.note || ''; draft.ecBefore = i.ec_before != null ? String(i.ec_before) : ''; draft.ecAfter = i.ec_after != null ? String(i.ec_after) : ''; };
+const saveEdit = (id: number) => { emit('update', id, { note: draft.note.trim() || null, ec_before: toNum(draft.ecBefore), ec_after: toNum(draft.ecAfter) }); editId.value = null; };
 const emit = defineEmits<{
   (e: 'reuse', item: PhAdjustmentItem): void;
   (e: 'apply', id: number): void;
   (e: 'unapply', id: number): void;
   (e: 'delete', id: number): void;
+  (e: 'update', id: number, data: { note: string | null; ec_before: number | null; ec_after: number | null }): void;
 }>();
 
 const confirmDelete = (id: number) => {

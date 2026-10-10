@@ -44,6 +44,8 @@ export const usePhStore = defineStore('ph', () => {
   const isCalculating = ref(false);
   const isSaving = ref(false);
   const errorMessage = ref<string | null>(null);
+  // بعد از «ثبت و اعمال»، صفحهٔ محاسبه کود یک‌بار خودکار دوباره محاسبه می‌کند
+  const pendingRecalc = ref(false);
 
   const activeItem = computed(() => history.value.find((h) => h.is_active) || null);
 
@@ -133,6 +135,17 @@ export const usePhStore = defineStore('ph', () => {
     }
   }
 
+  async function updateMeta(id: number, data: { note?: string | null; ec_before?: number | null; ec_after?: number | null }): Promise<boolean> {
+    try {
+      await apiService.updatePhAdjustment(id, data);
+      await loadHistory();
+      return true;
+    } catch (err: any) {
+      errorMessage.value = errorText(err, 'خطا در ویرایش');
+      return false;
+    }
+  }
+
   async function remove(id: number): Promise<boolean> {
     try {
       await apiService.deletePhAdjustment(id);
@@ -160,6 +173,6 @@ export const usePhStore = defineStore('ph', () => {
     adjusters, context, result, history, activeItem,
     isLoadingAdjusters, isCalculating, isSaving, errorMessage,
     loadAdjusters, loadContext, loadHistory, refreshAll,
-    calculate, save, setApplied, remove, clearResult, reset
+    calculate, save, setApplied, remove, updateMeta, clearResult, reset, pendingRecalc
   };
 });

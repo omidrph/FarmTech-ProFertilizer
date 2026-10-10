@@ -165,10 +165,8 @@
 
                           <span
                             v-if="fertilizer.sourceSystemId"
-                            class="text-[10px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded border border-indigo-200 dark:border-indigo-800"
-                          >
-                            سیستمی
-                          </span>
+                            
+                           :class="isCompanyFert(fertilizer) ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'" class="text-[10px] px-1.5 py-0.5 rounded">{{ isCompanyFert(fertilizer) ? 'شرکتی' : 'سیستمی' }}</span>
                         </div>
                       </div>
                     </div>
@@ -230,17 +228,11 @@
                           <span>{{ percentage }}%</span>
                         </span>
                         <!-- بقیهٔ عناصر: با هاور، فهرست کامل -->
-                        <span v-if="elementCount(fertilizer) > 3" class="relative group inline-flex">
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-default bg-gray-50 dark:bg-gray-700/50">
-                            +{{ elementCount(fertilizer) - 3 }}
-                          </span>
-                          <span class="pointer-events-none absolute z-30 bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block w-max max-w-[260px] rounded-lg bg-gray-900 text-white text-[11px] leading-6 p-2.5 shadow-xl">
-                            <span class="block font-semibold mb-1 text-gray-300">همهٔ عناصر ({{ fertilizer.name }})</span>
-                            <span class="grid grid-cols-2 gap-x-4 gap-y-0.5 tabular-nums">
-                              <span v-for="(pct, el) in getActiveElements(fertilizer)" :key="el" class="flex justify-between gap-2"><span>{{ el }}</span><span>{{ pct }}%</span></span>
-                            </span>
-                          </span>
-                        </span>
+                        <span
+                          v-if="elementCount(fertilizer) > 3"
+                          class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600"
+                          @mouseenter="showTip($event, fertilizer)" @mouseleave="tip = null" @focus="showTip($event, fertilizer)" @blur="tip = null" tabindex="0"
+                        >+{{ elementCount(fertilizer) - 3 }}</span>
                       </template>
 
                       <span
@@ -342,10 +334,8 @@
 
                   <span
                     v-if="fertilizer.sourceSystemId"
-                    class="text-[10px] px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded border border-indigo-200 dark:border-indigo-800"
-                  >
-                    سیستمی
-                  </span>
+                    
+                   :class="isCompanyFert(fertilizer) ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'" class="text-[10px] px-1.5 py-0.5 rounded">{{ isCompanyFert(fertilizer) ? 'شرکتی' : 'سیستمی' }}</span>
                 </div>
               </div>
             </div>
@@ -580,6 +570,15 @@
                 </div>
               </div>
 
+              <!-- شرکت / برند -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">شرکت / برند</label>
+                <select v-model="filterBrand" class="w-full h-10 px-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500">
+                  <option value="all">همهٔ شرکت‌ها</option>
+                  <option v-for="b in brandOptions" :key="b" :value="b">{{ b }}</option>
+                </select>
+              </div>
+
               <!-- منشأ کود -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">منشأ کود</label>
@@ -603,6 +602,16 @@
       </template>
     </AppModal>
   </div>
+  <!-- پاپ‌اور همهٔ عناصر (Teleport به body؛ از هر ردیفی که +N را هاور کنید) -->
+  <Teleport to="body">
+    <div v-if="tip" class="fixed z-[80] pointer-events-none w-max max-w-[300px] rounded-xl bg-gray-900 text-white text-xs leading-6 p-3 shadow-2xl"
+      :style="{ left: tip.x + 'px', top: tip.y + 'px', transform: tip.up ? 'translate(-50%, -100%)' : 'translate(-50%, 0)' }">
+      <p class="font-semibold mb-1.5 text-gray-300 truncate max-w-[270px]">{{ tip.name }}</p>
+      <div class="grid grid-cols-2 gap-x-5 gap-y-0.5 tabular-nums">
+        <div v-for="[el, pct] in tip.items" :key="el" class="flex justify-between gap-3"><span class="font-medium">{{ el }}</span><span class="text-gray-300">{{ pct }}%</span></div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -649,6 +658,8 @@ const priceMax = ref<number | null>(null);
 const filterElement = ref<string>('all');
 const filterType = ref<'all' | 'normal' | 'acid' | 'base'>('all');
 const filterSource = ref<'all' | 'user' | 'system'>('all');
+const filterBrand = ref('all');
+const brandOptions = computed(() => [...new Set(props.userFertilizers.map((f: any) => (f.brand || '').trim()).filter(Boolean))].sort());
 const showFilterModal = ref(false);
 
 // ============================================================
@@ -661,6 +672,14 @@ const sortedElements = (f: any): Array<[string, number]> =>
   Object.entries(getActiveElements(f) as Record<string, number>).sort((a, b) => b[1] - a[1]);
 const topElements = (f: any) => sortedElements(f).slice(0, 3);
 const elementCount = (f: any) => sortedElements(f).length;
+// ---- پاپ‌اور عناصر ----
+const tip = ref<null | { x: number; y: number; up: boolean; name: string; items: Array<[string, number]> }>(null);
+const showTip = (e: Event, f: any) => {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const up = r.top > 220;
+  tip.value = { x: Math.min(Math.max(r.left + r.width / 2, 160), window.innerWidth - 160), y: up ? r.top - 8 : r.bottom + 8, up, name: f.name, items: sortedElements(f) };
+};
+const isCompanyFert = (f: any) => !!f.brand && f.brand !== 'استاندارد';
 const allElementsText = (f: any) => sortedElements(f).map(([e, p]) => `${e}: ${p}%`).join('، ');
 
 const normalFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => !isAdjusterFert(f)).length);
@@ -706,7 +725,8 @@ const advancedFilterCount = computed(() =>
     !!priceMax.value,
     filterElement.value !== 'all',
     filterType.value !== 'all',
-    filterSource.value !== 'all'
+    filterSource.value !== 'all',
+    filterBrand.value !== 'all'
   ].filter(Boolean).length
 );
 
@@ -784,6 +804,11 @@ const filteredFertilizers = computed(() => {
     result = result.filter((f: any) => f.isBase);
   } else if (filterType.value === 'normal') {
     result = result.filter((f: any) => !isAdjusterFert(f));
+  }
+
+  // شرکت / برند
+  if (filterBrand.value !== 'all') {
+    result = result.filter((f: any) => (f.brand || '').trim() === filterBrand.value);
   }
 
   // منشأ کود
@@ -964,6 +989,7 @@ const resetFilters = () => {
   filterElement.value = 'all';
   filterType.value = 'all';
   filterSource.value = 'all';
+  filterBrand.value = 'all';
   searchQuery.value = '';
 };
 

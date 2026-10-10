@@ -157,6 +157,7 @@
     <!-- همان کارت صفحهٔ خانه و محاسبه کود (کاتیون آبی / آنیون قرمز) -->
     <HomeIonBalance
       v-else-if="ionBalance"
+      compact
       :cation="Number(ionBalance.cation) || 0"
       :anion="Number(ionBalance.anion) || 0"
       :balanced="!!ionBalance.isBalanced"

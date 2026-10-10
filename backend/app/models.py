@@ -211,6 +211,11 @@ class Fertilizer(Base):
     """مدل کودها"""
     
     __tablename__ = "fertilizers"
+    # 🆕 هر کود سیستمی/شرکتی فقط یک‌بار (بر اساس نام)؛ از تکرار هنگام seed هم‌زمان چند worker جلوگیری می‌کند
+    __table_args__ = (
+        Index("uq_system_fert_name", "name", unique=True,
+              postgresql_where=text("is_system_default AND user_id IS NULL")),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)

@@ -1074,6 +1074,11 @@ class ApiService {
         return response.data;
     }
 
+    async updatePhAdjustment(id: number, data: { note?: string | null; ec_before?: number | null; ec_after?: number | null }): Promise<PhAdjustmentItem> {
+        const response: AxiosResponse<PhAdjustmentItem> = await this.api.patch(`/ph-calculator/adjustments/${id}`, data);
+        return response.data;
+    }
+
     async deletePhAdjustment(id: number): Promise<void> {
         await this.api.delete(`/ph-calculator/adjustments/${id}`);
     }
