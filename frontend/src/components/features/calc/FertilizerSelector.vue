@@ -120,7 +120,7 @@
                     {{ kindLabel(fertilizer) }}
                   </span>
                   <span v-if="fertilizer.form === 'liquid'" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300">مایع</span>
-                  <span v-if="fertilizer.brand" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                  <span v-if="isCompany(fertilizer)" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
                     {{ fertilizer.brand }}
                   </span>
                   <span
@@ -320,13 +320,16 @@ const userFertilizers = computed(() => props.fertilizers.filter((f) => !f.isSyst
 const isAdjuster = (f: Fertilizer) => !!(f.isAcid || f.isBase);
 const hasAcidFertilizers = computed(() => userFertilizers.value.some(isAdjuster));
 
-const kindLabel = (f: Fertilizer) => (f.isBase ? 'باز' : f.isAcid ? 'اسید' : 'کود');
+const isCompany = (f: Fertilizer) => !!f.brand && f.brand.trim() !== '' && f.brand.trim() !== 'استاندارد';
+const kindLabel = (f: Fertilizer) => (f.isBase ? 'باز' : f.isAcid ? 'اسید' : isCompany(f) ? 'شرکتی' : 'کود');
 const kindClass = (f: Fertilizer) =>
   f.isBase
     ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300'
     : f.isAcid
       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+      : isCompany(f)
+        ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300'
+        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
 
 const fmtNum = (n: number) => new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 3 }).format(n);
 const amountLabel = (id: string) => {

@@ -32,6 +32,7 @@
            :class="tank.count ? tank.valueClass : 'text-gray-300 dark:text-gray-600'">
           {{ tank.count ? tank.count.toLocaleString('fa-IR') : '—' }}
         </p>
+        <p v-if="tank.key === 'C' && phNote && tank.count" class="mt-1 text-[10px] leading-4 text-amber-600 dark:text-amber-400">{{ phNote }}</p>
       </div>
     </div>
   </section>
@@ -42,6 +43,8 @@ import { computed } from 'vue';
 
 const props = defineProps<{
   counts: { A: number; B: number; C: number };
+  /** توضیح کوتاه زیر مخزن C (مثلاً اسید اصلاح pH) */
+  phNote?: string;
 }>();
 
 const tanks = computed(() => [

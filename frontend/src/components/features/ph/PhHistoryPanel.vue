@@ -79,12 +79,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { ref, reactive, watch } from 'vue';
 import type { PhAdjustmentItem } from '@/services/apiService';
 import { fmt, fmtDose } from './phFormat';
 
 const props = defineProps<{ items: PhAdjustmentItem[] }>();
-const open = ref<boolean>(true);
+const open = ref<boolean>(props.items.length > 0);
+watch(() => props.items.length, (n, o) => { if (o === 0 && n > 0) open.value = true; });
 const editId = ref<number | null>(null);
 const draft = reactive({ note: '', ecBefore: '', ecAfter: '' });
 const toNum = (t: string) => { const n = Number(t.replace(/[۰-۹]/g, (c) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(c))).replace(/٫/g, '.')); return t.trim() !== '' && Number.isFinite(n) ? n : null; };

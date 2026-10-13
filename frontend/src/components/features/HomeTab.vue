@@ -73,19 +73,11 @@
             :anion="Number(ionSource?.anion) || 0"
             :balanced="ionBalanced"
           />
-          <HomeReservoirs :counts="reservoirCounts" />
+          <HomeReservoirs :counts="reservoirCounts" :ph-note="phAdjustmentNote" />
         </div>
       </div>
 
-      <div class="flex flex-col sm:flex-row sm:items-start gap-3">
-        <HomeAttentionList class="flex-1" :items="attentionItems" />
-        <HomeQuickActions
-          class="sm:mr-auto"
-          :is-recalculating="isRecalculating"
-          @recalculate="handleRecalculate"
-          @edit-targets="emit('navigate', 'target-elements')"
-        />
-      </div>
+      <HomeAttentionList :items="attentionItems" @details="emit('navigate', 'fertilizer-calc')" />
 
       <!-- پیام کوتاه -->
       <Transition name="home-toast">
@@ -118,7 +110,6 @@ import HomeHeroCard from './home/HomeHeroCard.vue';
 import HomeElementRings from './home/HomeElementRings.vue';
 import HomeIonBalance from './home/HomeIonBalance.vue';
 import HomeReservoirs from './home/HomeReservoirs.vue';
-import HomeQuickActions from './home/HomeQuickActions.vue';
 import HomeAttentionList from './home/HomeAttentionList.vue';
 
 // ============================================================
@@ -142,7 +133,6 @@ const fertilizerStore = useFertilizerStore();
 // ============================================================
 const isLoading = ref(false);
 const error = ref<string | null>(null);
-const isRecalculating = ref(false);
 
 // ============================================================
 // Computed: وضعیت گزارش
@@ -299,16 +289,34 @@ const ecText = computed(() =>
   ec.value.toLocaleString('fa-IR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 );
 
-const costText = computed(() => Math.round(calcStore.totalCost || 0).toLocaleString('fa-IR'));
+const costValue = computed(() => {
+  const fromResult = Number(result.value?.cost_total) || 0;
+  if (fromResult > 0) return fromResult;
+  const fromStore = Number(calcStore.totalCost) || 0;
+  if (fromStore > 0) return fromStore;
+  // آخرین راه: جمع (وزن × قیمت) از روی نتیجه و پایگاه‌داده کود فعلی
+  let sum = 0;
+  for (const [id, grams] of Object.entries(result.value?.weights || {})) {
+    const f: any = (fertilizerStore.fertilizers || []).find((x: any) => String(x.id) === String(id));
+    if (f) sum += (Number(grams) / 1000) * (Number(f.pricePerKg) || 0);
+  }
+  return sum;
+});
+const costText = computed(() => Math.round(costValue.value).toLocaleString('fa-IR'));
 
 const activeElementsCount = computed(() =>
   Object.values(targetStore.targetElements || {}).filter(v => Number(v) > 0).length
 );
 
+// ✅ از reservoir_data خودِ نتیجه (همان که صفحهٔ نتیجه نشان می‌دهد) خوانده می‌شود، نه state قدیمی.
+// اسید/بازِ «اصلاح pH» هم در مخزن C (اسید) حساب می‌شود.
+const phAdjustment = computed(() => result.value?.ph_adjustment || null);
 const reservoirCounts = computed(() => {
-  const data = calcStore.reservoirData;
-  return { A: data?.A?.length || 0, B: data?.B?.length || 0, C: data?.C?.length || 0 };
+  const data: any = result.value?.reservoir_data || calcStore.reservoirData;
+  const count = (arr: any) => (Array.isArray(arr) ? arr.length : 0);
+  return { A: count(data?.A), B: count(data?.B), C: count(data?.C) + (phAdjustment.value ? 1 : 0) };
 });
+const phAdjustmentNote = computed(() => (phAdjustment.value ? `شامل ${phAdjustment.value.chemical_name} (اصلاح pH)` : ''));
 
 const fertilizerCount = computed(() =>
   Object.values(result.value?.weights || {}).filter(value => Number(value) > 0).length
@@ -354,116 +362,74 @@ const heroSummaryText = computed(() => {
 // ============================================================
 // Computed: هشدارهای کوتاه
 // ============================================================
+type AttnKind = 'danger' | 'warn' | 'ph' | 'info';
 const attentionItems = computed(() => {
-  const items: Array<{ text: string; danger: boolean; hint?: string }> = [];
-
-  if (!ionBalanced.value && ionSource.value) {
-    const diff = Math.abs(ionSource.value.cation - ionSource.value.anion);
-    items.push({
-      text: `اختلاف کاتیون و آنیون ${diff.toLocaleString('fa-IR', { maximumFractionDigits: 2 })} meq/L است`,
-      danger: true,
-      hint: 'تعادل یونی برای جذب بهینه عناصر ضروری است'
-    });
-  }
-
+  const items: Array<{ kind: AttnKind; title: string; text?: string; hint?: string }> = [];
   const actual = (result.value?.concentrations || {}) as Record<string, number>;
   const targets = targetStore.targetElements as Record<string, number>;
-  const deficient: string[] = [];
-  const excessive: string[] = [];
+  const fa = (n: number, d = 1) => n.toLocaleString('fa-IR', { maximumFractionDigits: d });
 
-  for (const [element, target] of Object.entries(targets)) {
-    if (!(Number(target) > 0)) continue;
-    const ratio = ((Number(actual[element]) || 0) / Number(target)) * 100;
-    if (ratio < 70) deficient.push(element);
-    else if (ratio > 130) excessive.push(element);
+  // ۱) تعادل یونی
+  if (!ionBalanced.value && ionSource.value) {
+    const cat = Number(ionSource.value.cation) || 0;
+    const ani = Number(ionSource.value.anion) || 0;
+    const diff = Math.abs(cat - ani);
+    const pct = Math.max(cat, ani) > 0 ? (diff / Math.max(cat, ani)) * 100 : 0;
+    items.push({ kind: pct > 10 ? 'danger' : 'warn', title: 'عدم تعادل یونی', text: `اختلاف کاتیون و آنیون ${fa(diff, 2)} meq/L (${fa(pct)}٪) است.`, hint: cat > ani ? 'آنیون کم است؛ کودی با آنیون بیشتر (نیترات، سولفات یا فسفات) اضافه کنید.' : 'کاتیون کم است؛ کودی با پتاسیم، کلسیم یا منیزیم اضافه کنید.' });
   }
 
-  if (deficient.length) {
-    items.push({
-      text: `${deficient.slice(0, 3).join('، ')}${deficient.length > 3 ? ' و ...' : ''} کمتر از ۷۰٪ هدف است`,
-      danger: false,
-      hint: 'افزایش این عناصر با استفاده از کود مناسب'
-    });
-  }
-  if (excessive.length) {
-    items.push({
-      text: `${excessive.slice(0, 3).join('، ')}${excessive.length > 3 ? ' و ...' : ''} بیشتر از ۱۳۰٪ هدف است`,
-      danger: false,
-      hint: 'کاهش این عناصر یا استفاده از کود با درصد کمتر'
-    });
-  }
-
-  if (ec.value > 3.5) {
-    items.push({
-      text: `EC بسیار بالا است (${ecText.value} dS/m)؛ خطر شوری`,
-      danger: true,
-      hint: 'کاهش غلظت کودها یا استفاده از آب با کیفیت‌تر'
-    });
-  } else if (ec.value < 0.8) {
-    items.push({
-      text: `EC پایین است (${ecText.value} dS/m)`,
-      danger: false,
-      hint: 'افزایش غلظت کودها متناسب با نیاز گیاه'
-    });
-  }
-
-  return items.slice(0, 3);
-});
-
-// ============================================================
-// 🆕 محاسبه مجدد (بدون ترک صفحه)
-// ============================================================
-const handleRecalculate = async () => {
-  if (isRecalculating.value) return;
-
-  const selectedIds = fertilizerStore.selectedFertilizerIds || [];
-  const selectedFertilizers = (fertilizerStore.fertilizers || []).filter(
-    (f: any) => selectedIds.includes(f.id)
-  );
-
-  // اگر کودی انتخاب نشده، از آخرین کودهای استفاده‌شده در calcStore کمک بگیر
-  const fallbackFertilizers = (calcStore as any).lastFertilizersUsed || [];
-  const fertilizersToUse =
-    selectedFertilizers.length > 0 ? selectedFertilizers : fallbackFertilizers;
-
-  if (fertilizersToUse.length === 0) {
-    showToast(
-      'برای محاسبه مجدد، ابتدا از تب «محاسبه کود» حداقل یک کود انتخاب کنید.',
-      'error'
-    );
-    return;
-  }
-
-  if (!hasTargets.value) {
-    showToast('ابتدا عناصر هدف را تعریف کنید.', 'error');
-    return;
-  }
-
-  isRecalculating.value = true;
-  try {
-    const s = calcStore.stockSettings;
-
-    const res = await calcStore.optimizeFertilizers(
-      targetStore.targetElements as Record<string, number>,
-      waterStore.waterValues as Record<string, number>,
-      fertilizersToUse,
-      undefined,
-      s.tankVolume,
-      s.stockVolume,
-      s.injectionRatio
-    );
-
-    if (res) {
-      showToast('محاسبه مجدد با موفقیت انجام شد', 'success');
-    } else {
-      showToast(calcStore.lastOptimizationError || 'خطا در محاسبه مجدد', 'error');
+  // ۲) خطای اصلاح pH (اسید/باز تب PH) — نمایش جدا با رنگ بنفش
+  const adj = phAdjustment.value;
+  if (adj) {
+    for (const [el, added] of Object.entries(adj.element_contributions || {})) {
+      const add = Number(added);
+      if (!(add > 0)) continue;
+      const tgt = Number(targets[el]) || 0;
+      const act = Number(actual[el]) || 0;
+      if (tgt > 0 && act - tgt > Math.max(2, tgt * 0.05)) {
+        items.push({ kind: 'ph', title: `خطای اصلاح pH — ${el}`, text: `${adj.chemical_name} حدود ${fa(add)} ppm ${el} وارد کرده و غلظت نهایی ${fa(act)} ppm شد (هدف ${fa(tgt)}).`, hint: 'مقدار اسید/باز را در تب PH کاهش دهید یا ماده‌ای با عنصر مفیدتر انتخاب کنید.' });
+      } else if (tgt === 0 && add > 2) {
+        items.push({ kind: 'ph', title: `خطای اصلاح pH — ${el}`, text: `${adj.chemical_name} ${fa(add)} ppm ${el} وارد کرده، در حالی که این عنصر هدفی ندارد.`, hint: 'برای این عنصر هدف تعریف کنید یا ماده دیگری برای تنظیم pH انتخاب کنید.' });
+      }
     }
-  } catch (err: any) {
-    showToast(err?.message || 'خطا در محاسبه مجدد', 'error');
-  } finally {
-    isRecalculating.value = false;
   }
-};
+
+  // ۳) عناصر کمبود / مازاد (به‌جز موارد خطای اصلاح pH که بالاتر آمد)
+  const phFlagged = new Set(items.filter(i => i.kind === 'ph').map(i => i.title.split('— ')[1]));
+  const deficient: string[] = [];
+  const severe: string[] = [];
+  const excessive: string[] = [];
+  for (const [element, target] of Object.entries(targets)) {
+    if (!(Number(target) > 0) || phFlagged.has(element)) continue;
+    const ratio = ((Number(actual[element]) || 0) / Number(target)) * 100;
+    if (ratio < 50) severe.push(element);
+    else if (ratio < 85) deficient.push(element);
+    else if (ratio > 120) excessive.push(element);
+  }
+  const list = (a: string[]) => a.slice(0, 4).join('، ') + (a.length > 4 ? ' و ...' : '');
+  if (severe.length) items.push({ kind: 'danger', title: 'کمبود شدید', text: `${list(severe)} کمتر از نیمی از هدف است.`, hint: 'کود حاوی این عناصر را به فهرست انتخابی اضافه کنید.' });
+  if (deficient.length) items.push({ kind: 'warn', title: 'کمبود عنصر', text: `${list(deficient)} کمتر از ۸۵٪ هدف است.`, hint: 'مقدار یا نوع کود تأمین‌کنندهٔ این عناصر را بازبینی کنید.' });
+  if (excessive.length) items.push({ kind: 'warn', title: 'مازاد عنصر', text: `${list(excessive)} بیشتر از ۱۲۰٪ هدف است.`, hint: 'کودی با درصد کمتر از این عناصر انتخاب کنید.' });
+
+  // ۴) EC
+  if (ec.value > 3.5) items.push({ kind: 'danger', title: 'EC بسیار بالا', text: `EC برابر ${ecText.value} dS/m است؛ خطر شوری.`, hint: 'غلظت کودها را کم کنید یا از آب با کیفیت‌تر استفاده کنید.' });
+  else if (ec.value > 0 && ec.value < 0.8) items.push({ kind: 'warn', title: 'EC پایین', text: `EC برابر ${ecText.value} dS/m است.`, hint: 'غلظت کودها را متناسب با نیاز گیاه افزایش دهید.' });
+
+  // ۵) هشدارهای بک‌اند (رسوب، سازگاری و ...) — تکراری‌ها حذف می‌شوند
+  const seen = new Set<string>();
+  for (const w of (result.value?.warnings || []) as string[]) {
+    const t = String(w || '').replace(/^[^\p{L}\p{N}]+/u, '').replace(/\s+/g, ' ').trim();
+    const key = t.slice(0, 50);
+    if (!t || seen.has(key)) continue;
+    seen.add(key);
+    // «خطر رسوب: Ca3(PO4)2» (کوتاه) در عنوان و بقیه در متن؛ جملهٔ بلند فقط متن
+    const short = t.length < 60 && /[:：]/.test(t);
+    items.push({ kind: /رسوب|خطر/.test(t) ? 'danger' : 'info', title: /رسوب/.test(t) ? (short ? t : 'خطر رسوب') : 'نکته', text: short ? undefined : (t.length > 170 ? t.slice(0, 167) + '…' : t) });
+  }
+
+  const order: Record<AttnKind, number> = { danger: 0, ph: 1, warn: 2, info: 3 };
+  return items.sort((a, b) => order[a.kind] - order[b.kind]);
+});
 
 // ============================================================
 // خروجی PDF و پیام کوتاه

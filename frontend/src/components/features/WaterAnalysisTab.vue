@@ -206,29 +206,6 @@
       <div
         class="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto justify-end"
       >
-        <!-- دکمه ذخیره قالب جدید -->
-        <button
-          @click="openSaveTemplateModal"
-          class="flex-1 sm:flex-none px-2.5 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm hover:shadow-md min-w-[70px] sm:min-w-0"
-        >
-          <svg
-            class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-            />
-          </svg>
-
-          <span class="hidden xs:inline">ذخیره قالب جدید</span>
-          <span class="xs:hidden">ذخیره قالب</span>
-        </button>
-
         <!-- دکمه بازنشانی -->
         <button
           @click="resetWaterAnalysis"
@@ -418,8 +395,26 @@
             />
           </svg>
           قالب‌های ذخیره شده من
+          <span class="text-[11px] font-normal text-gray-400 tabular-nums">{{ waterTemplates.length.toLocaleString('fa-IR') }} از ۶</span>
         </h3>
+        <button
+          type="button"
+          @click="openSaveTemplateModal"
+          class="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-xs sm:text-sm font-medium transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          افزودن قالب جدید
+        </button>
       </div>
+      <p class="-mt-2 mb-3 text-[11px] leading-5 text-gray-500 dark:text-gray-400">
+        قالب فقط یک نسخهٔ آمادهٔ قابل استفادهٔ مجدد از مقادیر فعلی است و <strong>جدا از ذخیرهٔ گزارش</strong> عمل می‌کند؛ برای ذخیرهٔ داده‌های این صفحه از دکمهٔ «ذخیره گزارش» بالای صفحه استفاده کنید.
+      </p>
+      <Transition name="fade">
+        <div v-if="templateStatus" class="mb-3 rounded-lg border px-3 py-2 text-xs"
+          :class="templateStatus.type === 'success' ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200' : 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 text-rose-800 dark:text-rose-200'">
+          {{ templateStatus.text }}
+        </div>
+      </Transition>
 
       <!-- لیست قالب‌ها -->
       <div
@@ -753,6 +748,13 @@ const toastType = ref<'success' | 'error'>('success');
 const waterTemplates = ref<any[]>([]);
 const showSaveTemplateModal = ref(false);
 const isSavingTemplate = ref(false);
+const templateStatus = ref<null | { type: 'success' | 'error'; text: string }>(null);
+let templateStatusTimer: ReturnType<typeof setTimeout> | null = null;
+const setTemplateStatus = (type: 'success' | 'error', text: string) => {
+  templateStatus.value = { type, text };
+  if (templateStatusTimer) clearTimeout(templateStatusTimer);
+  templateStatusTimer = setTimeout(() => (templateStatus.value = null), 5000);
+};
 const templateForm = ref({
   name: '',
   description: ''
@@ -1173,17 +1175,11 @@ const saveWaterTemplate = async () => {
 
     closeSaveTemplateModal();
 
-    showToast(
-      'قالب با موفقیت ذخیره شد',
-      'success'
-    );
+    setTemplateStatus('success', `قالب «${templateForm.value.name}» ذخیره شد (این کار گزارش را ذخیره نکرد).`);
   } catch (error: any) {
     console.error('Save water template error:', error);
 
-    showToast(
-      extractErrorMessage(error, 'خطا در ذخیره قالب'),
-      'error'
-    );
+    setTemplateStatus('error', extractErrorMessage(error, 'خطا در ذخیره قالب'));
   } finally {
     isSavingTemplate.value = false;
   }
@@ -1339,5 +1335,3 @@ onMounted(() => {
   }
 }
 </style>
-
-
