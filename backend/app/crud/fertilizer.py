@@ -1,3 +1,4 @@
+
 # backend/app/crud/fertilizer.py
 """
 عملیات CRUD برای مدل Fertilizer (کود)
@@ -44,7 +45,8 @@ def create_fertilizer(db: Session, fertilizer_data: FertilizerCreate, user_id: i
             is_acid=fertilizer_data.is_acid,
             is_base=getattr(fertilizer_data, 'is_base', False),
             acid_type=fertilizer_data.acid_type,
-            ph_level=fertilizer_data.ph_level,
+            formula=getattr(fertilizer_data, 'formula', None),
+            label_values=getattr(fertilizer_data, 'label_values', None),
             density_g_ml=getattr(fertilizer_data, 'density_g_ml', None),
             price_unit=getattr(fertilizer_data, 'price_unit', None),
             description=fertilizer_data.description,
@@ -216,7 +218,8 @@ def copy_system_fertilizer_to_user(db: Session, system_fertilizer_id: int, user_
             is_acid=system_fert.is_acid,
             is_base=bool(getattr(system_fert, 'is_base', False)),
             acid_type=system_fert.acid_type,
-            ph_level=system_fert.ph_level,
+            formula=getattr(system_fert, 'formula', None),
+            label_values=getattr(system_fert, 'label_values', None),
             density_g_ml=getattr(system_fert, 'density_g_ml', None),
             price_unit=getattr(system_fert, 'price_unit', None),
             description=system_fert.description,
@@ -277,3 +280,6 @@ def copy_all_system_fertilizers_to_user(db: Session, user_id: int) -> Dict[str, 
         logger.error(f"Error copying all system fertilizers: {e}")
         stats["errors"].append({"error": str(e)})
         return stats
+
+
+

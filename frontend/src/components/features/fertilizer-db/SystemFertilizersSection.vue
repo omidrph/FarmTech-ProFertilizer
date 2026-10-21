@@ -1,10 +1,11 @@
+
 <!-- frontend/src/components/features/fertilizer-db/SystemFertilizersSection.vue -->
 <!--
-  دو دستهٔ کود آماده: «کودهای شرکتی» (محصولات برند مشخص با برگهٔ آزمایش) و «کودهای سیستمی» (استاندارد).
+  فهرست «کودهای شرکتی» (محصولات برند مشخص). مفهوم «کود سیستمی» حذف شده است.
   هر دسته یک کارت فشرده است؛ فهرست کامل و کپی تکی/گروهی در مودال انجام می‌شود.
 -->
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  <div v-if="systemFertilizers.length" class="grid grid-cols-1 gap-3">
     <div
       v-for="g in groups"
       :key="g.key"
@@ -56,6 +57,7 @@
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium text-gray-900 dark:text-white flex flex-wrap items-center gap-1.5">
                 {{ f.name }}
+                <span v-if="f.formula" dir="ltr" class="text-xs font-normal text-gray-500 dark:text-gray-400 mx-1">{{ f.formula }}</span>
                 <span v-if="f.isAcid" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">اسید</span>
                 <span v-if="f.isBase" class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300">باز</span>
                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">{{ formLabel(f.form) }}</span>
@@ -89,34 +91,27 @@ const emit = defineEmits<{
   (e: 'copy-many', ids: string[]): void;
 }>();
 
-const open = ref<'company' | 'system' | null>(null);
+const open = ref<'company' | null>(null);
 const q = ref('');
 
-// کود شرکتی = برند مشخص (غیر از «استاندارد»)؛ بقیه «سیستمی»
-const isCompany = (f: any) => !!f.brand && f.brand !== 'استاندارد';
 const copiedIds = computed(() => new Set((props.userFertilizers || []).map((u: any) => String(u.sourceSystemId)).filter((x) => x !== 'undefined' && x !== 'null')));
 const isCopied = (f: any) => copiedIds.value.has(String(f.id));
 
-const mk = (key: 'company' | 'system', title: string, hint: string, items: any[], theme: any) => ({
+const mk = (key: 'company', title: string, hint: string, items: any[], theme: any) => ({
   key, title, hint, items, pending: items.filter((f) => !isCopied(f)), ...theme
 });
 const groups = computed(() => [
-  mk('company', 'کودهای شرکتی', 'محصولات برندهای تجاری با مقادیر برگهٔ آزمایش', props.systemFertilizers.filter(isCompany), {
+  mk('company', 'کودهای شرکتی', 'محصولات شرکت‌های تجاری با مقادیر برگهٔ آزمایش', props.systemFertilizers, {
     border: 'border-teal-200 dark:border-teal-800', iconBg: 'bg-teal-100 dark:bg-teal-900/30', iconText: 'text-teal-600 dark:text-teal-400',
     btn: 'bg-teal-600 hover:bg-teal-700',
     icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1" />'
-  }),
-  mk('system', 'کودهای سیستمی', 'کودهای استاندارد و پرکاربرد', props.systemFertilizers.filter((f) => !isCompany(f)), {
-    border: 'border-indigo-200 dark:border-indigo-800', iconBg: 'bg-indigo-100 dark:bg-indigo-900/30', iconText: 'text-indigo-600 dark:text-indigo-400',
-    btn: 'bg-indigo-600 hover:bg-indigo-700',
-    icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zm0 0v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />'
   })
 ]);
 const current = computed(() => groups.value.find((g) => g.key === open.value) || null);
 const filtered = computed(() => {
   const t = q.value.trim().toLowerCase();
   const items = current.value?.items || [];
-  return t ? items.filter((f: any) => `${f.name} ${f.brand || ''} ${f.category || ''}`.toLowerCase().includes(t)) : items;
+  return t ? items.filter((f: any) => `${f.name} ${f.formula || ''} ${f.brand || ''} ${f.category || ''}`.toLowerCase().includes(t)) : items;
 });
 
 const formLabel = (f?: string) => ({ liquid: 'مایع', powder: 'پودر', crystal: 'کریستال', granular: 'گرانول' } as Record<string, string>)[f || ''] || 'نامشخص';
@@ -132,3 +127,6 @@ function copyGroup() {
 <style scoped>
 .tabular-nums { font-variant-numeric: tabular-nums; }
 </style>
+
+
+

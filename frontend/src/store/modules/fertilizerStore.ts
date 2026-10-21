@@ -1,3 +1,4 @@
+
 // frontend/src/store/modules/fertilizerStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -59,7 +60,8 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
             densityGMl: item.density_g_ml ?? item.densityGMl ?? undefined,
             priceUnit: item.price_unit ?? item.priceUnit ?? undefined,
             acidType: item.acid_type ?? item.acidType ?? undefined,
-            phLevel: item.ph_level ?? item.phLevel ?? undefined,
+            formula: item.formula ?? '',
+            labelValues: item.label_values ?? item.labelValues ?? {},
             
             // توضیحات
             description: item.description ?? '',
@@ -114,8 +116,11 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
         if ('acidType' in fertilizerData && fertilizerData.acidType !== undefined) {
             result.acid_type = fertilizerData.acidType || null;
         }
-        if ('phLevel' in fertilizerData && fertilizerData.phLevel !== undefined) {
-            result.ph_level = fertilizerData.phLevel || null;
+        if ('formula' in fertilizerData) {
+            result.formula = (fertilizerData as any).formula || null;
+        }
+        if ('labelValues' in fertilizerData) {
+            result.label_values = (fertilizerData as any).labelValues || {};
         }
         if ('description' in fertilizerData && fertilizerData.description !== undefined) {
             result.description = fertilizerData.description || null;
@@ -392,3 +397,6 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
 });
 
 export default useFertilizerStore;
+
+
+

@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerStatsAndTable.vue -->
 <template>
   <div>
@@ -32,7 +33,7 @@
           <input
             v-model="searchQuery"
             type="text"
-            placeholder="جستجو در نام، برند یا دسته…"
+            placeholder="جستجو در نام، فرمول، برند یا عنصر (مثلاً K یا پتاسیم)…"
             class="w-full h-9 pr-9 pl-8 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
           />
           <button v-if="searchQuery" type="button" @click="searchQuery = ''" class="absolute left-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded text-gray-400 hover:text-gray-600 text-xs" aria-label="پاک کردن جستجو">✕</button>
@@ -95,16 +96,13 @@
               <thead>
                 <tr class="bg-gray-50 dark:bg-gray-700/50">
                   <th class="sticky right-0 z-10 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[200px]">
-                    نام / برند
+                    نام / فرمول / برند
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px]">
                     فرم
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px]">
                     خلوص
-                  </th>
-                  <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px]">
-                    pH
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[120px]">
                     قیمت
@@ -141,6 +139,7 @@
                         <p class="font-medium text-gray-900 dark:text-white truncate">
                           {{ fertilizer.name }}
                         </p>
+<p v-if="fertilizer.formula" dir="ltr" class="text-xs text-gray-500 dark:text-gray-400 text-right">{{ fertilizer.formula }}</p>
 
                         <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                           <span
@@ -166,7 +165,7 @@
                           <span
                             v-if="fertilizer.sourceSystemId"
                             
-                           :class="isCompanyFert(fertilizer) ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'" class="text-[10px] px-1.5 py-0.5 rounded">{{ isCompanyFert(fertilizer) ? 'شرکتی' : 'سیستمی' }}</span>
+                           :class="isCompanyFert(fertilizer) ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'" class="text-[10px] px-1.5 py-0.5 rounded">شرکتی</span>
                         </div>
                       </div>
                     </div>
@@ -186,22 +185,6 @@
                   <td class="px-4 py-3 text-center">
                     <span class="font-semibold text-gray-900 dark:text-white tabular-nums">
                       {{ fertilizer.concentration || 100 }}%
-                    </span>
-                  </td>
-
-                  <!-- pH -->
-                  <td class="px-4 py-3 text-center">
-                    <span
-                      v-if="fertilizer.phLevel !== undefined && fertilizer.phLevel !== null"
-                      class="font-semibold text-gray-900 dark:text-white tabular-nums"
-                    >
-                      {{ fertilizer.phLevel }}
-                    </span>
-                    <span
-                      v-else
-                      class="text-gray-400 dark:text-gray-500 text-xs"
-                    >
-                      -
                     </span>
                   </td>
 
@@ -302,6 +285,7 @@
                 <p class="font-semibold text-gray-900 dark:text-white truncate">
                   {{ fertilizer.name }}
                 </p>
+<p v-if="fertilizer.formula" dir="ltr" class="text-xs text-gray-500 dark:text-gray-400 text-right">{{ fertilizer.formula }}</p>
 
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span
@@ -335,7 +319,7 @@
                   <span
                     v-if="fertilizer.sourceSystemId"
                     
-                   :class="isCompanyFert(fertilizer) ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'" class="text-[10px] px-1.5 py-0.5 rounded">{{ isCompanyFert(fertilizer) ? 'شرکتی' : 'سیستمی' }}</span>
+                   :class="isCompanyFert(fertilizer) ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'" class="text-[10px] px-1.5 py-0.5 rounded">شرکتی</span>
                 </div>
               </div>
             </div>
@@ -362,18 +346,11 @@
           </div>
 
           <!-- جزئیات کارت موبایل -->
-          <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-3 gap-2 text-center">
+          <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 gap-2 text-center">
             <div>
               <p class="text-[10px] text-gray-400 dark:text-gray-500">خلوص</p>
               <p class="text-sm font-semibold text-gray-900 dark:text-white">
                 {{ fertilizer.concentration || 100 }}%
-              </p>
-            </div>
-
-            <div>
-              <p class="text-[10px] text-gray-400 dark:text-gray-500">pH</p>
-              <p class="text-sm font-semibold text-gray-900 dark:text-white">
-                {{ fertilizer.phLevel || '-' }}
               </p>
             </div>
 
@@ -615,6 +592,7 @@
 </template>
 
 <script setup lang="ts">
+import { matchesElementQuery } from '@/utils/labelForms';
 import AppModal from '@/components/common/AppModal.vue';
 import { ref, computed } from 'vue';
 import {
@@ -679,7 +657,7 @@ const showTip = (e: Event, f: any) => {
   const up = r.top > 220;
   tip.value = { x: Math.min(Math.max(r.left + r.width / 2, 160), window.innerWidth - 160), y: up ? r.top - 8 : r.bottom + 8, up, name: f.name, items: sortedElements(f) };
 };
-const isCompanyFert = (f: any) => !!f.brand && f.brand !== 'استاندارد';
+const isCompanyFert = (_f: any) => true; // فقط کود شرکتی داریم
 const allElementsText = (f: any) => sortedElements(f).map(([e, p]) => `${e}: ${p}%`).join('، ');
 
 const normalFertilizersCount = computed(() => props.userFertilizers.filter((f: any) => !isAdjusterFert(f)).length);
@@ -693,7 +671,7 @@ const categoryChips = computed(() => [
   { key: 'normal', label: 'معمولی', count: normalFertilizersCount.value, dot: 'bg-emerald-500', activeClass: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300' },
   { key: 'acid', label: 'اسیدها', count: acidFertilizersCount.value, dot: 'bg-amber-500', activeClass: 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300' },
   { key: 'base', label: 'بازها', count: baseFertilizersCount.value, dot: 'bg-sky-500', activeClass: 'border-sky-500 bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300' },
-  { key: 'system', label: 'کپی از سیستمی', count: systemCopiedCount.value, dot: 'bg-indigo-500', activeClass: 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' }
+  { key: 'system', label: 'از فهرست شرکتی', count: systemCopiedCount.value, dot: 'bg-indigo-500', activeClass: 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' }
 ]);
 
 const typeOptions: Array<{ value: 'all' | 'normal' | 'acid' | 'base'; label: string; activeClass: string }> = [
@@ -705,7 +683,7 @@ const typeOptions: Array<{ value: 'all' | 'normal' | 'acid' | 'base'; label: str
 const sourceOptions: Array<{ value: 'all' | 'user' | 'system'; label: string }> = [
   { value: 'all', label: 'همه' },
   { value: 'user', label: 'شخصی' },
-  { value: 'system', label: 'کپی از سیستمی' }
+  { value: 'system', label: 'از فهرست شرکتی' }
 ];
 
 // قیمت: ذخیره همیشه به‌ازای کیلوگرم؛ کود مایع با چگالی به‌ازای لیتر نمایش داده می‌شود
@@ -763,8 +741,10 @@ const filteredFertilizers = computed(() => {
 
     result = result.filter((f: any) =>
       f.name.toLowerCase().includes(query) ||
+      (f.formula && f.formula.toLowerCase().includes(query)) ||
       (f.brand && f.brand.toLowerCase().includes(query)) ||
-      (f.category && f.category.toLowerCase().includes(query))
+      (f.category && f.category.toLowerCase().includes(query)) ||
+      matchesElementQuery(f, query)
     );
   }
 
@@ -1044,3 +1024,6 @@ const clearTable = () => {
   background: #4b5563;
 }
 </style>
+
+
+

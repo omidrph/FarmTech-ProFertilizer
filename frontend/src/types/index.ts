@@ -1,4 +1,5 @@
 
+
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -81,7 +82,8 @@ export interface Fertilizer {
     isAcid: boolean;
     isBase: boolean;                // 🆕 باز تنظیم‌کنندهٔ pH (KOH, K2CO3, ...)
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
-    phLevel?: number;               // pH محلول
+    formula?: string;               // فرمول شیمیایی کود (جدا از نام)
+    labelValues?: Record<string, number>; // مقادیر روی برچسب (کلید «عنصر|فرم») برای نمایش
 
     // 🆕 کود مایع
     densityGMl?: number;            // چگالی g/mL (برای تبدیل جرم ↔ حجم)
@@ -110,7 +112,8 @@ export interface FertilizerCreate {
     isAcid?: boolean;
     isBase?: boolean;
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
-    phLevel?: number;
+    formula?: string;
+    labelValues?: Record<string, number>;
     densityGMl?: number;
     priceUnit?: 'kg' | 'l';
     description?: string;
@@ -127,7 +130,8 @@ export interface FertilizerUpdate {
     isAcid?: boolean;
     isBase?: boolean;
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
-    phLevel?: number;
+    formula?: string;
+    labelValues?: Record<string, number>;
     densityGMl?: number;
     priceUnit?: 'kg' | 'l';
     description?: string;
@@ -503,3 +507,6 @@ export interface User {
     updated_at?: string;
     full_name: string;
 }
+
+
+

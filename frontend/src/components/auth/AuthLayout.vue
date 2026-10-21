@@ -30,7 +30,7 @@
         <slot />
 
         <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-          <p class="text-xs text-center text-gray-500 dark:text-gray-400">© ۱۴۰۵ سهند کود — نسخه‌نویسی هوشمند کود</p>
+          <p class="text-xs text-center text-gray-500 dark:text-gray-400">© ۱۴۰۵ سهند کود — سیستم هوشمند نسخه‌نویسی کود</p>
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@
         <img src="/Logo.webp" alt="سهند کود" class="relative h-28 w-28 object-contain drop-shadow-2xl" />
       </div>
       <h1 class="text-4xl font-bold text-white text-center mb-2">سهند کود</h1>
-      <p class="text-primary-100 text-center text-base mb-10">نسخه‌نویسی هوشمند کود برای گلخانه و هیدروپونیک</p>
+      <p class="text-primary-100 text-center text-base mb-10">سیستم هوشمند نسخه‌نویسی کود</p>
 
       <div class="relative w-full max-w-md min-h-[150px]">
         <div class="absolute inset-0 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 shadow-2xl"></div>

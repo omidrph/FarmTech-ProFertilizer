@@ -1,3 +1,4 @@
+
 # backend/app/schemas/fertilizer.py
 """
 طرح‌های مربوط به Fertilizer (کود)
@@ -24,7 +25,8 @@ class FertilizerCreate(BaseModel):
     is_acid: bool = Field(False, description="آیا اسید است؟")
     is_base: bool = Field(False, description="آیا باز تنظیم‌کنندهٔ pH است؟ (KOH, K2CO3, ...)")
     acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید/باز: H3PO4, HNO3, H2SO4, KOH, ...")
-    ph_level: Optional[float] = Field(None, ge=0, le=14, description="pH محلول")
+    formula: Optional[str] = Field(None, max_length=150, description="فرمول شیمیایی کود")
+    label_values: Optional[Dict[str, float]] = Field(None, description="مقادیر روی برچسب (اکسیدی/یونی) برای نمایش")
     density_g_ml: Optional[float] = Field(None, gt=0, le=5, description="چگالی (g/mL) - برای کودهای مایع")
     price_unit: Optional[str] = Field(None, pattern="^(kg|l)$", description="واحد قیمت: kg یا l (لیتر)")
     description: Optional[str] = Field(None, description="توضیحات")
@@ -62,7 +64,8 @@ class FertilizerUpdate(BaseModel):
     is_acid: Optional[bool] = None
     is_base: Optional[bool] = None
     acid_type: Optional[str] = Field(None, max_length=10)
-    ph_level: Optional[float] = Field(None, ge=0, le=14)
+    formula: Optional[str] = Field(None, max_length=150)
+    label_values: Optional[Dict[str, float]] = None
     density_g_ml: Optional[float] = Field(None, gt=0, le=5)
     price_unit: Optional[str] = Field(None, pattern="^(kg|l)$")
     description: Optional[str] = None
@@ -91,7 +94,8 @@ class FertilizerResponse(BaseModel):
     is_acid: bool = False
     is_base: bool = False
     acid_type: Optional[str] = None
-    ph_level: Optional[float] = None
+    formula: Optional[str] = None
+    label_values: Optional[Dict[str, float]] = None
     density_g_ml: Optional[float] = None
     price_unit: Optional[str] = None
     description: Optional[str] = None
@@ -102,3 +106,6 @@ class FertilizerResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+

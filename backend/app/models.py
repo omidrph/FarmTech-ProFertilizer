@@ -1,4 +1,5 @@
 
+
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
@@ -230,7 +231,10 @@ class Fertilizer(Base):
     # 🆕 باز تنظیم‌کنندهٔ pH (KOH، K2CO3، ...) - همراه با is_acid در تب PH نمایش داده می‌شود
     is_base = Column(Boolean, default=False, server_default=text("false"), nullable=False)
     acid_type = Column(String(10), nullable=True)
-    ph_level = Column(Float, nullable=True)
+    # فرمول شیمیایی کود (مثلاً KNO₃) - جدا از نام تجاری
+    formula = Column(String(150), nullable=True)
+    # مقادیر به‌صورت «روی برچسب» (مثلاً {"K2O": 50, "N-NO3": 13}) فقط برای نمایش/ویرایش؛ محاسبات از elements (عنصری) استفاده می‌کنند
+    label_values = Column(JSON, nullable=True)
     # 🆕 کود مایع: چگالی (g/mL) برای تبدیل جرم ↔ حجم؛ و واحد قیمت ('kg' یا 'l')
     # (price_per_kg همیشه به‌ازای کیلوگرم نگه داشته می‌شود؛ price_unit فقط برای نمایش/ورود در فرم است)
     density_g_ml = Column(Float, nullable=True)
@@ -444,3 +448,6 @@ class PhAdjustment(Base):
 
     def __repr__(self):
         return f"<PhAdjustment {self.id} ({self.mode}, {self.chemical_name})>"
+
+
+

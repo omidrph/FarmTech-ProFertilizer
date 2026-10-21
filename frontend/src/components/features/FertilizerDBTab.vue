@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/FertilizerDBTab.vue -->
 <template>
   <div class="space-y-6">
@@ -6,13 +7,13 @@
     <!-- ============================================================ -->
     <div class="bg-primary-50 dark:bg-primary-900/20 border-r-4 border-primary-500 rounded-lg p-4">
       <p class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-        در این بخش می‌توانید کودهای شخصی خود را مدیریت کنید.
-        همچنین با کلیک روی دکمه "کپی کودهای سیستمی" می‌توانید کودهای استاندارد را به بخش شخصی خود اضافه کنید.
+        در این بخش کودهای خود را مدیریت کنید. مقدار عناصر را همان‌طور که روی برچسب کود نوشته شده (مثلاً K₂O یا P₂O₅) وارد کنید؛
+        برنامه خودش آن‌ها را به عنصر خالص تبدیل می‌کند. کودهای شرکتی آماده را هم می‌توانید به فهرست خود اضافه کنید.
       </p>
     </div>
 
     <!-- ============================================================ -->
-    <!-- بخش کودهای سیستمی -->
+    <!-- بخش کودهای شرکتی -->
     <!-- ============================================================ -->
     <SystemFertilizersSection
       :system-fertilizers="systemFertilizers"
@@ -147,12 +148,12 @@ const initialFormData = {
   category: '',
   form: '' as '' | 'liquid' | 'powder' | 'crystal' | 'granular',
   concentration: 100,
-  price_per_kg: 0,
+  price_per_kg: null as number | null,
+  formula: '',
   elements: {} as Record<string, number>,
+  label_values: {} as Record<string, number>,
   is_acid: false,
   is_base: false,
-  acid_type: '',
-  ph_level: null as number | null,
   description: '',
   is_system_default: false,
   source_system_id: null as number | null,
@@ -189,7 +190,7 @@ const showToast = (message: string, type: 'success' | 'error' = 'success') => {
 // Methods - Form
 // ============================================================
 const resetForm = () => {
-  Object.assign(formData, { ...initialFormData, elements: {} });
+  Object.assign(formData, { ...initialFormData, elements: {}, label_values: {} });
   isEditing.value = false;
 };
 
@@ -220,12 +221,12 @@ const editFertilizer = (fertilizer: any) => {
     category: fertilizer.category || '',
     form: fertilizer.form || '',
     concentration: fertilizer.concentration || 100,
-    price_per_kg: displayPrice(fertilizer),
+    price_per_kg: displayPrice(fertilizer) || null,
+    formula: fertilizer.formula || '',
     elements: { ...(fertilizer.elements || {}) },
+    label_values: { ...(fertilizer.labelValues || fertilizer.label_values || {}) },
     is_acid: fertilizer.isAcid || fertilizer.is_acid || false,
     is_base: fertilizer.isBase || fertilizer.is_base || false,
-    acid_type: fertilizer.acidType || fertilizer.acid_type || '',
-    ph_level: fertilizer.phLevel || fertilizer.ph_level || null,
     description: fertilizer.description || '',
     is_system_default: fertilizer.isSystemDefault || fertilizer.is_system_default || false,
     source_system_id: fertilizer.sourceSystemId || fertilizer.source_system_id || null,
@@ -256,6 +257,10 @@ const saveFertilizer = async () => {
     showToast('برای قیمت هر لیتر، چگالی کود را وارد کنید', 'error');
     return;
   }
+  if (isLiquid && (formData.is_acid || formData.is_base) && !(Number(formData.density_g_ml) > 0)) {
+    showToast('برای اسید/باز مایع، چگالی را وارد کنید', 'error');
+    return;
+  }
   if (formData.is_acid && formData.is_base) {
     showToast('یک ماده همزمان اسید و باز نیست؛ فقط یکی را انتخاب کنید', 'error');
     return;
@@ -283,12 +288,12 @@ const saveFertilizer = async () => {
       category: formData.category || undefined,
       form: formData.form || undefined,
       concentration: formData.concentration,
-      pricePerKg,
+      pricePerKg: pricePerKg || 0,
+      formula: formData.formula || undefined,
+      labelValues: formData.label_values || {},
       elements: cleanElements,
       isAcid: formData.is_acid,
       isBase: formData.is_base,
-      acidType: (formData.is_acid || formData.is_base) ? (formData.acid_type || undefined) : undefined,
-      phLevel: formData.ph_level || undefined,
       description: formData.description || undefined,
       // کود غیرمایع: چگالی/واحد قیمت پاک می‌شود تا داده‌ی قدیمی باقی نماند
       densityGMl: density,
@@ -383,7 +388,7 @@ const loadSystemFertilizers = async () => {
 };
 
 const handleCopyAllSystemFertilizers = async () => {
-  if (!confirm('آیا می‌خواهید همه کودهای سیستمی را به بخش شخصی خود کپی کنید؟')) {
+  if (!confirm('آیا می‌خواهید همه کودهای شرکتی را به بخش شخصی خود کپی کنید؟')) {
     return;
   }
 
@@ -391,14 +396,14 @@ const handleCopyAllSystemFertilizers = async () => {
   try {
     const result = await fertilizerStore.copyAllSystemFertilizers();
     if (result.success) {
-      showToast(result.message || 'کودهای سیستمی با موفقیت کپی شدند', 'success');
+      showToast(result.message || 'کودهای شرکتی با موفقیت کپی شدند', 'success');
       await refreshFertilizers();
       await loadSystemFertilizers();
     } else {
-      showToast(result.message || 'خطا در کپی کودهای سیستمی', 'error');
+      showToast(result.message || 'خطا در کپی کودهای شرکتی', 'error');
     }
   } catch (error: any) {
-    showToast(error.message || 'خطا در کپی کودهای سیستمی', 'error');
+    showToast(error.message || 'خطا در کپی کودهای شرکتی', 'error');
   } finally {
     isCopying.value = false;
   }
@@ -487,3 +492,6 @@ watch(() => fertilizerStore.fertilizers, (newVal) => {
   transform: translate(-50%, 10px);
 }
 </style>
+
+
+

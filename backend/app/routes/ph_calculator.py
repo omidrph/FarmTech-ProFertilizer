@@ -1,3 +1,4 @@
+
 # backend/app/routes/ph_calculator.py
 """
 مسیرهای تب «PH» - اصلاح pH با اسید/باز
@@ -95,28 +96,13 @@ def _describe_fertilizer(fert: Fertilizer) -> Dict[str, Any]:
     purity = float(fert.concentration or 100.0)
     db_elements = _clean_elements(fert.elements)
 
-    # درصد وزنی عناصر در «محصول تجاری»:
-    #  • اسید/بازِ شناخته‌شده → از فرمول و خلوص (دقیق و مستقل از نحوهٔ ثبت درصدها؛ در پایگاه‌داده‌ی
-    #    فعلی درصد عناصر اسیدها از قبل در خلوص ضرب شده ولی برای کودهای دیگر «ماده خالص» است)
-    #  • ناشناخته (سفارشی) → درصد ثبت‌شده، طبق قرارداد برنامه («ماده خالص») × خلوص
-    derived = derive_elements_pct(fert.acid_type, purity)
-    if derived:
-        elements, source = derived, "derived"
-        main = next(iter(derived))
-        db_main = db_elements.get(main)
-        # قرارداد برنامه: درصد ثبت‌شده برای «ماده خالص» است و در خلوص ضرب می‌شود
-        db_effective = (db_main or 0) * purity / 100.0
-        if db_main and abs(db_effective - derived[main]) / derived[main] > 0.05:
-            warnings.append(
-                f"درصد {main} ثبت‌شده در پایگاه‌داده ({db_main:.2f}٪ برای ماده خالص) با فرمول این ماده "
-                f"هم‌خوان نیست؛ مقدار محاسبه‌شده از فرمول و خلوص استفاده شد."
-            )
-    elif db_elements:
-        elements = {k: v * purity / 100.0 for k, v in db_elements.items()}
-        source = "database"
+    # قرارداد برنامه (مثل بهینه‌ساز): درصد عناصر ثبت‌شده برای «ماده خالص» است و در خلوص ضرب می‌شود.
+    # کودهای جدید با خلوص ۱۰۰ ذخیره می‌شوند (درصدها همان درصد محصول روی برچسب‌اند).
+    if db_elements:
+        elements, source = {k: v * purity / 100.0 for k, v in db_elements.items()}, "database"
     else:
         elements, source = {}, "missing"
-        warnings.append("درصد عناصر این کود ثبت نشده و نوع آن شناخته‌شده نیست؛ ابتدا آن را در پایگاه‌داده کود کامل کنید.")
+        warnings.append("درصد عناصر این کود ثبت نشده؛ ابتدا آن را در پایگاه‌داده کود کامل کنید.")
 
     unit = default_dose_unit(fert.form, kind)
     density, extrapolated = (None, False)
@@ -433,3 +419,6 @@ def get_active(
         return None
     rec = crud.get_active_adjustment(db, current_user.id, report_id)
     return ActiveAdjustmentSummary(**summary_from_record(rec)) if rec else None
+
+
+
