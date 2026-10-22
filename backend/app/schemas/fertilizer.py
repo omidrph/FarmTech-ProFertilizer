@@ -26,6 +26,7 @@ class FertilizerCreate(BaseModel):
     is_base: bool = Field(False, description="آیا باز تنظیم‌کنندهٔ pH است؟ (KOH, K2CO3, ...)")
     acid_type: Optional[str] = Field(None, max_length=10, description="نوع اسید/باز: H3PO4, HNO3, H2SO4, KOH, ...")
     formula: Optional[str] = Field(None, max_length=150, description="فرمول شیمیایی کود")
+    ph_params: Optional[Dict[str, float]] = Field(None, description="مشخصات اسید/باز: purity_pct, molar_mass, equivalents")
     label_values: Optional[Dict[str, float]] = Field(None, description="مقادیر روی برچسب (اکسیدی/یونی) برای نمایش")
     density_g_ml: Optional[float] = Field(None, gt=0, le=5, description="چگالی (g/mL) - برای کودهای مایع")
     price_unit: Optional[str] = Field(None, pattern="^(kg|l)$", description="واحد قیمت: kg یا l (لیتر)")
@@ -65,6 +66,7 @@ class FertilizerUpdate(BaseModel):
     is_base: Optional[bool] = None
     acid_type: Optional[str] = Field(None, max_length=10)
     formula: Optional[str] = Field(None, max_length=150)
+    ph_params: Optional[Dict[str, float]] = None
     label_values: Optional[Dict[str, float]] = None
     density_g_ml: Optional[float] = Field(None, gt=0, le=5)
     price_unit: Optional[str] = Field(None, pattern="^(kg|l)$")
@@ -95,6 +97,7 @@ class FertilizerResponse(BaseModel):
     is_base: bool = False
     acid_type: Optional[str] = None
     formula: Optional[str] = None
+    ph_params: Optional[Dict[str, float]] = None
     label_values: Optional[Dict[str, float]] = None
     density_g_ml: Optional[float] = None
     price_unit: Optional[str] = None

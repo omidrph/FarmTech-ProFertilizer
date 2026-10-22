@@ -104,6 +104,18 @@ def _describe_fertilizer(fert: Fertilizer) -> Dict[str, Any]:
         elements, source = {}, "missing"
         warnings.append("درصد عناصر این کود ثبت نشده؛ ابتدا آن را در پایگاه‌داده کود کامل کنید.")
 
+    # مشخصات اسید/باز واردشده توسط کاربر (غلظت، جرم مولی، تعداد H⁺/OH⁻ در هر مولکول)
+    raw_params = fert.ph_params if isinstance(getattr(fert, "ph_params", None), dict) else {}
+    try:
+        p_pct = float(raw_params.get("purity_pct") or 0)
+        p_mw = float(raw_params.get("molar_mass") or 0)
+        p_eq = float(raw_params.get("equivalents") or 0)
+    except (TypeError, ValueError):
+        p_pct = p_mw = p_eq = 0.0
+    params = {"purity_pct": p_pct, "molar_mass": p_mw, "equivalents": p_eq} if (0 < p_pct <= 100 and p_mw > 0 and p_eq > 0) else None
+    if params is None:
+        warnings.append("غلظت، جرم مولی و تعداد H⁺/OH⁻ این ماده در پایگاه‌داده کود ثبت نشده؛ قدرت خنثی‌سازی از روی عناصر تخمین زده می‌شود.")
+
     unit = default_dose_unit(fert.form, kind)
     density, extrapolated = (None, False)
     density_from_db = False
@@ -126,6 +138,7 @@ def _describe_fertilizer(fert: Fertilizer) -> Dict[str, Any]:
         "density": density,
         "density_from_db": density_from_db,
         "density_extrapolated": extrapolated,
+        "params": params,
         "warnings": warnings,
     }
 
@@ -230,9 +243,16 @@ def _compute(db: Session, user: User, req: AdjustmentRequest) -> Tuple[Adjustmen
         raise HTTPException(status_code=422, detail=e.message)
 
     commercial_mass_g = tank.amount * density if unit == "ml" else tank.amount
-    pure_mass_g = commercial_mass_g * info["purity"] / 100.0
+    params = info.get("params")
+    pure_mass_g = commercial_mass_g * (params["purity_pct"] if params else info["purity"]) / 100.0
     contrib = element_contributions_mg_l(commercial_mass_g, info["elements"], req.tank_volume_l)
     strength = neutralization_strength_meq_l(contrib, kind)
+    if params:
+        # قدرت خنثی‌سازی دقیق از روی غلظت، جرم مولی و تعداد H⁺/OH⁻ (meq/L)
+        strength_ph = pure_mass_g / params["molar_mass"] * params["equivalents"] * 1000.0 / req.tank_volume_l
+        if strength_ph > 0 and abs(strength - strength_ph) / strength_ph > 0.25:
+            warnings.append("قدرت خنثی‌سازی محاسبه‌شده از غلظت و جرم مولی با درصد عناصر ثبت‌شده هم‌خوان نیست؛ اطلاعات این ماده را در پایگاه‌داده کود بررسی کنید.")
+        strength = round(strength_ph, 3)
     ec_delta = ec_delta_ds_m(contrib)
 
     ctx = _report_context(db, req.report_id, user)
@@ -246,7 +266,8 @@ def _compute(db: Session, user: User, req: AdjustmentRequest) -> Tuple[Adjustmen
         "kind": kind,
         "acid_type": fert.acid_type,
         "form": fert.form,
-        "purity_pct": info["purity"],
+        "purity_pct": (info["params"]["purity_pct"] if info.get("params") else info["purity"]),
+        "ph_params": info.get("params"),
         "density_g_ml": density if unit == "ml" else None,
         "density_is_reference": density_is_reference,
         "elements_pct": info["elements"],
@@ -286,7 +307,7 @@ def list_adjusters(db: Session = Depends(get_db), current_user: User = Depends(g
                 concentration=info["purity"], dose_unit=info["unit"], elements_pct=info["elements"],
                 elements_source=info["elements_source"], density_g_ml=info["density"],
                 density_is_reference=info["unit"] == "ml" and info["density"] is not None and not info["density_from_db"],
-                density_extrapolated=info["density_extrapolated"], recognized=info["spec"] is not None,
+                density_extrapolated=info["density_extrapolated"], recognized=info["params"] is not None,
                 warnings=info["warnings"],
             )
         )

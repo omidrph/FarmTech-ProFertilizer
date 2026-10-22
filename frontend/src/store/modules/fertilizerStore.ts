@@ -62,6 +62,7 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
             acidType: item.acid_type ?? item.acidType ?? undefined,
             formula: item.formula ?? '',
             labelValues: item.label_values ?? item.labelValues ?? {},
+            phParams: item.ph_params ?? item.phParams ?? undefined,
             
             // توضیحات
             description: item.description ?? '',
@@ -118,6 +119,9 @@ export const useFertilizerStore = defineStore('fertilizer', () => {
         }
         if ('formula' in fertilizerData) {
             result.formula = (fertilizerData as any).formula || null;
+        }
+        if ('phParams' in fertilizerData) {
+            result.ph_params = (fertilizerData as any).phParams || null;
         }
         if ('labelValues' in fertilizerData) {
             result.label_values = (fertilizerData as any).labelValues || {};

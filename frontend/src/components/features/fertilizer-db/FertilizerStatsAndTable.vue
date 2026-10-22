@@ -96,13 +96,16 @@
               <thead>
                 <tr class="bg-gray-50 dark:bg-gray-700/50">
                   <th class="sticky right-0 z-10 bg-gray-50 dark:bg-gray-700/50 px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[200px]">
-                    نام / فرمول / برند
+                    نام / برند
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px]">
                     فرم
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[80px]">
                     خلوص
+                  </th>
+                  <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[120px]">
+                    فرمول
                   </th>
                   <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[120px]">
                     قیمت
@@ -139,7 +142,6 @@
                         <p class="font-medium text-gray-900 dark:text-white truncate">
                           {{ fertilizer.name }}
                         </p>
-<p v-if="fertilizer.formula" dir="ltr" class="text-xs text-gray-500 dark:text-gray-400 text-right">{{ fertilizer.formula }}</p>
 
                         <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                           <span
@@ -186,6 +188,12 @@
                     <span class="font-semibold text-gray-900 dark:text-white tabular-nums">
                       {{ fertilizer.concentration || 100 }}%
                     </span>
+                  </td>
+
+                  <!-- فرمول -->
+                  <td class="px-4 py-3 text-center">
+                    <span v-if="fertilizer.formula" dir="ltr" class="inline-block text-sm text-gray-700 dark:text-gray-300">{{ fertilizer.formula }}</span>
+                    <span v-else class="text-gray-300 dark:text-gray-600">-</span>
                   </td>
 
                   <!-- قیمت -->
@@ -285,7 +293,6 @@
                 <p class="font-semibold text-gray-900 dark:text-white truncate">
                   {{ fertilizer.name }}
                 </p>
-<p v-if="fertilizer.formula" dir="ltr" class="text-xs text-gray-500 dark:text-gray-400 text-right">{{ fertilizer.formula }}</p>
 
                 <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                   <span
@@ -346,12 +353,17 @@
           </div>
 
           <!-- جزئیات کارت موبایل -->
-          <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-2 gap-2 text-center">
+          <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 grid grid-cols-3 gap-2 text-center">
             <div>
               <p class="text-[10px] text-gray-400 dark:text-gray-500">خلوص</p>
               <p class="text-sm font-semibold text-gray-900 dark:text-white">
                 {{ fertilizer.concentration || 100 }}%
               </p>
+            </div>
+
+            <div>
+              <p class="text-[10px] text-gray-400 dark:text-gray-500">فرمول</p>
+              <p dir="ltr" class="text-sm text-gray-700 dark:text-gray-300">{{ fertilizer.formula || '-' }}</p>
             </div>
 
             <div>

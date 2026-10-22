@@ -231,6 +231,8 @@ class Fertilizer(Base):
     # 🆕 باز تنظیم‌کنندهٔ pH (KOH، K2CO3، ...) - همراه با is_acid در تب PH نمایش داده می‌شود
     is_base = Column(Boolean, default=False, server_default=text("false"), nullable=False)
     acid_type = Column(String(10), nullable=True)
+    # مشخصات اسید/باز برای محاسبهٔ pH: {purity_pct, molar_mass, equivalents}
+    ph_params = Column(JSON, nullable=True)
     # فرمول شیمیایی کود (مثلاً KNO₃) - جدا از نام تجاری
     formula = Column(String(150), nullable=True)
     # مقادیر به‌صورت «روی برچسب» (مثلاً {"K2O": 50, "N-NO3": 13}) فقط برای نمایش/ویرایش؛ محاسبات از elements (عنصری) استفاده می‌کنند

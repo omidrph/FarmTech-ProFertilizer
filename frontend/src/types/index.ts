@@ -83,7 +83,8 @@ export interface Fertilizer {
     isBase: boolean;                // 🆕 باز تنظیم‌کنندهٔ pH (KOH, K2CO3, ...)
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
     formula?: string;               // فرمول شیمیایی کود (جدا از نام)
-    labelValues?: Record<string, number>; // مقادیر روی برچسب (کلید «عنصر|فرم») برای نمایش
+    labelValues?: Record<string, number>;
+    phParams?: { purity_pct: number; molar_mass: number; equivalents: number } | null; // مقادیر روی برچسب (کلید «عنصر|فرم») برای نمایش
 
     // 🆕 کود مایع
     densityGMl?: number;            // چگالی g/mL (برای تبدیل جرم ↔ حجم)
@@ -114,6 +115,7 @@ export interface FertilizerCreate {
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
     formula?: string;
     labelValues?: Record<string, number>;
+    phParams?: { purity_pct: number; molar_mass: number; equivalents: number } | null;
     densityGMl?: number;
     priceUnit?: 'kg' | 'l';
     description?: string;
@@ -132,6 +134,7 @@ export interface FertilizerUpdate {
     acidType?: 'H3PO4' | 'HNO3' | 'H2SO4' | string;
     formula?: string;
     labelValues?: Record<string, number>;
+    phParams?: { purity_pct: number; molar_mass: number; equivalents: number } | null;
     densityGMl?: number;
     priceUnit?: 'kg' | 'l';
     description?: string;

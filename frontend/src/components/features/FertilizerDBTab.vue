@@ -154,6 +154,9 @@ const initialFormData = {
   label_values: {} as Record<string, number>,
   is_acid: false,
   is_base: false,
+  ph_purity: null as number | null,
+  ph_mw: null as number | null,
+  ph_eq: null as number | null,
   description: '',
   is_system_default: false,
   source_system_id: null as number | null,
@@ -227,6 +230,9 @@ const editFertilizer = (fertilizer: any) => {
     label_values: { ...(fertilizer.labelValues || fertilizer.label_values || {}) },
     is_acid: fertilizer.isAcid || fertilizer.is_acid || false,
     is_base: fertilizer.isBase || fertilizer.is_base || false,
+    ph_purity: (fertilizer.phParams || fertilizer.ph_params || {}).purity_pct ?? null,
+    ph_mw: (fertilizer.phParams || fertilizer.ph_params || {}).molar_mass ?? null,
+    ph_eq: (fertilizer.phParams || fertilizer.ph_params || {}).equivalents ?? null,
     description: fertilizer.description || '',
     is_system_default: fertilizer.isSystemDefault || fertilizer.is_system_default || false,
     source_system_id: fertilizer.sourceSystemId || fertilizer.source_system_id || null,
@@ -261,6 +267,11 @@ const saveFertilizer = async () => {
     showToast('برای اسید/باز مایع، چگالی را وارد کنید', 'error');
     return;
   }
+  const isAdjuster = formData.is_acid || formData.is_base;
+  if (isAdjuster && !(Number(formData.ph_purity) > 0 && Number(formData.ph_purity) <= 100 && Number(formData.ph_mw) > 0 && Number(formData.ph_eq) > 0)) {
+    showToast(`برای ${formData.is_acid ? 'اسید' : 'باز'}، غلظت، جرم مولی و ${formData.is_acid ? 'تعداد H⁺' : 'تعداد OH⁻'} را وارد کنید`, 'error');
+    return;
+  }
   if (formData.is_acid && formData.is_base) {
     showToast('یک ماده همزمان اسید و باز نیست؛ فقط یکی را انتخاب کنید', 'error');
     return;
@@ -291,6 +302,7 @@ const saveFertilizer = async () => {
       pricePerKg: pricePerKg || 0,
       formula: formData.formula || undefined,
       labelValues: formData.label_values || {},
+      phParams: isAdjuster ? { purity_pct: Number(formData.ph_purity), molar_mass: Number(formData.ph_mw), equivalents: Number(formData.ph_eq) } : null,
       elements: cleanElements,
       isAcid: formData.is_acid,
       isBase: formData.is_base,
