@@ -202,7 +202,7 @@ def _compute(db: Session, user: User, req: AdjustmentRequest) -> Tuple[Adjustmen
     if unit == "ml" and not density:
         raise HTTPException(
             status_code=400,
-            detail=f"چگالی «{fert.name}» ناشناخته است؛ چگالی دقیق (g/mL) را از برگهٔ مشخصات محصول وارد کنید.",
+            detail=f"چگالی «{fert.name}» در پایگاه داده کود ثبت نشده؛ آن را در ویرایش همین کود وارد کنید.",
         )
 
     warnings: List[str] = list(info["warnings"])

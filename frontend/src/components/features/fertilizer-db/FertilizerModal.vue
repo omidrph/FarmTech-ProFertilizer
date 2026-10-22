@@ -44,6 +44,11 @@
             </select>
           </div>
         </div>
+        <div>
+          <label :class="labelCls">درصد خلوص (٪)</label>
+          <input type="number" v-model.number="formData.concentration" min="0.1" max="100" step="0.1" dir="ltr" :class="[inputCls, 'text-left']" />
+          <p class="text-[11px] text-gray-400 mt-1">درصد عناصر در خلوص ضرب می‌شود.</p>
+        </div>
         <div v-if="formData.form === 'liquid'" class="rounded-xl bg-sky-50/70 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800/40 p-3">
           <label :class="labelCls">چگالی (g/mL)</label>
           <input type="number" v-model.number="formData.density_g_ml" min="0" max="5" step="0.001" dir="ltr" :class="[inputCls, 'text-left']" />
@@ -161,17 +166,13 @@
         </div>
         <Transition name="pop">
           <div v-if="kind !== 'none'" class="rounded-xl p-3 space-y-3 border" :class="kind === 'acid' ? 'bg-amber-50/60 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/40' : 'bg-sky-50/60 dark:bg-sky-900/10 border-sky-100 dark:border-sky-800/40'">
-            <p class="text-[11px] leading-5 text-gray-600 dark:text-gray-400">این سه مقدار برای محاسبهٔ دقیق قدرت خنثی‌سازی لازم است و از برگهٔ مشخصات ماده یا فرمول آن به‌دست می‌آید.</p>
+            <p class="text-[11px] leading-5 text-gray-600 dark:text-gray-400">این دو مقدار (به‌همراه درصد خلوص) برای محاسبهٔ دقیق قدرت خنثی‌سازی لازم است و از برگهٔ مشخصات ماده یا فرمول آن به‌دست می‌آید.</p>
             <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label :class="labelCls">غلظت (٪ وزنی)</label>
-                <input type="number" v-model.number="formData.ph_purity" min="0" max="100" step="0.1" dir="ltr" :class="[inputCls, 'text-left']" />
-              </div>
               <div>
                 <label :class="labelCls">جرم مولی (g/mol)</label>
                 <input type="number" v-model.number="formData.ph_mw" min="0" step="0.01" dir="ltr" :class="[inputCls, 'text-left']" />
               </div>
-              <div class="col-span-2">
+              <div>
                 <label :class="labelCls">{{ kind === 'acid' ? 'تعداد H⁺ مؤثر در هر مولکول' : 'تعداد OH⁻ مؤثر در هر مولکول' }}</label>
                 <input type="number" v-model.number="formData.ph_eq" min="0" step="0.1" dir="ltr" :class="[inputCls, 'text-left']" />
                 <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{{ kind === 'acid' ? 'پروتونی که در pH کشت (۵ تا ۷) آزاد می‌شود؛ مثلاً اسید فسفریک حدود ۱ است.' : 'یون هیدروکسید (یا معادل آن) که هر مولکول در pH کشت تأمین می‌کند.' }}</p>
@@ -314,13 +315,12 @@ watch(() => props.isOpen, (open) => {
   showMore.value = !!(props.formData.category || props.formData.description);
   resetEntries();
   const lv = props.formData.label_values || {};
-  const purity = Number(props.formData.concentration) || 100;
   for (const d of ELEMENT_DEFS) {
     const hit = Object.keys(lv).find((k) => k.startsWith(d.key + '|'));
     if (hit) {
       entries[d.key] = { form: hit.split('|')[1], value: Number(lv[hit]) };
     } else if (Number(props.formData.elements?.[d.key]) > 0) {
-      const v = Number(props.formData.elements[d.key]) * purity / 100;
+      const v = Number(props.formData.elements[d.key]);
       entries[d.key] = { form: pureFormKey(d), value: Math.round(v * 10000) / 10000 };
     }
   }
@@ -366,7 +366,9 @@ const handleSave = () => {
   }
   props.formData.elements = elements;
   props.formData.label_values = labels;
-  props.formData.concentration = 100;
+  const purity = Number(props.formData.concentration);
+  if (!(purity > 0 && purity <= 100)) props.formData.concentration = 100;
+  if (kind.value !== 'none') props.formData.ph_purity = props.formData.concentration;
   props.formData.formula = prettyFormula(props.formData.formula || '');
   emit('save');
 };

@@ -42,11 +42,11 @@
               {{ fmtDose(item.dose_tank, item.dose_unit) }} برای {{ fmt(item.tank_volume_l, 0) }} لیتر
               ({{ fmtDose(item.dose_per_1000l, item.dose_unit) }} در هر ۱۰۰۰ لیتر)
               <template v-if="item.initial_ph != null && item.final_ph != null">
-                · pH {{ fmt(item.initial_ph, 2) }} ← {{ fmt(item.final_ph, 2) }}
+                · <span class="inline-flex items-center gap-1 align-middle tabular-nums"><span>pH</span><span>{{ fmt(item.initial_ph, 2) }}</span><svg class="w-3 h-3 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg><span>{{ fmt(item.final_ph, 2) }}</span></span>
               </template>
             </p>
             <p v-if="item.ec_before != null && item.ec_after != null" class="text-xs text-gray-500 dark:text-gray-400">
-              EC اندازه‌گیری‌شده: {{ fmt(item.ec_before, 2) }} ← {{ fmt(item.ec_after, 2) }}
+              EC اندازه‌گیری‌شده: <span class="inline-flex items-center gap-1 align-middle tabular-nums"><span>{{ fmt(item.ec_before, 2) }}</span><svg class="w-3 h-3 text-primary-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg><span>{{ fmt(item.ec_after, 2) }}</span></span>
               (Δ {{ fmt(item.ec_after - item.ec_before, 2) }})
             </p>
             <p v-if="item.note && editId !== item.id" class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ item.note }}</p>

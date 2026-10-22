@@ -111,11 +111,11 @@
               </div>
               <div>
                 <label class="field-label">pH فعلی محلول</label>
-                <input v-model="form.initialPh" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched1 && !phOk(form.initialPh) }" placeholder="مثلاً ۷٫۸" />
+                <input v-model="form.initialPh" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched1 && !phOk(form.initialPh) }" />
               </div>
               <div>
                 <label class="field-label">pH هدف <span v-if="phRangeText" class="font-normal text-gray-400">(معمول {{ phRangeText }})</span></label>
-                <input v-model="form.targetPh" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched1 && !phOk(form.targetPh) }" placeholder="مثلاً ۶٫۰" />
+                <input v-model="form.targetPh" inputmode="decimal" class="field-input" :class="{ 'field-invalid': touched1 && !phOk(form.targetPh) }" />
               </div>
             </div>
             <p v-if="scale" class="text-xs text-gray-500 dark:text-gray-400">نمونهٔ بزرگ‌تر دقت بیشتری می‌دهد. ضریب مقیاس‌دهی به مخزن: <strong class="text-gray-800 dark:text-gray-100 tabular-nums">×{{ fmt(scale, scale < 10 ? 1 : 0) }}</strong></p>
@@ -154,11 +154,6 @@
                 <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg></summary>
               <div class="px-2 pb-2"><PhCurveChart :points="livePoints" :target-ph="num(form.targetPh) as number" :unit-label="unitShort" /></div>
             </details>
-
-            <details v-if="selected && selected.dose_unit === 'ml'" class="rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2.5">
-              <summary class="cursor-pointer select-none text-xs font-medium text-gray-600 dark:text-gray-300">چگالی دقیق ماده (اختیاری)</summary>
-              <input v-model="form.density" inputmode="decimal" class="field-input mt-2" :placeholder="selected.density_g_ml ? `ثبت‌شده: ${fmt(selected.density_g_ml, 3)} g/mL` : 'از برگهٔ مشخصات (SDS)'" />
-            </details>
             <p v-if="phStore.errorMessage && currentStep === 2" class="text-xs text-rose-600 dark:text-rose-400">{{ phStore.errorMessage }}</p>
           </section>
 
@@ -178,7 +173,13 @@
                   <input v-model="saveForm.ecBefore" inputmode="decimal" class="field-input" placeholder="EC قبل (dS/m)" />
                   <input v-model="saveForm.ecAfter" inputmode="decimal" class="field-input" placeholder="EC بعد (dS/m)" />
                 </div>
-                <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-5">با «ثبت و اعمال» (دکمهٔ بالا) نتیجه ثبت و مستقیماً در محاسبه کود اعمال می‌شود: سهم کودهای دیگر کم می‌شود و تعادل یونی و EC دوباره محاسبه می‌گردد. در هر گزارش یک اصلاح فعال است.</p>
+                <details class="group">
+                  <summary class="flex items-center gap-1 cursor-pointer select-none text-xs text-gray-500 dark:text-gray-400 list-none">
+                    «ثبت و اعمال» چه می‌کند؟
+                    <svg class="w-3.5 h-3.5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                  </summary>
+                  <p class="mt-2 text-[11px] leading-5 text-gray-500 dark:text-gray-400">نتیجه ثبت و مستقیماً در محاسبهٔ کود اعمال می‌شود: سهم کودهای دیگر کم می‌شود و تعادل یونی و EC دوباره حساب می‌گردد. در هر گزارش یک اصلاح فعال است.</p>
+                </details>
                 <p v-if="!reportStore.hasActiveReport" class="text-[11px] text-amber-700 dark:text-amber-300">برای ثبت، ابتدا یک گزارش باز یا ذخیره کنید.</p>
                 <p v-if="saveError" class="text-xs text-rose-600 dark:text-rose-400">{{ saveError }}</p>
               </section>
@@ -240,7 +241,7 @@ const showReset = ref(false);
 
 let rowSeq = 0;
 const newStep = () => ({ id: ++rowSeq, amount: '', ph: '' });
-const defaultForm = () => ({ fertilizerId: null as number | null, tankVolume: '', sampleVolume: '5', initialPh: '', targetPh: '', steps: [newStep(), newStep()], density: '' });
+const defaultForm = () => ({ fertilizerId: null as number | null, tankVolume: '', sampleVolume: '5', initialPh: '', targetPh: '', steps: [newStep(), newStep()] });
 const form = reactive(defaultForm());
 const saveForm = reactive({ note: '', ecBefore: '', ecAfter: '' });
 const stale = ref(false);
@@ -324,7 +325,7 @@ const next1 = () => {
   if (step1Done.value) goToStep(2);
 };
 
-function selectAdjuster(id: number) { form.fertilizerId = id; form.density = ''; phStore.errorMessage = null; }
+function selectAdjuster(id: number) { form.fertilizerId = id; phStore.errorMessage = null; }
 function addStep() { if (form.steps.length < MAX_STEPS) form.steps.push(newStep()); }
 function removeStep(id: number) { if (form.steps.length > 1) form.steps.splice(form.steps.findIndex((r) => r.id === id), 1); }
 
@@ -333,7 +334,7 @@ function buildPayload(): PhAdjustmentRequest | null {
   if (!form.fertilizerId || !tank || !sample || initial == null || target == null) { phStore.errorMessage = 'اطلاعات مرحلهٔ ۱ را کامل کنید.'; return null; }
   const filled = form.steps.filter((r) => r.amount.trim() !== '' || r.ph.trim() !== '');
   if (filled.length === 0 || filled.some((r) => rowInvalid(r))) { touched3.value = true; phStore.errorMessage = 'هر مرحله باید هم مقدار (بزرگ‌تر از صفر) و هم pH معتبر داشته باشد.'; return null; }
-  return { mode: 'trial', fertilizer_id: form.fertilizerId, tank_volume_l: tank, initial_ph: initial, target_ph: target, density_g_ml: num(form.density), sample_volume_l: sample,
+  return { mode: 'trial', fertilizer_id: form.fertilizerId, tank_volume_l: tank, initial_ph: initial, target_ph: target, sample_volume_l: sample,
     steps: filled.map((r) => ({ amount: parseNum(r.amount) as number, ph: parseNum(r.ph) as number })) };
 }
 
@@ -381,7 +382,7 @@ function resetAll() {
   const keepTank = form.tankVolume;
   Object.assign(form, defaultForm());
   form.tankVolume = keepTank;
-  form.targetPh = phStore.context ? String(phStore.context.suggested_target_ph) : '';
+  form.targetPh = '';
   saveForm.note = saveForm.ecBefore = saveForm.ecAfter = '';
   touched1.value = touched3.value = false; stale.value = false; saveError.value = '';
   phStore.clearResult();
@@ -394,7 +395,6 @@ function prefillFromContext() {
   const ctx = phStore.context;
   if (!ctx) return;
   if (!form.tankVolume && ctx.tank_volume_l) form.tankVolume = String(ctx.tank_volume_l);
-  if (!form.targetPh) form.targetPh = String(ctx.suggested_target_ph);
 }
 onMounted(async () => { phStore.clearResult(); await phStore.refreshAll(); prefillFromContext(); });
 watch(() => reportStore.currentReportId, async () => { phStore.reset(); form.tankVolume = ''; form.targetPh = ''; currentStep.value = 1; await phStore.refreshAll(); prefillFromContext(); });
