@@ -93,7 +93,7 @@
           :fixed-amounts="fixedAmounts"
           :tank-volume="mainTankVolume"
           :targets="targetStore.targetElements"
-          :water="waterStore.waterValues"
+          :water="waterStore.calcWaterValues"
           @update:amounts="manualAmounts = $event"
         />
 

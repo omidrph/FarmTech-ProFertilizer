@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { WaterMixData } from '@/types';
 
-const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
+const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
 export const EC_STANDARDS = {
   MIN_VALID_EC: 0.1,
@@ -19,7 +19,6 @@ export const EC_STANDARDS = {
 export const PH_STANDARDS = {
   MIN_VALID_PH: 0,
   MAX_VALID_PH: 14,
-  DEFAULT_PH: 7,
   RANGES: [
     { min: 0, max: 5.5, level: 'acidic', label: 'اسیدی', color: 'warning', description: 'نیاز به تنظیم pH' },
     { min: 5.5, max: 6.5, level: 'slightly_acidic', label: 'کمی اسیدی', color: 'success', description: 'مناسب برای اکثر گیاهان' },
@@ -67,9 +66,20 @@ export const useWaterStore = defineStore('water', () => {
   });
 
   const ecUnit = ref<'dS/m' | 'mS/cm' | 'μS/cm'>('dS/m');
-  const waterPH = ref<number | null>(PH_STANDARDS.DEFAULT_PH);
   const wastewaterValues = ref<Record<string, number>>({});
   const waterValues = ref<Record<string, number>>({});
+
+  // pH آب اختیاری است و در water_values['pH'] نگه داشته می‌شود (پیش‌فرض خالی)
+  const waterPH = computed<number | null>({
+    get: () => {
+      const v = waterValues.value['pH'];
+      return typeof v === 'number' && v > 0 ? v : null;
+    },
+    set: (v) => {
+      if (v === null || !Number.isFinite(v)) delete waterValues.value['pH'];
+      else waterValues.value['pH'] = v;
+    }
+  });
 
   // ===== Getters =====
   const finalValues = computed(() => {
@@ -84,6 +94,20 @@ export const useWaterStore = defineStore('water', () => {
     }
 
     return result;
+  });
+
+  // مقادیر آب برای محاسبه: ترکیب آب و پساب + قلیائیت + pH (در صورت وجود)
+  const calcWaterValues = computed(() => {
+    const out: Record<string, number> = {};
+    const waterPct = waterMixData.value.waterPercentage / 100;
+    const wastePct = waterMixData.value.wastewaterPercentage / 100;
+    for (const key of [...WATER_ELEMENTS, 'Alkalinity']) {
+      const v = (waterValues.value[key] || 0) * waterPct + (wastewaterValues.value[key] || 0) * wastePct;
+      if (v > 0) out[key] = v;
+    }
+    const ph = waterValues.value['pH'];
+    if (typeof ph === 'number' && ph > 0) out['pH'] = ph;
+    return out;
   });
 
   const analysisRows = computed(() => {
@@ -143,6 +167,14 @@ export const useWaterStore = defineStore('water', () => {
     waterPH.value = ph;
   }
 
+  function removeWaterValue(element: string) {
+    delete waterValues.value[element];
+  }
+
+  function removeWastewaterValue(element: string) {
+    delete wastewaterValues.value[element];
+  }
+
   function setWastewaterValue(element: string, value: number) {
     wastewaterValues.value[element] = value;
   }
@@ -160,7 +192,6 @@ export const useWaterStore = defineStore('water', () => {
       waterSalinity: EC_STANDARDS.DEFAULT_EC
     };
     ecUnit.value = 'dS/m';
-    waterPH.value = PH_STANDARDS.DEFAULT_PH;
   }
 
   function getElementFinalValue(element: string): number {
@@ -203,6 +234,7 @@ export const useWaterStore = defineStore('water', () => {
     wastewaterValues,
     waterValues,
     finalValues,
+    calcWaterValues,
     analysisRows,
     tds,
     phStatus,
@@ -212,6 +244,8 @@ export const useWaterStore = defineStore('water', () => {
     setWaterPH,
     setWastewaterValue,
     setWaterValue,
+    removeWaterValue,
+    removeWastewaterValue,
     resetWaterData,
     getElementFinalValue,
     loadFromAPI

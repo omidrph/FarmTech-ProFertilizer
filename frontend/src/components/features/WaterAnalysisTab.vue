@@ -1,24 +1,7 @@
 <template>
   <div class="space-y-6">
-    <!-- ============================================================ -->
-    <!-- هدر با توضیحات و وضعیت ذخیره‌سازی -->
-    <!-- ============================================================ -->
-    <div
-      class="bg-primary-50 dark:bg-primary-900/20 border-r-4 border-primary-500 rounded-lg p-4 flex justify-between items-start"
-    >
-      <div>
-        <p class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-          مقادیر آب و پساب را در جدول زیر وارد کنید. نرم‌افزار به صورت خودکار
-          مقادیر تامینی را محاسبه می‌کند.
-          <br />
-          <span
-            class="text-xs text-primary-600 dark:text-primary-400 font-medium mt-1 inline-block"
-          >
-            تغییرات شما به صورت خودکار و لحظه‌ای ذخیره می‌شوند.
-          </span>
-        </p>
-      </div>
-
+    <!-- وضعیت ذخیره‌سازی -->
+    <div class="flex justify-end min-h-[1.5rem]">
       <!-- نشانگر وضعیت ذخیره‌سازی -->
       <div
         v-if="isSaving || saveStatus === 'success'"
@@ -195,9 +178,10 @@
             v-model="currentUnit"
             class="px-1.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 transition-all"
           >
-            <option value="ppm">PPM</option>
-            <option value="meq">MEQ/L</option>
-            <option value="mmol">MMOL/L</option>
+            <option value="ppm">mg/L</option>
+            <option value="meq">meq/L</option>
+            <option value="mmol">mmol/L</option>
+            <option value="umol">µmol/L</option>
           </select>
         </div>
       </div>
@@ -232,143 +216,81 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- جدول آنالیز آب و پساب -->
+    <!-- پارامترهای آب (EC و pH) -->
     <!-- ============================================================ -->
-    <div
-      class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
-    >
-      <div class="overflow-x-auto custom-scrollbar">
-        <table class="w-full text-sm border-collapse min-w-[800px]">
-          <thead>
-            <tr>
-              <th
-                class="sticky right-0 z-10 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 border-b border-gray-200 dark:border-gray-600 min-w-[100px] shadow-sm"
-              >
-                عنصر
-              </th>
-
-              <th
-                v-for="el in waterElements"
-                :key="el"
-                class="px-3 py-3 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[90px]"
-              >
-                <div class="flex flex-col items-center gap-1">
-                  <span>{{ el }}</span>
-
-                  <!-- واحد EC فقط برای ستون EC -->
-                  <select
-                    v-if="el === 'EC'"
-                    v-model="ecUnit"
-                    class="text-[10px] bg-transparent border-none focus:ring-0 cursor-pointer text-primary-600 dark:text-primary-400 font-bold p-0 h-auto"
-                  >
-                    <option value="dS/m">dS/m</option>
-                    <option value="mS/cm">mS/cm</option>
-                    <option value="μS/cm">μS/cm</option>
-                  </select>
-                </div>
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <!-- ردیف پساب -->
-            <tr
-              v-if="showWastewaterRow"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group"
-            >
-              <td
-                class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm"
-              >
-                <div class="flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-orange-400"></span>
-                  پساب
-                </div>
-              </td>
-
-              <td
-                v-for="el in waterElements"
-                :key="'waste-' + el"
-                class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center relative"
-              >
-                <input
-                  type="number"
-                  :value="getDisplayValue('waste', el)"
-                  @input="updateWastewaterValue(el, $event)"
-                  step="0.0001"
-                  min="0"
-                  class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300"
-                  placeholder="۰"
-                />
-              </td>
-            </tr>
-
-            <!-- ردیف آب تازه -->
-            <tr
-              v-if="showFreshWaterRow"
-              class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group"
-            >
-              <td
-                class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm"
-              >
-                <div class="flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                  آب تازه
-                </div>
-              </td>
-
-              <td
-                v-for="el in waterElements"
-                :key="'water-' + el"
-                class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center relative"
-              >
-                <input
-                  type="number"
-                  :value="getDisplayValue('water', el)"
-                  @input="updateWaterValue(el, $event)"
-                  step="0.0001"
-                  min="0"
-                  class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300"
-                  placeholder="۰"
-                />
-              </td>
-            </tr>
-
-            <!-- ردیف مقادیر تامینی -->
-            <tr
-              class="bg-primary-50 dark:bg-primary-900/10 border-t-2 border-primary-100 dark:border-primary-900/30"
-            >
-              <td
-                class="sticky right-0 z-10 bg-primary-50 dark:bg-primary-900/20 px-4 py-3 text-right font-bold text-primary-700 dark:text-primary-400 border-l border-primary-100 dark:border-primary-900/30 shadow-sm"
-              >
-                <div class="flex items-center gap-2">
-                  <svg
-                    class="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  مقادیر تامینی
-                </div>
-              </td>
-
-              <td
-                v-for="el in waterElements"
-                :key="'final-' + el"
-                class="px-3 py-3 border-l border-primary-100 dark:border-primary-900/30 text-center font-bold text-primary-700 dark:text-primary-400 tabular-nums"
-              >
-                {{ getFinalDisplayValue(el) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">EC آب</label>
+          <div class="flex gap-2">
+            <input type="text" inputmode="decimal" dir="ltr" :value="ecText" @change="onEcChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-0 text-left tabular-nums" />
+            <select v-model="ecUnit" @change="triggerAutoSave" class="px-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+              <option value="dS/m">dS/m</option>
+              <option value="mS/cm">mS/cm</option>
+              <option value="μS/cm">μS/cm</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">pH آب <span class="font-normal text-gray-400">اختیاری</span></label>
+          <input type="text" inputmode="decimal" dir="ltr" :value="phText" @change="onPhChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent text-left tabular-nums" />
+        </div>
       </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- جدول آنالیز عناصر -->
+    <!-- ============================================================ -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 pb-2">
+      <table class="w-full text-sm table-fixed">
+        <thead>
+          <tr class="bg-gray-50 dark:bg-gray-700/50 text-xs text-gray-600 dark:text-gray-300">
+            <th class="w-[40%] sm:w-[34%] px-3 py-2.5 text-right font-semibold rounded-tr-xl">عنصر</th>
+            <th v-if="showFreshWaterRow" class="px-2 py-2.5 text-center font-semibold">آب تازه</th>
+            <th v-if="showWastewaterRow" class="px-2 py-2.5 text-center font-semibold">پساب</th>
+            <th class="px-2 py-2.5 text-center font-semibold text-primary-700 dark:text-primary-400 rounded-tl-xl">تامینی</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-for="group in groups" :key="group.title">
+            <tr>
+              <td :colspan="colCount" class="px-3 pt-4 pb-1.5 text-[11px] font-semibold text-gray-400 dark:text-gray-500">{{ group.title }}</td>
+            </tr>
+            <tr v-for="row in group.rows" :key="row.key" class="border-t border-gray-100 dark:border-gray-700/60">
+              <td class="px-3 py-1.5 relative">
+                <button type="button" @click="openMenu = openMenu === row.key ? null : row.key" class="w-full flex items-center justify-between gap-1 text-right" :class="row.forms.length > 1 ? '' : 'cursor-default'">
+                  <span class="flex items-center gap-1.5 min-w-0">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="row.type === 'cation' ? 'bg-blue-400' : 'bg-red-400'"></span>
+                    <span class="truncate text-sm text-gray-800 dark:text-gray-100">{{ row.name }}</span>
+                  </span>
+                  <span class="flex items-center gap-0.5 text-xs font-semibold text-primary-600 dark:text-primary-400" dir="ltr">
+                    {{ currentForm(row).label }}
+                    <svg v-if="row.forms.length > 1" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                  </span>
+                </button>
+                <template v-if="openMenu === row.key && row.forms.length > 1">
+                  <div class="fixed inset-0 z-20" @click="openMenu = null"></div>
+                  <div class="absolute z-30 right-2 top-full mt-1 w-60 max-w-[80vw] rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-1">
+                    <button v-for="fm in row.forms" :key="fm.key" type="button" @click="selectForm(row, fm.key)"
+                      class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                      :class="formChoice[row.key] === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
+                      <span>{{ fm.hint }}</span>
+                      <span class="font-semibold" dir="ltr">{{ fm.label }}</span>
+                    </button>
+                  </div>
+                </template>
+              </td>
+              <td v-if="showFreshWaterRow" class="px-1.5 py-1.5">
+                <input type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('water', row)" @change="onCellChange('water', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full h-9 px-2 text-center text-sm tabular-nums border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
+              </td>
+              <td v-if="showWastewaterRow" class="px-1.5 py-1.5">
+                <input type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('waste', row)" @change="onCellChange('waste', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full h-9 px-2 text-center text-sm tabular-nums border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
+              </td>
+              <td class="px-2 py-1.5 text-center font-bold tabular-nums text-primary-700 dark:text-primary-400">{{ suppliedText(row) }}</td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
     </div>
 
     <!-- ============================================================ -->
@@ -406,9 +328,7 @@
           افزودن قالب جدید
         </button>
       </div>
-      <p class="-mt-2 mb-3 text-[11px] leading-5 text-gray-500 dark:text-gray-400">
-        قالب فقط یک نسخهٔ آمادهٔ قابل استفادهٔ مجدد از مقادیر فعلی است و <strong>جدا از ذخیرهٔ گزارش</strong> عمل می‌کند؛ برای ذخیرهٔ داده‌های این صفحه از دکمهٔ «ذخیره گزارش» بالای صفحه استفاده کنید.
-      </p>
+      <p class="-mt-2 mb-3 text-[11px] leading-5 text-gray-500 dark:text-gray-400">قالب، نسخهٔ آمادهٔ مقادیر فعلی برای استفادهٔ مجدد است.</p>
       <Transition name="fade">
         <div v-if="templateStatus" class="mb-3 rounded-lg border px-3 py-2 text-xs"
           :class="templateStatus.type === 'success' ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-200' : 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 text-rose-800 dark:text-rose-200'">
@@ -509,7 +429,7 @@
                 >
                   {{
                     Object.keys(template.water_values).filter(
-                      (k) => template.water_values[k] > 0
+                      (k) => template.water_values[k] > 0 && !k.startsWith('lt:') && k !== 'pH'
                     ).length
                   }}
                   عنصر آب
@@ -524,7 +444,7 @@
                 >
                   {{
                     Object.keys(template.wastewater_values).filter(
-                      (k) => template.wastewater_values[k] > 0
+                      (k) => template.wastewater_values[k] > 0 && !k.startsWith('lt:')
                     ).length
                   }}
                   عنصر پساب
@@ -706,8 +626,9 @@
 
 <script setup lang="ts">
 import AppModal from '@/components/common/AppModal.vue';
-import { ref, computed, onMounted } from 'vue';
-import { useWaterStore } from '@/store/modules/waterStore';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useWaterStore, EC_STANDARDS, convertECUnit } from '@/store/modules/waterStore';
+import { WATER_GROUPS, toStored, fromStored, normalizeNumberText, fmtPlain, type WaterRow, type WaterForm, type WaterUnit } from '@/utils/waterForms';
 import { apiService } from '@/services/apiService';
 import { useReportStore } from '@/store/modules/reportStore';
 
@@ -717,23 +638,7 @@ const reportStore = useReportStore();
 
 // ===== State =====
 // pH و Alkalinity هر دو از جدول حذف شده‌اند.
-const waterElements = [
-  'N-NO3',
-  'P',
-  'S',
-  'N-NH4',
-  'K',
-  'Ca',
-  'Fe',
-  'Mn',
-  'Zn',
-  'B',
-  'Cu',
-  'Mo',
-  'EC'
-];
-
-const currentUnit = ref<'ppm' | 'meq' | 'mmol'>('ppm');
+const currentUnit = ref<WaterUnit>('ppm');
 
 // Auto-save State
 const isSaving = ref(false);
@@ -803,165 +708,95 @@ const showFreshWaterRow = computed(() => {
 });
 
 // ===== Helper Functions for Unit Conversion =====
-const ELEMENT_DATA: Record<
-  string,
-  { mw: number; valence: number }
-> = {
-  'N-NO3': { mw: 62.0049, valence: 1 },
-  P: { mw: 30.9738, valence: 1 },
-  S: { mw: 32.065, valence: 1 },
-  'N-NH4': { mw: 18.0385, valence: 1 },
-  K: { mw: 39.0983, valence: 1 },
-  Ca: { mw: 40.078, valence: 2 },
-  Fe: { mw: 55.845, valence: 2 },
-  Mn: { mw: 54.938, valence: 2 },
-  Zn: { mw: 65.38, valence: 2 },
-  B: { mw: 10.81, valence: 1 },
-  Cu: { mw: 63.546, valence: 2 },
-  Mo: { mw: 95.95, valence: 2 }
+// ---------- جدول: فرم و واحد ورود ----------
+const groups = WATER_GROUPS;
+const formChoice = reactive<Record<string, string>>({});
+for (const g of WATER_GROUPS) for (const r of g.rows) formChoice[r.key] = r.defaultForm;
+const openMenu = ref<string | null>(null);
+
+const currentForm = (row: WaterRow): WaterForm =>
+  row.forms.find((f) => f.key === formChoice[row.key]) || row.forms[0];
+const selectForm = (row: WaterRow, key: string) => {
+  formChoice[row.key] = key;
+  openMenu.value = null;
 };
 
-function convertToDisplay(
-  value: number,
-  element: string,
-  unit: string
-): number {
-  if (element === 'EC') return value;
-  if (!ELEMENT_DATA[element]) return value;
+type Col = 'water' | 'waste';
+const bag = (c: Col) =>
+  (c === 'water' ? waterStore.waterValues : waterStore.wastewaterValues) as Record<string, number>;
+const setIn = (c: Col, k: string, v: number) =>
+  c === 'water' ? waterStore.setWaterValue(k, v) : waterStore.setWastewaterValue(k, v);
+const delIn = (c: Col, k: string) =>
+  c === 'water' ? waterStore.removeWaterValue(k) : waterStore.removeWastewaterValue(k);
 
-  const { mw, valence } = ELEMENT_DATA[element];
+const colCount = computed(() => 2 + (showFreshWaterRow.value ? 1 : 0) + (showWastewaterRow.value ? 1 : 0));
 
-  if (unit === 'ppm') return value;
-  if (unit === 'meq') return (value * valence) / mw;
-  if (unit === 'mmol') return value / mw;
+/** متن سلول: مقدار در فرم/واحد انتخابی، یا «<x» برای زیر حد تشخیص */
+const cellText = (c: Col, row: WaterRow): string => {
+  const v = bag(c)[row.key] || 0;
+  if (v > 0) return fmtPlain(fromStored(currentForm(row), currentUnit.value, v));
+  const lt = bag(c)['lt:' + row.key] || 0;
+  return lt > 0 ? '<' + fmtPlain(fromStored(currentForm(row), currentUnit.value, lt)) : '';
+};
 
-  return value;
-}
+const suppliedText = (row: WaterRow): string => {
+  const wp = (waterPercentage.value || 0) / 100;
+  const ep = (wastewaterPercentage.value || 0) / 100;
+  const v = (waterStore.waterValues[row.key] || 0) * wp + (waterStore.wastewaterValues[row.key] || 0) * ep;
+  return v > 0 ? fmtPlain(fromStored(currentForm(row), currentUnit.value, v)) : '—';
+};
 
-function convertFromDisplay(
-  displayValue: number,
-  element: string,
-  unit: string
-): number {
-  if (element === 'EC') return displayValue;
-  if (!ELEMENT_DATA[element]) return displayValue;
+const onCellChange = (c: Col, row: WaterRow, e: Event) => {
+  const input = e.target as HTMLInputElement;
+  const raw = normalizeNumberText(input.value);
+  const below = raw.startsWith('<') || raw.startsWith('≤');
+  const n = parseFloat(below ? raw.slice(1) : raw);
 
-  const { mw, valence } = ELEMENT_DATA[element];
-
-  if (unit === 'ppm') return displayValue;
-  if (unit === 'meq') return (displayValue * mw) / valence;
-  if (unit === 'mmol') return displayValue * mw;
-
-  return displayValue;
-}
-
-// ===== Methods =====
-
-/**
- * دریافت مقدار نمایشی برای جدول
- */
-const getDisplayValue = (
-  type: 'water' | 'waste',
-  element: string
-): number => {
-  let rawValue = 0;
-
-  if (type === 'water') {
-    if (element === 'EC') {
-      rawValue = waterSalinity.value;
-    } else {
-      rawValue =
-        (waterStore.waterValues as Record<string, number>)[element] || 0;
-    }
+  if (raw === '') {
+    delIn(c, row.key);
+    delIn(c, 'lt:' + row.key);
+  } else if (!Number.isFinite(n) || n < 0) {
+    input.value = cellText(c, row);
+    return;
+  } else if (below) {
+    delIn(c, row.key);
+    if (n > 0) setIn(c, 'lt:' + row.key, toStored(currentForm(row), currentUnit.value, n));
+    else delIn(c, 'lt:' + row.key);
   } else {
-    rawValue =
-      (waterStore.wastewaterValues as Record<string, number>)[element] || 0;
+    delIn(c, 'lt:' + row.key);
+    if (n > 0) setIn(c, row.key, toStored(currentForm(row), currentUnit.value, n));
+    else delIn(c, row.key);
   }
-
-  return parseFloat(
-    convertToDisplay(
-      rawValue,
-      element,
-      currentUnit.value
-    ).toFixed(3)
-  );
-};
-
-/**
- * دریافت مقدار نهایی نمایشی
- */
-const getFinalDisplayValue = (element: string): string => {
-  if (element === 'EC') return '-';
-
-  const waterPct = (waterPercentage.value || 0) / 100;
-  const wastePct = (wastewaterPercentage.value || 0) / 100;
-
-  const waterVal =
-    (waterStore.waterValues as Record<string, number>)[element] || 0;
-
-  const wasteVal =
-    (waterStore.wastewaterValues as Record<string, number>)[element] || 0;
-
-  const finalPpm =
-    waterVal * waterPct + wasteVal * wastePct;
-
-  const converted = convertToDisplay(
-    finalPpm,
-    element,
-    currentUnit.value
-  );
-
-  return converted.toFixed(4);
-};
-
-/**
- * به‌روزرسانی مقدار آب
- */
-const updateWaterValue = (
-  element: string,
-  event: Event
-) => {
-  const target = event.target as HTMLInputElement;
-  const displayValue = parseFloat(target.value) || 0;
-
-  const realValue = convertFromDisplay(
-    displayValue,
-    element,
-    currentUnit.value
-  );
-
-  if (element === 'EC') {
-    waterStore.setWaterMix({
-      waterSalinity: realValue
-    });
-  } else {
-    waterStore.setWaterValue(element, realValue);
-  }
-
+  input.value = cellText(c, row);
   triggerAutoSave();
 };
 
-/**
- * به‌روزرسانی مقدار پساب
- */
-const updateWastewaterValue = (
-  element: string,
-  event: Event
-) => {
-  const target = event.target as HTMLInputElement;
-  const displayValue = parseFloat(target.value) || 0;
+// ---------- EC (همیشه عدد معتبر) و pH (اختیاری) ----------
+const ecText = computed(() => fmtPlain(waterSalinity.value));
+const onEcChange = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  const n = parseFloat(normalizeNumberText(input.value));
+  waterSalinity.value =
+    Number.isFinite(n) && n > 0 ? n : convertECUnit(EC_STANDARDS.DEFAULT_EC, 'dS/m', ecUnit.value);
+  input.value = fmtPlain(waterSalinity.value);
+  triggerAutoSave();
+};
 
-  const realValue = convertFromDisplay(
-    displayValue,
-    element,
-    currentUnit.value
-  );
-
-  waterStore.setWastewaterValue(
-    element,
-    realValue
-  );
-
+const phText = computed(() => (waterStore.waterPH == null ? '' : fmtPlain(waterStore.waterPH)));
+const onPhChange = (e: Event) => {
+  const input = e.target as HTMLInputElement;
+  const raw = normalizeNumberText(input.value);
+  if (raw === '') {
+    waterStore.setWaterPH(null);
+  } else {
+    const n = parseFloat(raw);
+    if (!Number.isFinite(n) || n <= 0 || n > 14) {
+      input.value = phText.value;
+      return;
+    }
+    waterStore.setWaterPH(n);
+  }
+  input.value = phText.value;
   triggerAutoSave();
 };
 

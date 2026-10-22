@@ -46,7 +46,7 @@ export function useCalculations() {
         try {
             // دریافت داده‌ها از storeها
             const targetValues = targetStore.targetElements;
-            const waterValues = waterStore.waterValues;
+            const waterValues = waterStore.calcWaterValues;
             
             // بررسی وجود عناصر هدف
             const hasTargets = Object.values(targetValues).some(v => v > 0);
@@ -126,7 +126,7 @@ export function useCalculations() {
                 if (v > 0) targetValuesRecord[k] = v;
             }
             const waterValuesRecord: Record<string, number> = {};
-            for (const [k, v] of Object.entries(waterStore.waterValues)) {
+            for (const [k, v] of Object.entries(waterStore.calcWaterValues)) {
                 if (v > 0) waterValuesRecord[k] = v;
             }
             if (!fertilizers.length || !Object.values(weightsGrams).some(w => w > 0)) {
