@@ -1,4 +1,3 @@
-
 # backend/app/routes/ph_calculator.py
 """
 مسیرهای تب «PH» - اصلاح pH با اسید/باز
@@ -125,8 +124,10 @@ def _describe_fertilizer(fert: Fertilizer) -> Dict[str, Any]:
         else:
             density, extrapolated = resolve_density_g_ml(fert.acid_type, purity)
 
-    if fert.acid_type in DISCOURAGED:
-        warnings.append(DISCOURAGED[fert.acid_type])
+    if kind == "acid" and elements.get("Cl", 0) > 0:
+        warnings.append(DISCOURAGED["HCl"])
+    if kind == "base" and elements.get("Na", 0) > 0:
+        warnings.append(DISCOURAGED["NaOH"])
 
     return {
         "kind": kind,
@@ -192,7 +193,7 @@ def _compute(db: Session, user: User, req: AdjustmentRequest) -> Tuple[Adjustmen
 
     info = _describe_fertilizer(fert)
     if info["elements_source"] == "missing":
-        raise HTTPException(status_code=400, detail=info["warnings"][-1])
+        raise HTTPException(status_code=400, detail="درصد عناصر این اسید/باز در پایگاه‌داده کود ثبت نشده؛ ابتدا آن را کامل کنید.")
 
     kind: str = info["kind"]
     unit: str = info["unit"]
@@ -304,7 +305,7 @@ def list_adjusters(db: Session = Depends(get_db), current_user: User = Depends(g
         options.append(
             AdjusterOption(
                 fertilizer_id=f.id, name=f.name, kind=info["kind"], acid_type=f.acid_type, form=f.form,
-                concentration=info["purity"], dose_unit=info["unit"], elements_pct=info["elements"],
+                concentration=(info["params"]["purity_pct"] if info.get("params") else info["purity"]), dose_unit=info["unit"], elements_pct=info["elements"],
                 elements_source=info["elements_source"], density_g_ml=info["density"],
                 density_is_reference=info["unit"] == "ml" and info["density"] is not None and not info["density_from_db"],
                 density_extrapolated=info["density_extrapolated"], recognized=info["params"] is not None,
@@ -440,6 +441,3 @@ def get_active(
         return None
     rec = crud.get_active_adjustment(db, current_user.id, report_id)
     return ActiveAdjustmentSummary(**summary_from_record(rec)) if rec else None
-
-
-

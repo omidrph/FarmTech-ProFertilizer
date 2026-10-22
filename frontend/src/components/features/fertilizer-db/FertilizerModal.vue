@@ -7,23 +7,6 @@
       </svg>
     </template>
 
-    <!-- ===== خلاصهٔ زندهٔ کود ===== -->
-    <div class="mb-4 rounded-2xl border border-primary-100 dark:border-primary-900/40 bg-gradient-to-l from-primary-50 via-white to-emerald-50 dark:from-primary-900/20 dark:via-gray-800 dark:to-emerald-900/10 p-3.5 flex items-center gap-3">
-      <span class="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-500 to-emerald-500 shadow-md shadow-primary-500/20 flex items-center justify-center flex-shrink-0">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" :d="S.elements.icon" /></svg>
-      </span>
-      <div class="min-w-0 flex-1">
-        <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ formData.name || 'کود جدید' }}</p>
-        <p v-if="formData.formula" dir="ltr" class="text-xs text-gray-500 dark:text-gray-400 text-right truncate">{{ formData.formula }}</p>
-        <div class="flex flex-wrap gap-1.5 mt-1.5">
-          <span v-if="formData.form" class="text-[10px] px-2 py-0.5 rounded-full bg-white/80 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">{{ formLabel }}</span>
-          <span v-if="kind === 'acid'" class="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">اسید</span>
-          <span v-if="kind === 'base'" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300">باز</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">{{ filledCount.toLocaleString('fa-IR') }} عنصر</span>
-        </div>
-      </div>
-    </div>
-
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 items-start">
       <!-- ===== مشخصات ===== -->
       <section :class="cardCls" class="lg:col-start-1">
@@ -78,7 +61,7 @@
               <h4 :class="titleCls">عناصر</h4>
               <button type="button" @click="clearEntries" class="text-xs text-gray-400 hover:text-danger-600 transition-colors">پاک کردن</button>
             </div>
-            <p :class="descCls">مقدار را همان‌طور که روی برچسب نوشته شده وارد کنید. برای تغییر فرم (مثلاً اکسید یا تک‌عنصر) روی نام عنصر بزنید؛ برنامه خودش به عنصر خالص تبدیل می‌کند.</p>
+            <p :class="descCls">مقدار را مطابق برچسب وارد کنید؛ برای تغییر فرم (مثلاً اکسید) روی نام عنصر بزنید.</p>
           </div>
         </header>
 
@@ -143,8 +126,7 @@
         <header class="flex items-start gap-2.5">
           <span :class="badgeCls(S.price)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="S.price.icon" /></svg></span>
           <div>
-            <h4 :class="titleCls">قیمت <span class="text-[11px] font-normal text-gray-400 mr-1">اختیاری</span></h4>
-            <p :class="descCls">فقط برای محاسبهٔ هزینهٔ فرمول و حالت کم‌هزینه استفاده می‌شود.</p>
+            <h4 :class="titleCls">قیمت</h4>
           </div>
         </header>
         <div class="flex items-center gap-2">
@@ -190,9 +172,9 @@
                 <input type="number" v-model.number="formData.ph_mw" min="0" step="0.01" dir="ltr" :class="[inputCls, 'text-left']" />
               </div>
               <div class="col-span-2">
-                <label :class="labelCls">{{ kind === 'acid' ? 'تعداد H⁺ در هر مولکول' : 'تعداد OH⁻ در هر مولکول' }}</label>
+                <label :class="labelCls">{{ kind === 'acid' ? 'تعداد H⁺ مؤثر در هر مولکول' : 'تعداد OH⁻ مؤثر در هر مولکول' }}</label>
                 <input type="number" v-model.number="formData.ph_eq" min="0" step="0.1" dir="ltr" :class="[inputCls, 'text-left']" />
-                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{{ kind === 'acid' ? 'تعداد پروتون‌هایی که هر مولکول اسید آزاد می‌کند.' : 'تعداد یون هیدروکسید (یا معادل آن) که هر مولکول باز تأمین می‌کند.' }}</p>
+                <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">{{ kind === 'acid' ? 'پروتونی که در pH کشت (۵ تا ۷) آزاد می‌شود؛ مثلاً اسید فسفریک حدود ۱ است.' : 'یون هیدروکسید (یا معادل آن) که هر مولکول در pH کشت تأمین می‌کند.' }}</p>
               </div>
             </div>
           </div>
@@ -229,7 +211,6 @@
 
     <template #footer>
       <div class="app-modal-actions">
-        <button type="button" @click="$emit('close')" class="app-modal-btn app-modal-btn-secondary">انصراف</button>
         <button type="button" @click="handleSave" :disabled="isSaving || !formData.name || totalElementsPercentage > 100" class="app-modal-btn app-modal-btn-primary">
           {{ isSaving ? 'در حال ذخیره...' : (isEditing ? 'ذخیره تغییرات' : 'افزودن کود') }}
         </button>
@@ -295,8 +276,6 @@ const S = {
 const badgeCls = (x: { badge: string }) => `w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${x.badge}`;
 const stripCls = (x: { strip: string }) => `absolute inset-x-0 top-0 h-1 bg-gradient-to-l ${x.strip}`;
 
-const formLabel = computed(() => ({ liquid: 'مایع', powder: 'پودری', crystal: 'کریستالی', granular: 'گرانول' } as Record<string, string>)[props.formData.form] || '');
-const filledCount = computed(() => ELEMENT_DEFS.filter((d) => Number(entries[d.key].value) > 0).length);
 
 // ظاهر ردیف عنصر: پس از وارد کردن مقدار، با رنگ کاتیون/آنیون پررنگ می‌شود
 const rowCls = (d: ElementDef) => {

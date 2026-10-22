@@ -100,6 +100,7 @@ class ChemicalSnapshot(BaseModel):
     density_is_reference: bool = False
     elements_pct: Dict[str, float] = Field(default_factory=dict)
     elements_source: str = "database"
+    ph_params: Optional[Dict[str, float]] = None
 
 
 class CurvePoint(BaseModel):
