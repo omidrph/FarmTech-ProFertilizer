@@ -127,10 +127,10 @@
             v-model="currentUnit"
             class="px-1.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 transition-all"
           >
-            <option value="ppm">mg/L</option>
-            <option value="meq">meq/L</option>
-            <option value="mmol">mmol/L</option>
-            <option value="umol">µmol/L</option>
+            <option value="ppm">PPM</option>
+            <option value="meq">MEQ/L</option>
+            <option value="mmol">MMOL/L</option>
+            <option value="umol">µMOL/L</option>
           </select>
         </div>
       </div>
@@ -176,66 +176,79 @@
     <!-- ============================================================ -->
     <!-- جدول آنالیز (دسکتاپ: جدول — موبایل: لیست آکاردئونی) -->
     <!-- ============================================================ -->
-    <!-- دسکتاپ -->
-    <div v-for="g in tableGroups" :key="'d-' + g.id" class="hidden lg:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300">{{ g.title }}</div>
-      <div class="overflow-x-auto custom-scrollbar">
-        <table class="w-full text-sm border-collapse">
-          <thead>
-            <tr>
-              <th class="w-28 px-4 py-2.5 border-b border-gray-200 dark:border-gray-600 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 align-bottom">عنصر</th>
-              <th v-for="row in g.rows" :key="row.key" class="px-2 py-2.5 border-b border-gray-200 dark:border-gray-600 text-center align-bottom" :class="tone(row).th">
-                <button type="button" @click="openFormMenu(row, $event)" class="w-full min-w-[72px] rounded-lg border px-2 py-1.5 flex flex-col items-center gap-0.5 transition-colors" :class="[tone(row).pill, row.forms.length > 1 ? 'cursor-pointer' : 'cursor-default']">
-                  <span class="text-[10px] font-medium opacity-80">{{ shortName(row) }}</span>
-                  <span class="flex items-center gap-0.5 text-xs font-bold" dir="ltr">{{ currentForm(row).label }}
-                    <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg></span>
-                </button>
-              </th>
-              <template v-if="g.extras">
-                <th class="px-2 py-2.5 border-b border-gray-200 dark:border-gray-600 text-center align-bottom">
-                  <div class="flex flex-col items-center gap-1.5 px-1">
-                    <span class="text-xs font-bold text-gray-700 dark:text-gray-200">EC</span>
-                    <div class="inline-flex rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5 gap-0.5" dir="ltr">
+    <!-- دسکتاپ (هم‌سبک جدول عناصر هدف) -->
+    <div class="hidden lg:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <template v-for="(g, gi) in tableGroups" :key="'d-' + g.id">
+        <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/40 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700" :class="gi > 0 ? 'border-t' : ''">{{ g.title }}</div>
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-sm border-collapse">
+            <thead>
+              <tr>
+                <th class="sticky right-0 z-10 w-32 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-right text-sm font-bold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 shadow-sm">عنصر</th>
+                <th v-for="row in g.rows" :key="row.key" class="px-3 py-3 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[88px] transition-colors" :class="tone(row).th">
+                  <button v-if="row.forms.length > 1" type="button" @click="openFormMenu(row, $event)" class="inline-flex flex-col items-center gap-0.5 hover:underline underline-offset-4">
+                    <span class="text-sm">{{ shortName(row) }}</span>
+                    <span class="inline-flex items-center gap-0.5 text-xs font-medium opacity-80" dir="ltr">{{ currentForm(row).label }}<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg></span>
+                  </button>
+                  <div v-else class="inline-flex flex-col items-center gap-0.5">
+                    <span class="text-sm">{{ shortName(row) }}</span>
+                    <span class="text-xs font-medium opacity-80" dir="ltr">{{ currentForm(row).label }}</span>
+                  </div>
+                </th>
+                <template v-if="g.extras">
+                  <th class="px-3 py-3 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[110px] bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                    <div class="flex flex-col items-center gap-1.5">
+                      <span class="text-sm">EC</span>
+                      <div class="inline-flex rounded-lg bg-gray-100 dark:bg-gray-700 p-0.5 gap-0.5" dir="ltr">
                       <button v-for="u in ecUnits" :key="u" type="button" @click="setEcUnit(u)"
                         class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold transition-all"
                         :class="ecUnit === u ? 'bg-white dark:bg-gray-600 text-primary-700 dark:text-primary-300 shadow-sm' : 'text-gray-500 dark:text-gray-400'">{{ u }}</button>
                     </div>
-                  </div>
-                </th>
-                <th class="px-2 py-2.5 border-b border-gray-200 dark:border-gray-600 text-center align-bottom">
-                  <div class="flex flex-col items-center gap-0.5">
-                    <span class="text-xs font-bold text-gray-700 dark:text-gray-200">pH</span>
-                    <span class="text-[10px] text-gray-400">اختیاری</span>
-                  </div>
-                </th>
-              </template>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="showWastewaterRow" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-              <td class="px-4 py-2 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-400"></span>پساب</div></td>
-              <td v-for="row in g.rows" :key="'dw-' + row.key" class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center">
-                <input type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('waste', row)" @change="onCellChange('waste', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[76px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" />
-              </td>
-              <template v-if="g.extras"><td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center text-gray-300 dark:text-gray-600">—</td><td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center text-gray-300 dark:text-gray-600">—</td></template>
-            </tr>
-            <tr v-if="showFreshWaterRow" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-              <td class="px-4 py-2 text-right font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span>آب تازه</div></td>
-              <td v-for="row in g.rows" :key="'dwa-' + row.key" class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center">
-                <input type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('water', row)" @change="onCellChange('water', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[76px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" />
-              </td>
-              <template v-if="g.extras">
-                <td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center"><input type="text" inputmode="decimal" dir="ltr" :value="ecText" @change="onEcChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[76px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" /></td>
-                <td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center"><input type="text" inputmode="decimal" dir="ltr" :value="phText" @change="onPhChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[76px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" /></td>
-              </template>
-            </tr>
-            <tr class="bg-primary-50 dark:bg-primary-900/10 border-t-2 border-primary-100 dark:border-primary-900/30">
-              <td class="px-4 py-3 text-right font-bold text-primary-700 dark:text-primary-400 border-l border-primary-100 dark:border-primary-900/30"><div class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>تامینی</div></td>
-              <td v-for="row in g.rows" :key="'df-' + row.key" class="px-3 py-3 border-l border-primary-100 dark:border-primary-900/30 text-center font-bold text-primary-700 dark:text-primary-400 tabular-nums">{{ suppliedText(row) }}</td>
-              <template v-if="g.extras"><td class="px-3 py-3 border-l border-primary-100 dark:border-primary-900/30 text-center text-primary-700 dark:text-primary-400">-</td><td class="px-3 py-3 text-center text-primary-700 dark:text-primary-400">-</td></template>
-            </tr>
-          </tbody>
-        </table>
+                    </div>
+                  </th>
+                  <th class="px-3 py-3 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[88px] bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                    <div class="flex flex-col items-center gap-0.5">
+                      <span class="text-sm">pH</span>
+                      <span class="text-xs font-normal opacity-70">اختیاری</span>
+                    </div>
+                  </th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="showWastewaterRow" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2.5 text-right text-sm font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-orange-400"></span>پساب</div></td>
+                <td v-for="row in g.rows" :key="'dw-' + row.key" class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors" :class="tone(row).cell">
+                  <input type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('waste', row)" @change="onCellChange('waste', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" />
+                </td>
+                <template v-if="g.extras"><td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors text-gray-300 dark:text-gray-600">—</td><td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors text-gray-300 dark:text-gray-600">—</td></template>
+              </tr>
+              <tr v-if="showFreshWaterRow" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2.5 text-right text-sm font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span>آب تازه</div></td>
+                <td v-for="row in g.rows" :key="'dwa-' + row.key" class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors" :class="tone(row).cell">
+                  <input type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('water', row)" @change="onCellChange('water', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" />
+                </td>
+                <template v-if="g.extras">
+                  <td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors"><input type="text" inputmode="decimal" dir="ltr" :value="ecText" @change="onEcChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" /></td>
+                  <td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors"><input type="text" inputmode="decimal" dir="ltr" :value="phText" @change="onPhChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" /></td>
+                </template>
+              </tr>
+              <tr class="bg-primary-50 dark:bg-primary-900/10 border-t-2 border-primary-100 dark:border-primary-900/30">
+                <td class="sticky right-0 z-10 bg-primary-50 dark:bg-primary-900/20 px-4 py-3 text-right text-sm font-bold text-primary-700 dark:text-primary-400 border-l border-primary-100 dark:border-primary-900/30 shadow-sm"><div class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>مقادیر تامینی</div></td>
+                <td v-for="row in g.rows" :key="'df-' + row.key" class="px-3 py-3 border-l border-primary-100 dark:border-primary-900/30 text-center font-bold text-primary-700 dark:text-primary-400 tabular-nums">{{ suppliedText(row) }}</td>
+                <template v-if="g.extras"><td class="px-3 py-3 border-l border-primary-100 dark:border-primary-900/30 text-center text-primary-700 dark:text-primary-400">-</td><td class="px-3 py-3 text-center text-primary-700 dark:text-primary-400">-</td></template>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <!-- راهنمای رنگ‌ها -->
+      <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-600 flex flex-wrap items-center gap-4 text-xs">
+        <span class="text-gray-600 dark:text-gray-400 font-medium">راهنما:</span>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-gray-600 dark:text-gray-400">کاتیون</span></div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><span class="text-gray-600 dark:text-gray-400">آنیون</span></div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-gray-400"></span><span class="text-gray-600 dark:text-gray-400">خنثی</span></div>
       </div>
     </div>
 
@@ -262,7 +275,7 @@
               <button type="button" @click="openFormMenu(row, $event)" class="flex-1 min-w-0 h-10 flex items-center justify-between gap-1 px-2.5 rounded-lg border transition-colors" :class="[tone(row).pill, row.forms.length > 1 ? 'cursor-pointer' : 'cursor-default']">
                 <span class="truncate text-xs font-medium">{{ shortName(row) }}</span>
                 <span class="flex items-center gap-0.5 text-xs font-bold" dir="ltr">{{ currentForm(row).label }}
-                    <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg></span>
+                    <svg v-if="row.forms.length > 1" class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg></span>
               </button>
               <input v-if="showFreshWaterRow" type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('water', row)" @change="onCellChange('water', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-[4.5rem] flex-shrink-0 h-10 px-2 text-center text-sm tabular-nums border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
               <input v-if="showWastewaterRow" type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('waste', row)" @change="onCellChange('waste', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-[4.5rem] flex-shrink-0 h-10 px-2 text-center text-sm tabular-nums border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
@@ -734,8 +747,8 @@ const openGroups = reactive<Record<string, boolean>>({ macro: true, micro: false
 // رنگ کاتیون (آبی) و آنیون (قرمز)
 const tone = (row: WaterRow) =>
   row.type === 'cation'
-    ? { pill: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300', th: 'bg-blue-50/50 dark:bg-blue-900/10' }
-    : { pill: 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300', th: 'bg-red-50/50 dark:bg-red-900/10' };
+    ? { pill: 'bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300', th: 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300', cell: 'bg-blue-50/30 dark:bg-blue-900/5' }
+    : { pill: 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300', th: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300', cell: 'bg-red-50/30 dark:bg-red-900/5' };
 const shortName = (row: WaterRow) => (row.key === 'Alkalinity' ? 'قلیائیت' : row.key === 'S' ? 'گوگرد' : row.name);
 
 const ecUnits = ['dS/m', 'mS/cm', 'μS/cm'] as const;
