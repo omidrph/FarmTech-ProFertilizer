@@ -30,6 +30,7 @@
 import { computed } from 'vue';
 
 interface Props {
+  greenhouseName?: string;
   reportName: string;
   plantName: string;
   season: string;
@@ -44,6 +45,6 @@ const emit = defineEmits<{
 }>();
 
 const meta = computed(() =>
-  [props.plantName, props.season, props.growthStage, props.reportDate].filter(Boolean).join(' • ')
+  [props.greenhouseName, props.plantName, props.season, props.growthStage, props.reportDate].filter(Boolean).join(' • ')
 );
 </script>

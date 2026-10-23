@@ -751,6 +751,7 @@ const handleExportPdf = async () => {
       fertilizers: props.fertilizers,
       targetValues: targetStore.targetElements as Record<string, number>,
       meta: {
+        greenhouseName: report.greenhouseName,
         reportName: report.reportName,
         plantName: report.plantName,
         season: report.season,

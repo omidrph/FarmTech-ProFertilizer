@@ -27,22 +27,16 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
       <div>
+        <label class="field-label">نام گلخانه <span class="text-gray-400 font-normal">اختیاری</span></label>
+        <input type="text" :value="greenhouseName" @input="updateGreenhouse($event)" placeholder="نام گلخانه" class="field-input" />
+      </div>
+      <div>
         <label class="field-label">نام گزارش <span class="text-danger-500">*</span></label>
         <input type="text" :value="reportName" @input="updateReportName($event)" placeholder="نام گزارش" class="field-input" />
       </div>
       <div>
         <label class="field-label">نام گیاه <span class="text-danger-500">*</span></label>
         <input type="text" :value="plantName" @input="updatePlantName($event)" placeholder="مثلاً گوجه‌فرنگی" class="field-input" />
-      </div>
-      <div>
-        <label class="field-label">فصل <span class="text-danger-500">*</span></label>
-        <select :value="season" @change="updateSeason($event)" class="field-input">
-          <option value="">انتخاب فصل</option>
-          <option value="بهار">بهار</option>
-          <option value="تابستان">تابستان</option>
-          <option value="پاییز">پاییز</option>
-          <option value="زمستان">زمستان</option>
-        </select>
       </div>
       <div>
         <label class="field-label">مرحله رشد <span class="text-danger-500">*</span></label>
@@ -59,6 +53,7 @@
       <div>
         <label class="field-label">تاریخ <span class="text-danger-500">*</span></label>
         <input type="text" :value="reportDate" @input="updateReportDate($event)" placeholder="مثلاً ۱۴۰۵/۰۶/۰۱" class="field-input" />
+        <p v-if="derivedSeason" class="text-[11px] text-gray-400 mt-1">فصل: {{ derivedSeason }}</p>
       </div>
     </div>
 
@@ -81,11 +76,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { seasonFromDate } from '@/utils/reportSeason';
 
 interface Props {
   reportName: string;
   plantName: string;
-  season: string;
+  greenhouseName: string;
   growthStage: string;
   reportDate: string;
   isSaving?: boolean;
@@ -96,7 +92,7 @@ const props = withDefaults(defineProps<Props>(), { isSaving: false });
 const emit = defineEmits<{
   (e: 'update:reportName', value: string): void;
   (e: 'update:plantName', value: string): void;
-  (e: 'update:season', value: string): void;
+  (e: 'update:greenhouseName', value: string): void;
   (e: 'update:growthStage', value: string): void;
   (e: 'update:reportDate', value: string): void;
   (e: 'save'): void;
@@ -106,7 +102,6 @@ const isComplete = computed(() =>
   Boolean(
     props.reportName.trim() &&
     props.plantName.trim() &&
-    props.season &&
     props.growthStage &&
     props.reportDate.trim()
   )
@@ -114,7 +109,8 @@ const isComplete = computed(() =>
 
 const updateReportName = (event: Event) => emit('update:reportName', (event.target as HTMLInputElement).value);
 const updatePlantName = (event: Event) => emit('update:plantName', (event.target as HTMLInputElement).value);
-const updateSeason = (event: Event) => emit('update:season', (event.target as HTMLSelectElement).value);
+const updateGreenhouse = (event: Event) => emit('update:greenhouseName', (event.target as HTMLInputElement).value);
+const derivedSeason = computed(() => seasonFromDate(props.reportDate));
 const updateGrowthStage = (event: Event) => emit('update:growthStage', (event.target as HTMLSelectElement).value);
 const updateReportDate = (event: Event) => emit('update:reportDate', (event.target as HTMLInputElement).value);
 const emitSave = () => emit('save');

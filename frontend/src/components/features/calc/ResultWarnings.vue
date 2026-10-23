@@ -115,6 +115,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { cleanNote, isCoveredElsewhere, isGenericNote } from '@/utils/resultNotes';
 
 const props = defineProps<{
   warnings: string[];
@@ -129,28 +130,11 @@ defineEmits<{
   (e: 'go-to-selection'): void;
 }>();
 
-// پیام‌های کم‌ارزش/تکراری که هرگز نمایش داده نمی‌شوند
-const FILLER_SUGGESTIONS = new Set([
-  'دوباره بهینه‌سازی را اجرا کنید',
-  'تعداد تکرارها را افزایش دهید',
-  'تعداد تکرارها را افزایش دهید یا تلرانس را کاهش دهید'
-]);
-
-// الگوهایی که در بخش‌های دیگر صفحه (عناصر / تعادل یونی) قبلاً نمایش داده شده‌اند
-const KNOWN_PATTERNS: RegExp[] = [
-  /^عنصر .+: \d+% تحقق/, // بخش «عناصر تأمین‌شده» همین را نشان می‌دهد
-  /^تعادل یونی برقرار نیست/, // بخش «تعادل یونی» همین را نشان می‌دهد
-  /^الگوریتم به جواب کامل نرسید/, // در کارت «کیفیت ترکیب» بازنویسی می‌شود
-  /^خطر رسوب:/, // در بخش ۱ جدا نمایش داده می‌شود
-  /^\d+ کود در ترکیب نهایی استفاده نشدند/ // در کارت «کیفیت ترکیب» بازنویسی می‌شود
-];
-
-const isKnown = (text: string): boolean => KNOWN_PATTERNS.some((pattern) => pattern.test(text));
-
 const precipitationItems = computed(() => {
   const seen = new Set<string>();
   return props.warnings
-    .map((text) => {
+    .map((raw) => {
+      const text = cleanNote(raw);
       const match = text.match(/^خطر رسوب:\s*(.+)$/);
       return match ? { compound: match[1].trim() } : null;
     })
@@ -198,14 +182,14 @@ const showSelectionCta = computed(
 );
 
 const otherNotes = computed(() => {
-  const combined = [...props.warnings, ...props.suggestions];
+  const combined = [...props.warnings, ...props.suggestions].map(cleanNote);
   const seen = new Set<string>();
   const result: string[] = [];
 
   for (const text of combined) {
-    if (!text) continue;
-    if (FILLER_SUGGESTIONS.has(text)) continue;
-    if (isKnown(text)) continue;
+    if (text.length < 4) continue;
+    if (/^خطر رسوب[:：]/.test(text)) continue;
+    if (isCoveredElsewhere(text) || isGenericNote(text)) continue;
     if (seen.has(text)) continue;
     seen.add(text);
     result.push(text);

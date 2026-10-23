@@ -111,6 +111,7 @@ import HomeElementRings from './home/HomeElementRings.vue';
 import HomeIonBalance from './home/HomeIonBalance.vue';
 import HomeReservoirs from './home/HomeReservoirs.vue';
 import HomeAttentionList from './home/HomeAttentionList.vue';
+import { cleanNote, isCoveredElsewhere, isGenericNote } from '@/utils/resultNotes';
 
 // ============================================================
 // Emits
@@ -418,13 +419,20 @@ const attentionItems = computed(() => {
   // ۵) هشدارهای بک‌اند (رسوب، سازگاری و ...) — تکراری‌ها حذف می‌شوند
   const seen = new Set<string>();
   for (const w of (result.value?.warnings || []) as string[]) {
-    const t = String(w || '').replace(/^[^\p{L}\p{N}]+/u, '').replace(/\s+/g, ' ').trim();
+    const t = cleanNote(w);
+    if (t.length < 4) continue;
+    const isPrecip = /رسوب/.test(t);
+    if (!isPrecip && (isCoveredElsewhere(t) || isGenericNote(t))) continue;
     const key = t.slice(0, 50);
-    if (!t || seen.has(key)) continue;
+    if (seen.has(key)) continue;
     seen.add(key);
-    // «خطر رسوب: Ca3(PO4)2» (کوتاه) در عنوان و بقیه در متن؛ جملهٔ بلند فقط متن
-    const short = t.length < 60 && /[:：]/.test(t);
-    items.push({ kind: /رسوب|خطر/.test(t) ? 'danger' : 'info', title: /رسوب/.test(t) ? (short ? t : 'خطر رسوب') : 'نکته', text: short ? undefined : (t.length > 170 ? t.slice(0, 167) + '…' : t) });
+    if (isPrecip) {
+      // «خطر رسوب: Ca3(PO4)2» → عنوان؛ جملهٔ بلند → فقط متن
+      const short = t.length < 60 && /[:：]/.test(t);
+      items.push({ kind: 'danger', title: short ? t : 'خطر رسوب', text: short ? undefined : (t.length > 170 ? t.slice(0, 167) + '…' : t) });
+    } else {
+      items.push({ kind: /خطر/.test(t) ? 'danger' : 'info', title: 'نکته', text: t.length > 170 ? t.slice(0, 167) + '…' : t });
+    }
   }
 
   const order: Record<AttnKind, number> = { danger: 0, ph: 1, warn: 2, info: 3 };
@@ -462,6 +470,7 @@ const handleExportPdf = async () => {
       fertilizers: fertilizerStore.fertilizers,
       targetValues: targetStore.targetElements as Record<string, number>,
       meta: {
+        greenhouseName: report.greenhouseName,
         reportName: report.reportName,
         plantName: report.plantName,
         season: report.season,

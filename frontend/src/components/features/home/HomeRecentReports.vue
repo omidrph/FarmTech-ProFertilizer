@@ -32,7 +32,7 @@
               {{ r.report_name || 'بدون نام' }}
             </p>
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-              {{ [r.plant_name, r.season, r.growth_stage].filter(Boolean).join(' • ') || 'بدون مشخصات' }}
+              {{ [(r as any).greenhouse_name, r.plant_name, r.season, r.growth_stage].filter(Boolean).join(' • ') || 'بدون مشخصات' }}
             </p>
           </div>
           <span class="flex-shrink-0 w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 flex items-center justify-center group-hover:bg-primary-100 dark:group-hover:bg-primary-900/40 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">

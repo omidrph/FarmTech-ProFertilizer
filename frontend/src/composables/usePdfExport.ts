@@ -13,6 +13,7 @@ import { ref } from 'vue';
 import type { OptimizationResponse } from '@/types';
 
 export interface PdfReportMeta {
+    greenhouseName?: string;
     reportName?: string;
     plantName?: string;
     season?: string;
@@ -70,6 +71,7 @@ export function usePdfExport() {
 
     function buildHeader(meta: PdfReportMeta): string {
         const rows = [
+            meta.greenhouseName ? ['نام گلخانه', meta.greenhouseName] : null,
             meta.reportName ? ['عنوان گزارش', meta.reportName] : null,
             meta.plantName ? ['محصول', meta.plantName] : null,
             meta.season ? ['فصل / مرحله رشد', meta.season] : null,

@@ -17,9 +17,7 @@
             :key="subTab.id"
             @click="selectSubTab(subTab.id)"
             class="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 text-sm group whitespace-nowrap snap-start flex-shrink-0"
-            :class="activeSubTab === subTab.id
-              ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' 
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'"
+            :class="[activeSubTab === subTab.id ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800', subTab.id === 'home' && homeBlink ? 'home-blink' : '']"
           >
             <span class="relative z-10 flex items-center gap-1.5">
               <span v-html="subTab.icon" class="w-4 h-4 flex-shrink-0"></span>
@@ -79,7 +77,7 @@
           v-if="activeSubTab === 'home'"
           v-model:reportName="reportStore.reportData.reportName"
           v-model:plantName="reportStore.reportData.plantName"
-          v-model:season="reportStore.reportData.season"
+          v-model:greenhouseName="reportStore.reportData.greenhouseName"
           v-model:growthStage="reportStore.reportData.growthStage"
           v-model:reportDate="reportStore.reportData.date"
           :is-saving="reportStore.isSaving"
@@ -91,6 +89,7 @@
           v-else-if="activeSubTab !== 'widgets'"
           :report-name="reportStore.reportData.reportName"
           :plant-name="reportStore.reportData.plantName"
+          :greenhouse-name="reportStore.reportData.greenhouseName"
           :season="reportStore.reportData.season"
           :growth-stage="reportStore.reportData.growthStage"
           :report-date="reportStore.reportData.date"
@@ -213,11 +212,29 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- پیام راهنمای سبک مراحل -->
+    <Teleport to="body">
+      <Transition name="hint">
+        <div v-if="hintMessage" class="fixed inset-x-0 z-50 flex justify-center px-3 pointer-events-none" :style="{ top: (headerHeight + 56) + 'px' }">
+          <div class="pointer-events-auto flex items-center gap-3 w-full sm:w-auto max-w-md rounded-xl border border-primary-200 dark:border-primary-800 bg-white dark:bg-gray-800 shadow-lg px-3.5 py-2.5">
+            <span class="w-7 h-7 rounded-lg bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </span>
+            <p class="text-xs sm:text-sm text-gray-700 dark:text-gray-200 leading-6 flex-1">{{ hintMessage }}</p>
+            <button type="button" @click="hintGoHome" class="text-xs font-semibold text-primary-600 dark:text-primary-400 whitespace-nowrap">رفتن به خانه</button>
+            <button type="button" @click="hintMessage = null" aria-label="بستن" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
@@ -410,6 +427,100 @@ const goToHome = () => {
   window.scrollTo({ top: 0, behavior: 'auto' });
 };
 
+// ============================================================
+// راهنمای سبک مراحل: وقتی کاربر از «خانه» وارد یک مرحله می‌شود و آن را کامل می‌کند،
+// فقط یک‌بار پیام کوتاه می‌آید و تب «خانه» لحظه‌ای چشمک می‌زند.
+// ============================================================
+const GUIDE_MESSAGES: Record<string, string> = {
+  'target-elements': 'عناصر هدف ثبت شد. برای ادامهٔ مراحل می‌توانید به «خانه» برگردید.',
+  'water-analysis': 'آنالیز آب ثبت شد. برای ادامهٔ مراحل می‌توانید به «خانه» برگردید.',
+  'fertilizer-db': 'کود شما ثبت شد. برای ادامهٔ مراحل می‌توانید به «خانه» برگردید.',
+  'fertilizer-calc': 'محاسبه انجام شد. خلاصهٔ نتیجه و مخازن را در «خانه» ببینید.'
+};
+const guideStep = ref<string | null>(null);
+const guideShown = new Set<string>();
+const hintMessage = ref<string | null>(null);
+const homeBlink = ref(false);
+let guideTimer: ReturnType<typeof setTimeout> | null = null;
+let hintTimer: ReturnType<typeof setTimeout> | null = null;
+let blinkTimer: ReturnType<typeof setTimeout> | null = null;
+
+const isStepDone = (id: string): boolean => {
+  switch (id) {
+    case 'target-elements':
+      return Object.values(targetStore.targetElements || {}).some((v) => Number(v) > 0);
+    case 'water-analysis':
+      return Object.keys(waterStore.calcWaterValues).length > 0;
+    case 'fertilizer-db':
+      return (fertilizerStore.fertilizers || []).filter((f: any) => !f.isSystemDefault).length > 0;
+    case 'fertilizer-calc':
+      return !!calcStore.optimizationResult;
+    default:
+      return false;
+  }
+};
+
+const stepSignature = (id: string): string => {
+  switch (id) {
+    case 'target-elements':
+      return JSON.stringify(targetStore.targetElements || {});
+    case 'water-analysis':
+      return JSON.stringify(waterStore.calcWaterValues);
+    case 'fertilizer-db':
+      return String((fertilizerStore.fertilizers || []).length);
+    case 'fertilizer-calc':
+      return String(!!calcStore.optimizationResult);
+    default:
+      return '';
+  }
+};
+
+const fireGuide = (id: string) => {
+  if (guideStep.value !== id || activeSubTab.value !== id) return;
+  guideShown.add(id);
+  guideStep.value = null;
+  hintMessage.value = GUIDE_MESSAGES[id];
+  homeBlink.value = true;
+  if (blinkTimer) clearTimeout(blinkTimer);
+  blinkTimer = setTimeout(() => (homeBlink.value = false), 2600);
+  if (hintTimer) clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => (hintMessage.value = null), 7000);
+};
+
+watch(activeSubTab, (to, from) => {
+  if (to === 'home') {
+    guideStep.value = null;
+    return;
+  }
+  if (from === 'home' && GUIDE_MESSAGES[to] && !isStepDone(to) && !guideShown.has(to)) guideStep.value = to;
+  else if (to !== guideStep.value) guideStep.value = null;
+});
+
+// با هر تغییر داده‌ی مرحله، بعد از چند لحظه سکوت (تمام‌شدن تایپ) بررسی می‌شود
+watch(
+  () => (guideStep.value ? stepSignature(guideStep.value) : ''),
+  () => {
+    if (guideTimer) clearTimeout(guideTimer);
+    const id = guideStep.value;
+    if (!id || !isStepDone(id)) return;
+    guideTimer = setTimeout(() => fireGuide(id), id === 'target-elements' || id === 'water-analysis' ? 2500 : 700);
+  }
+);
+
+watch(
+  () => reportStore.currentReportId,
+  () => {
+    guideShown.clear();
+    guideStep.value = null;
+    hintMessage.value = null;
+  }
+);
+
+const hintGoHome = () => {
+  hintMessage.value = null;
+  goToHome();
+};
+
 const clearErrors = () => {
   clearError();
   fertilizerStore.clearError();
@@ -442,12 +553,25 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  if (guideTimer) clearTimeout(guideTimer);
+  if (hintTimer) clearTimeout(hintTimer);
+  if (blinkTimer) clearTimeout(blinkTimer);
   window.removeEventListener('resize', updateHeaderHeight);
   window.removeEventListener('open-profile-modal', openProfileModalHandler);
 });
 </script>
 
 <style scoped>
+.home-blink { animation: homeBlink 1.1s ease-in-out 2; }
+@keyframes homeBlink {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.35); }
+}
+.hint-enter-active, .hint-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.hint-enter-from, .hint-leave-to { opacity: 0; transform: translateY(-10px); }
+@media (prefers-reduced-motion: reduce) {
+  .home-blink { animation: none; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35); }
+}
 .animate-slide-up {
   animation: slideUp 0.3s ease-out;
 }
