@@ -190,6 +190,15 @@ export const useWaterStore = defineStore('water', () => {
     waterPH.value = ph;
   }
 
+  // «Alkalinity» (کلیدی که تب pH و محاسبه می‌خوانند) از بی‌کربنات pH 5.5 (و در نبود آن pH 4.5) ساخته می‌شود
+  function syncAlkalinity() {
+    for (const bag of [waterValues, wastewaterValues]) {
+      const v = bag.value['Alk55'] > 0 ? bag.value['Alk55'] : bag.value['Alk45'] > 0 ? bag.value['Alk45'] : 0;
+      if (v > 0) bag.value['Alkalinity'] = v;
+      else delete bag.value['Alkalinity'];
+    }
+  }
+
   function removeWaterValue(element: string) {
     delete waterValues.value[element];
   }
@@ -250,6 +259,13 @@ export const useWaterStore = defineStore('water', () => {
         }
       }
     }
+
+    // داده‌های قدیمی که فقط «Alkalinity» داشتند: به بی‌کربنات pH 5.5 منتقل می‌شوند
+    for (const bag of [waterValues, wastewaterValues]) {
+      if (bag.value['Alkalinity'] > 0 && !(bag.value['Alk55'] > 0) && !(bag.value['Alk45'] > 0)) {
+        bag.value['Alk55'] = bag.value['Alkalinity'];
+      }
+    }
   }
 
   return {
@@ -274,6 +290,7 @@ export const useWaterStore = defineStore('water', () => {
     setWastewaterValue,
     setWaterValue,
     removeWaterValue,
+    syncAlkalinity,
     removeWastewaterValue,
     resetWaterData,
     getElementFinalValue,
