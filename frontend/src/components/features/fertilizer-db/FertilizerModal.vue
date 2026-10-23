@@ -106,7 +106,7 @@
               </p>
 
               <Transition name="pop">
-                <div v-if="openMenu === def.key" class="absolute z-30 inset-x-0 top-full mt-1 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-1">
+                <div v-if="openMenu === def.key" class="absolute z-30 inset-x-0 top-full mt-1 max-h-72 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-1">
                   <button v-for="fm in def.forms" :key="fm.key" type="button" @click="selectForm(def, fm.key)"
                     class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                     :class="entries[def.key].form === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
