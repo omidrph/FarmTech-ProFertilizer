@@ -27,7 +27,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
       <div>
-        <label class="field-label">نام گلخانه <span class="text-gray-400 font-normal">اختیاری</span></label>
+        <label class="field-label">نام گلخانه</label>
         <input type="text" :value="greenhouseName" @input="updateGreenhouse($event)" placeholder="نام گلخانه" class="field-input" />
       </div>
       <div>
@@ -53,7 +53,6 @@
       <div>
         <label class="field-label">تاریخ <span class="text-danger-500">*</span></label>
         <input type="text" :value="reportDate" @input="updateReportDate($event)" placeholder="مثلاً ۱۴۰۵/۰۶/۰۱" class="field-input" />
-        <p v-if="derivedSeason" class="text-[11px] text-gray-400 mt-1">فصل: {{ derivedSeason }}</p>
       </div>
     </div>
 
@@ -110,10 +109,12 @@ const isComplete = computed(() =>
 const updateReportName = (event: Event) => emit('update:reportName', (event.target as HTMLInputElement).value);
 const updatePlantName = (event: Event) => emit('update:plantName', (event.target as HTMLInputElement).value);
 const updateGreenhouse = (event: Event) => emit('update:greenhouseName', (event.target as HTMLInputElement).value);
-const derivedSeason = computed(() => seasonFromDate(props.reportDate));
 const updateGrowthStage = (event: Event) => emit('update:growthStage', (event.target as HTMLSelectElement).value);
 const updateReportDate = (event: Event) => emit('update:reportDate', (event.target as HTMLInputElement).value);
 const emitSave = () => emit('save');
+
+// فصل محاسبه می‌شود (برای استفاده‌ی منطقی/آینده) اما در قالب نمایش داده نمی‌شود.
+const derivedSeason = computed(() => seasonFromDate(props.reportDate));
 </script>
 
 <style scoped>
