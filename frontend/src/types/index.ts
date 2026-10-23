@@ -1,5 +1,3 @@
-
-
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -198,6 +196,7 @@ export interface IonBalance {
 }
 
 export interface ReportData {
+    greenhouseName?: string;
     reportName: string;
     plantName: string;
     season: string;
@@ -510,6 +509,3 @@ export interface User {
     updated_at?: string;
     full_name: string;
 }
-
-
-

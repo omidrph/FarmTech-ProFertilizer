@@ -1,15 +1,16 @@
-
 // frontend/src/store/modules/reportStore.ts
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { apiService } from '@/services/apiService';
 import { useTargetStore } from './targetStore';
 import { useWaterStore } from './waterStore';
 import { useCalcStore } from './calcStore';
 import { useFertilizerStore } from './fertilizerStore';
+import { seasonFromDate } from '@/utils/reportSeason';
 
 export interface ReportData {
   id: number | null;
+  greenhouseName: string;
   reportName: string;
   plantName: string;
   season: string;
@@ -21,6 +22,7 @@ export interface ReportData {
 
 export interface ReportListItem {
   id: number;
+  greenhouse_name?: string | null;
   report_name: string | null;
   plant_name: string | null;
   season: string | null;
@@ -40,6 +42,7 @@ export const useReportStore = defineStore('report', () => {
   const currentReportId = ref<number | null>(null);
   const reportData = ref<ReportData>({
     id: null,
+    greenhouseName: '',
     reportName: '',
     plantName: '',
     season: '',
@@ -53,18 +56,27 @@ export const useReportStore = defineStore('report', () => {
   const error = ref<string | null>(null);
   const isSaving = ref(false);
 
+  // فصل از روی تاریخ خوانده می‌شود (ورود دستی ندارد)
+  watch(
+    () => reportData.value.date,
+    (d) => {
+      const s = seasonFromDate(d);
+      if (s) reportData.value.season = s;
+    },
+    { immediate: true }
+  );
+
   // ===== Getters =====
   const hasActiveReport = computed(() => currentReportId.value !== null);
   const isReportComplete = computed(() => {
     return !!(
       reportData.value.reportName &&
       reportData.value.plantName &&
-      reportData.value.season &&
       reportData.value.growthStage
     );
   });
   const reportSummary = computed(() => {
-    return `${reportData.value.reportName} - ${reportData.value.plantName} (${reportData.value.season})`;
+    return `${reportData.value.reportName} - ${reportData.value.plantName}`;
   });
 
   // ===== Actions =====
@@ -74,6 +86,7 @@ export const useReportStore = defineStore('report', () => {
     
     reportData.value = {
       id: null,
+      greenhouseName: '',
       reportName: '',
       plantName: '',
       season: '',
@@ -121,6 +134,7 @@ export const useReportStore = defineStore('report', () => {
       
       reportData.value = {
         id: report.id,
+        greenhouseName: report.greenhouse_name || '',
         reportName: report.report_name || '',
         plantName: report.plant_name || '',
         season: report.season || '',
@@ -261,9 +275,10 @@ export const useReportStore = defineStore('report', () => {
       const fertilizerStore = useFertilizerStore();
       
       const reportPayload = {
+        greenhouse_name: reportData.value.greenhouseName?.trim() || null,
         report_name: reportData.value.reportName || `گزارش ${reportData.value.date}`,
         plant_name: reportData.value.plantName || '',
-        season: reportData.value.season || '',
+        season: seasonFromDate(reportData.value.date) || reportData.value.season || seasonFromDate(getCurrentShamsiDate()),
         growth_stage: reportData.value.growthStage || '',
         report_date: reportData.value.date || getCurrentShamsiDate()
       };

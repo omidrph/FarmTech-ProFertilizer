@@ -10,15 +10,17 @@ from pydantic import BaseModel, Field
 
 class ReportCreate(BaseModel):
     """طرح ایجاد گزارش جدید"""
+    greenhouse_name: Optional[str] = Field(None, max_length=100)
     report_name: str = Field(..., min_length=1, max_length=100)
     plant_name: str = Field(..., min_length=1, max_length=50)
-    season: str = Field(..., min_length=1, max_length=20)
+    season: Optional[str] = Field(None, max_length=20, description="از تاریخ گزارش محاسبه می‌شود")
     growth_stage: str = Field(..., min_length=1, max_length=50)
     report_date: str = Field(..., min_length=1, description="تاریخ شمسی")
 
 
 class ReportUpdate(BaseModel):
     """طرح به‌روزرسانی گزارش"""
+    greenhouse_name: Optional[str] = Field(None, max_length=100)
     report_name: Optional[str] = Field(None, max_length=100)
     plant_name: Optional[str] = Field(None, max_length=50)
     season: Optional[str] = Field(None, max_length=20)
@@ -30,6 +32,7 @@ class ReportResponse(BaseModel):
     """طرح پاسخ گزارش"""
     id: int
     user_id: int
+    greenhouse_name: Optional[str] = None
     report_name: Optional[str]
     plant_name: Optional[str]
     season: Optional[str]

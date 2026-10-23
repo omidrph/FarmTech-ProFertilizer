@@ -166,8 +166,8 @@ export const useWaterStore = defineStore('water', () => {
   // ===== Getters جدید =====
   const hasWaterData = computed(() => {
     return waterMixData.value.waterSalinity > 0 || 
-           Object.keys(waterValues.value).some(k => waterValues.value[k] > 0) ||
-           Object.keys(wastewaterValues.value).some(k => wastewaterValues.value[k] > 0);
+           Object.keys(waterValues.value).some(k => !k.startsWith('ui:') && !k.startsWith('lt:') && waterValues.value[k] > 0) ||
+           Object.keys(wastewaterValues.value).some(k => !k.startsWith('lt:') && wastewaterValues.value[k] > 0);
   });
 
   // ===== Actions =====

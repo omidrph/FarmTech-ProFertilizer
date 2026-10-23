@@ -1,5 +1,3 @@
-
-
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
@@ -185,6 +183,7 @@ class Report(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    greenhouse_name = Column(String(100), nullable=True)  # نام گلخانه (اختیاری)
     report_name = Column(String(100), nullable=True)
     plant_name = Column(String(50), nullable=True)
     season = Column(String(20), nullable=True)
@@ -450,6 +449,3 @@ class PhAdjustment(Base):
 
     def __repr__(self):
         return f"<PhAdjustment {self.id} ({self.mode}, {self.chemical_name})>"
-
-
-

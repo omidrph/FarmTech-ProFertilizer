@@ -153,7 +153,7 @@ const hasTargets = computed(() =>
 );
 
 const hasWater = computed(() =>
-  Object.values(waterStore.waterValues || {}).some(value => Number(value) > 0)
+  Object.keys(waterStore.calcWaterValues).length > 0
 );
 
 const userFertilizersCount = computed(
@@ -491,7 +491,7 @@ const loadDashboardData = async () => {
   try {
     await targetStore.calculateIonBalanceFromAPI();
 
-    if (Object.keys(waterStore.waterValues).length === 0) {
+    if (Object.keys(waterStore.calcWaterValues).length === 0) {
       try {
         const waterData = await apiService.getWaterAnalysis(String(reportStore.currentReportId));
         if (waterData) waterStore.loadFromAPI(waterData);

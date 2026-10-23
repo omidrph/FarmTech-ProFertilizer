@@ -26,6 +26,7 @@ def create_report(db: Session, report_data: ReportCreate, user_id: int) -> Repor
             raise ValueError("ظرفیت ۲۵۰ گزارش برای این حساب تکمیل شده است.")
         db_report = Report(
             user_id=user_id,
+            greenhouse_name=report_data.greenhouse_name,
             report_name=report_data.report_name,
             plant_name=report_data.plant_name,
             season=report_data.season,
@@ -112,4 +113,3 @@ def delete_report(db: Session, report_id: int) -> bool:
         db.rollback()
         logger.error(f"Error deleting report: {e}")
         raise e
-
