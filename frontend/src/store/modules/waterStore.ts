@@ -2,6 +2,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { WaterMixData } from '@/types';
+import { WATER_GROUPS } from '@/utils/waterForms';
 
 const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
 
@@ -57,6 +58,14 @@ export function calculateTDS(ecDS: number): number {
   return ecDS * 640;
 }
 
+// واحد و فرم نمایشی جدول داخل خود گزارش ذخیره می‌شود (کلیدهای رزرو ui: در water_values)
+// تا با تغییر تب، رفرش یا دستگاه دیگر عوض نشود. مقدار = شمارهٔ گزینه (از ۱).
+type WaterUiUnit = 'ppm' | 'meq' | 'mmol' | 'umol';
+const UI_UNITS: WaterUiUnit[] = ['ppm', 'meq', 'mmol', 'umol'];
+const UI_FORMS: Record<string, string[]> = Object.fromEntries(
+  WATER_GROUPS.flatMap((g) => g.rows).map((r) => [r.key, r.forms.map((f) => f.key)])
+);
+
 export const useWaterStore = defineStore('water', () => {
   // ===== State =====
   const waterMixData = ref<WaterMixData>({
@@ -66,6 +75,20 @@ export const useWaterStore = defineStore('water', () => {
   });
 
   const ecUnit = ref<'dS/m' | 'mS/cm' | 'μS/cm'>('dS/m');
+
+  // ===== انتخاب‌های ظاهری جدول (داخل water_values) =====
+  const uiUnit = computed<WaterUiUnit>(() => UI_UNITS[(waterValues.value['ui:unit'] || 1) - 1] || 'ppm');
+  function setUiUnit(u: WaterUiUnit) {
+    waterValues.value['ui:unit'] = UI_UNITS.indexOf(u) + 1;
+  }
+  function getUiForm(elementKey: string): string | undefined {
+    const idx = waterValues.value['ui:form:' + elementKey];
+    return idx ? UI_FORMS[elementKey]?.[idx - 1] : undefined;
+  }
+  function setUiForm(elementKey: string, formKey: string) {
+    const idx = (UI_FORMS[elementKey] || []).indexOf(formKey);
+    if (idx >= 0) waterValues.value['ui:form:' + elementKey] = idx + 1;
+  }
   const wastewaterValues = ref<Record<string, number>>({});
   const waterValues = ref<Record<string, number>>({});
 
@@ -184,8 +207,10 @@ export const useWaterStore = defineStore('water', () => {
   }
 
   function resetWaterData() {
+    const keep: Record<string, number> = {};
+    for (const [k, v] of Object.entries(waterValues.value)) if (k.startsWith('ui:')) keep[k] = v;
     wastewaterValues.value = {};
-    waterValues.value = {};
+    waterValues.value = keep;
     waterMixData.value = {
       waterPercentage: 100,
       wastewaterPercentage: 0,
@@ -235,6 +260,10 @@ export const useWaterStore = defineStore('water', () => {
     waterValues,
     finalValues,
     calcWaterValues,
+    uiUnit,
+    setUiUnit,
+    getUiForm,
+    setUiForm,
     analysisRows,
     tds,
     phStatus,

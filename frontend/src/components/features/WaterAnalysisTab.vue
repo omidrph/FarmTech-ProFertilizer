@@ -125,6 +125,7 @@
 
           <select
             v-model="currentUnit"
+            @change="triggerAutoSave"
             class="px-1.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 transition-all"
           >
             <option value="ppm">PPM</option>
@@ -177,16 +178,17 @@
     <!-- جدول آنالیز (دسکتاپ: جدول — موبایل: لیست آکاردئونی) -->
     <!-- ============================================================ -->
     <!-- دسکتاپ (هم‌سبک جدول عناصر هدف) -->
-    <div class="hidden lg:block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <template v-for="(g, gi) in tableGroups" :key="'d-' + g.id">
-        <div class="px-4 py-2 bg-gray-50 dark:bg-gray-700/40 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700" :class="gi > 0 ? 'border-t' : ''">{{ g.title }}</div>
+    <div class="hidden lg:block space-y-4">
+      <template v-for="g in tableGroups" :key="'d-' + g.id">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-4 py-2.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300">{{ g.title }}</div>
         <div class="overflow-x-auto custom-scrollbar">
           <table class="w-full text-sm border-collapse">
             <thead>
               <tr>
                 <th class="sticky right-0 z-10 w-32 bg-gray-50 dark:bg-gray-700 px-4 py-3 text-right text-sm font-bold text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 shadow-sm">عنصر</th>
                 <th v-for="row in g.rows" :key="row.key" class="px-3 py-3 font-semibold border-b border-gray-200 dark:border-gray-600 text-center min-w-[88px] transition-colors" :class="tone(row).th">
-                  <button v-if="row.forms.length > 1" type="button" @click="openFormMenu(row, $event)" class="inline-flex flex-col items-center gap-0.5 hover:underline underline-offset-4">
+                  <button v-if="row.forms.length > 1" type="button" @click="openFormMenu(row, $event)" class="inline-flex flex-col items-center gap-0.5 rounded-md px-1.5 py-0.5 -mx-1.5 hover:bg-white/60 dark:hover:bg-white/10">
                     <span class="text-sm">{{ shortName(row) }}</span>
                     <span class="inline-flex items-center gap-0.5 text-xs font-medium opacity-80" dir="ltr">{{ currentForm(row).label }}<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg></span>
                   </button>
@@ -223,6 +225,11 @@
                 </td>
                 <template v-if="g.extras"><td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors text-gray-300 dark:text-gray-600">—</td><td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors text-gray-300 dark:text-gray-600">—</td></template>
               </tr>
+              <tr v-if="showWastewaterRow && hasEq('waste', g)">
+                <td class="px-4 py-1 text-right text-xs text-gray-400 dark:text-gray-500 border-l border-gray-100 dark:border-gray-700">{{ showFreshWaterRow ? 'معادل پساب' : 'معادل' }}</td>
+                <td v-for="row in g.rows" :key="'eqwaste-' + row.key" class="px-2 py-1 border-l border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400 tabular-nums" :class="tone(row).cell" dir="ltr">{{ eqText('waste', row) }}</td>
+                <template v-if="g.extras"><td class="px-2 py-1 border-l border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400 tabular-nums"></td><td class="px-2 py-1 border-l border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400 tabular-nums"></td></template>
+              </tr>
               <tr v-if="showFreshWaterRow" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                 <td class="sticky right-0 z-10 bg-white dark:bg-gray-800 px-4 py-2.5 text-right text-sm font-medium text-gray-600 dark:text-gray-400 border-l border-gray-100 dark:border-gray-700 shadow-sm"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span>آب تازه</div></td>
                 <td v-for="row in g.rows" :key="'dwa-' + row.key" class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors" :class="tone(row).cell">
@@ -233,6 +240,11 @@
                   <td class="px-2 py-2 border-l border-gray-100 dark:border-gray-700 text-center transition-colors"><input type="text" inputmode="decimal" dir="ltr" :value="phText" @change="onPhChange" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-full max-w-[80px] mx-auto px-2 py-1.5 text-center tabular-nums bg-transparent border border-transparent hover:border-gray-300 dark:hover:border-gray-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 rounded transition-all duration-200 text-gray-700 dark:text-gray-300" /></td>
                 </template>
               </tr>
+              <tr v-if="showFreshWaterRow && hasEq('water', g)">
+                <td class="px-4 py-1 text-right text-xs text-gray-400 dark:text-gray-500 border-l border-gray-100 dark:border-gray-700">{{ showWastewaterRow ? 'معادل آب تازه' : 'معادل' }}</td>
+                <td v-for="row in g.rows" :key="'eqwater-' + row.key" class="px-2 py-1 border-l border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400 tabular-nums" :class="tone(row).cell" dir="ltr">{{ eqText('water', row) }}</td>
+                <template v-if="g.extras"><td class="px-2 py-1 border-l border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400 tabular-nums"></td><td class="px-2 py-1 border-l border-gray-100 dark:border-gray-700 text-center text-xs text-gray-500 dark:text-gray-400 tabular-nums"></td></template>
+              </tr>
               <tr class="bg-primary-50 dark:bg-primary-900/10 border-t-2 border-primary-100 dark:border-primary-900/30">
                 <td class="sticky right-0 z-10 bg-primary-50 dark:bg-primary-900/20 px-4 py-3 text-right text-sm font-bold text-primary-700 dark:text-primary-400 border-l border-primary-100 dark:border-primary-900/30 shadow-sm"><div class="flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>مقادیر تامینی</div></td>
                 <td v-for="row in g.rows" :key="'df-' + row.key" class="px-3 py-3 border-l border-primary-100 dark:border-primary-900/30 text-center font-bold text-primary-700 dark:text-primary-400 tabular-nums">{{ suppliedText(row) }}</td>
@@ -241,10 +253,11 @@
             </tbody>
           </table>
         </div>
+      </div>
       </template>
 
       <!-- راهنمای رنگ‌ها -->
-      <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-600 flex flex-wrap items-center gap-4 text-xs">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 px-4 py-3 flex flex-wrap items-center gap-4 text-xs">
         <span class="text-gray-600 dark:text-gray-400 font-medium">راهنما:</span>
         <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span><span class="text-gray-600 dark:text-gray-400">کاتیون</span></div>
         <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><span class="text-gray-600 dark:text-gray-400">آنیون</span></div>
@@ -280,6 +293,7 @@
               <input v-if="showFreshWaterRow" type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('water', row)" @change="onCellChange('water', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-[4.5rem] flex-shrink-0 h-10 px-2 text-center text-sm tabular-nums border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
               <input v-if="showWastewaterRow" type="text" inputmode="decimal" dir="ltr" placeholder="۰" :value="cellText('waste', row)" @change="onCellChange('waste', row, $event)" @keydown.enter="($event.target as HTMLInputElement).blur()" class="w-[4.5rem] flex-shrink-0 h-10 px-2 text-center text-sm tabular-nums border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:bg-white dark:focus:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors" />
             </div>
+            <p v-if="eqLine(row)" class="mt-1 pr-1 text-[11px] text-gray-500 dark:text-gray-400">معادل: <span dir="ltr" class="font-semibold tabular-nums">{{ eqLine(row) }}</span></p>
             <p v-if="suppliedText(row) !== '—'" class="mt-1 pr-1 text-[11px] text-primary-700 dark:text-primary-400">تامینی: <span class="font-bold tabular-nums">{{ suppliedText(row) }}</span></p>
           </div>
 
@@ -310,7 +324,7 @@
       <div class="fixed z-50 w-60 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-1" :style="{ top: menu.top + 'px', left: menu.left + 'px' }">
         <button v-for="fm in menuRow.forms" :key="fm.key" type="button" @click="selectForm(menuRow, fm.key)"
           class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-md text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-          :class="formChoice[menuRow.key] === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
+          :class="formKeyOf(menuRow) === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
           <span>{{ fm.hint }}</span>
           <span class="font-semibold" dir="ltr">{{ fm.label }}</span>
         </button>
@@ -453,7 +467,7 @@
                 >
                   {{
                     Object.keys(template.water_values).filter(
-                      (k) => template.water_values[k] > 0 && !k.startsWith('lt:') && k !== 'pH'
+                      (k) => template.water_values[k] > 0 && !k.startsWith('lt:') && !k.startsWith('ui:') && k !== 'pH'
                     ).length
                   }}
                   عنصر آب
@@ -468,7 +482,7 @@
                 >
                   {{
                     Object.keys(template.wastewater_values).filter(
-                      (k) => template.wastewater_values[k] > 0 && !k.startsWith('lt:')
+                      (k) => template.wastewater_values[k] > 0 && !k.startsWith('lt:') && !k.startsWith('ui:')
                     ).length
                   }}
                   عنصر پساب
@@ -662,7 +676,10 @@ const reportStore = useReportStore();
 
 // ===== State =====
 // pH و Alkalinity هر دو از جدول حذف شده‌اند.
-const currentUnit = ref<WaterUnit>('ppm');
+const currentUnit = computed<WaterUnit>({
+  get: () => waterStore.uiUnit,
+  set: (u) => waterStore.setUiUnit(u)
+});
 
 // Auto-save State
 const isSaving = ref(false);
@@ -756,8 +773,7 @@ const setEcUnit = (u: (typeof ecUnits)[number]) => {
   ecUnit.value = u;
   triggerAutoSave();
 };
-const formChoice = reactive<Record<string, string>>({});
-for (const g of WATER_GROUPS) for (const r of g.rows) formChoice[r.key] = r.defaultForm;
+const formKeyOf = (row: WaterRow): string => waterStore.getUiForm(row.key) || row.defaultForm;
 const menu = ref<{ key: string; top: number; left: number } | null>(null);
 const menuRow = computed(() => (menu.value ? allRows.find((r) => r.key === menu.value!.key) || null : null));
 const openFormMenu = (row: WaterRow, e: MouseEvent) => {
@@ -768,10 +784,11 @@ const openFormMenu = (row: WaterRow, e: MouseEvent) => {
 };
 
 const currentForm = (row: WaterRow): WaterForm =>
-  row.forms.find((f) => f.key === formChoice[row.key]) || row.forms[0];
+  row.forms.find((f) => f.key === formKeyOf(row)) || row.forms[0];
 const selectForm = (row: WaterRow, key: string) => {
-  formChoice[row.key] = key;
+  waterStore.setUiForm(row.key, key);
   menu.value = null;
+  triggerAutoSave();
 };
 
 type Col = 'water' | 'waste';
@@ -788,6 +805,25 @@ const cellText = (c: Col, row: WaterRow): string => {
   if (v > 0) return fmtPlain(fromStored(currentForm(row), currentUnit.value, v));
   const lt = bag(c)['lt:' + row.key] || 0;
   return lt > 0 ? '<' + fmtPlain(fromStored(currentForm(row), currentUnit.value, lt)) : '';
+};
+
+// فرم پایه (عنصری) و معادل مقدار واردشده، وقتی کاربر فرم دیگری (یون/اکسید) انتخاب کرده
+const baseForm = (row: WaterRow): WaterForm => row.forms.find((f) => f.factor === 1) || row.forms[0];
+const eqText = (c: Col, row: WaterRow): string => {
+  const f = currentForm(row);
+  const b = baseForm(row);
+  if (f.key === b.key) return '';
+  const v = bag(c)[row.key] || 0;
+  return v > 0 ? `${fmtPlain(fromStored(b, currentUnit.value, v))} ${b.label}` : '';
+};
+const hasEq = (c: Col, g: { rows: WaterRow[] }): boolean => g.rows.some((r) => eqText(c, r) !== '');
+const eqLine = (row: WaterRow): string => {
+  const parts: string[] = [];
+  const w = showFreshWaterRow.value ? eqText('water', row) : '';
+  const e = showWastewaterRow.value ? eqText('waste', row) : '';
+  if (w) parts.push((showWastewaterRow.value ? 'آب: ' : '') + w);
+  if (e) parts.push('پساب: ' + e);
+  return parts.join(' · ');
 };
 
 const filledCount = (g: { rows: WaterRow[]; extras: boolean }): number =>
