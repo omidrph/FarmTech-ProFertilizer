@@ -200,7 +200,7 @@ const groups = [
   { id: 'micro', title: 'عناصر کم‌مصرف و سیلیسیم', rows: EL_DEFS.slice(9) },
 ];
 // آکاردئون موبایل
-const openGroups = reactive<Record<string, boolean>>({ macro: true, micro: false });
+const openGroups = reactive<Record<string, boolean>>({ macro: true, micro: true });
 
 // ===== State =====
 const recipeRef = ref<InstanceType<typeof RecipeManager> | null>(null);

@@ -782,7 +782,7 @@ const tableGroups = [
   { id: 'params', title: 'پارامترهای آب', rows: [] as WaterRow[], extras: true },
 ];
 // آکاردئون موبایل
-const openGroups = reactive<Record<string, boolean>>({ macro: true, micro: false, other: false, params: true });
+const openGroups = reactive<Record<string, boolean>>({ macro: true, micro: true, other: false, params: false });
 
 // رنگ کاتیون (آبی) و آنیون (قرمز)
 const tone = (row: WaterRow) =>

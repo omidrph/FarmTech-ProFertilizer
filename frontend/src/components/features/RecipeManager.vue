@@ -16,106 +16,132 @@
     </div>
 
     <!-- ===== رسپی‌های استاندارد ===== -->
-    <div v-if="activeTab === 'standard'" class="p-4 sm:p-5 space-y-5">
+    <div v-if="activeTab === 'standard'" class="p-4 sm:p-5">
       <div v-if="isLoading" class="flex justify-center items-center gap-2 py-8 text-sm text-gray-500 dark:text-gray-400">
         <div class="animate-spin w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
         در حال بارگذاری...
       </div>
       <p v-else-if="systemRecipes.length === 0" class="text-center py-10 text-sm text-gray-500 dark:text-gray-400">رسپی استانداردی موجود نیست.</p>
 
-      <template v-else>
+      <div v-else class="max-h-[420px] overflow-y-auto custom-scrollbar px-1 space-y-5">
         <div v-for="group in groupedSystem" :key="group.title">
           <p class="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2.5">
             <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>{{ group.title }}<span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
           </p>
-          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div v-for="recipe in group.items" :key="recipe.id"
-              class="flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-sm transition-all">
-              <div class="flex items-start justify-between gap-2">
-                <h4 class="text-sm font-semibold text-gray-900 dark:text-white leading-6">{{ recipe.name }}</h4>
+              class="flex flex-col bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all hover:shadow-md">
+              <div class="flex items-start justify-between gap-2 mb-1.5">
+                <h4 class="font-medium text-gray-900 dark:text-white text-sm leading-6">{{ recipe.name }}</h4>
                 <span v-if="recipe.stage" class="flex-shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300">{{ recipe.stage }}</span>
               </div>
-              <p v-if="recipe.description" class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400 line-clamp-3">{{ recipe.description }}</p>
-              <div class="flex flex-wrap gap-1 mt-2.5">
+              <p v-if="recipe.description" class="text-[11px] leading-5 text-gray-500 dark:text-gray-400 line-clamp-3">{{ recipe.description }}</p>
+              <div class="flex flex-wrap items-center gap-1 mt-2">
                 <span v-for="(value, element) in getTopElements(recipe.target_values, 5)" :key="element"
-                  class="text-[11px] px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 tabular-nums" dir="ltr">
+                  class="text-[11px] px-1.5 py-0.5 rounded bg-white dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 tabular-nums" dir="ltr">
                   {{ element }} {{ Number(value).toFixed(1) }}
                 </span>
-                <span v-if="elementCount(recipe) > 5" class="text-[11px] px-1.5 py-0.5 text-gray-400">+{{ (elementCount(recipe) - 5).toLocaleString('fa-IR') }}</span>
+                <button v-if="elementCount(recipe) > 5" type="button"
+                  @mouseenter="popFor(recipe, $event)" @mouseleave="pop = null" @click.stop="popFor(recipe, $event, true)"
+                  class="text-[11px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                  +{{ (elementCount(recipe) - 5).toLocaleString('fa-IR') }}
+                </button>
               </div>
-              <div class="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 mt-auto">
+              <div class="flex items-center gap-2 mt-3 pt-2.5 border-t border-gray-200 dark:border-gray-600 mt-auto">
                 <button type="button" @click="applyRecipe(recipe.id)"
-                  class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition-colors">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" /></svg>
-                  اعمال در جدول
-                </button>
+                  class="flex-1 inline-flex items-center justify-center gap-1 h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors">اعمال</button>
                 <button type="button" @click="copyRecipe(recipe.id)" title="ذخیره در رسپی‌های شخصی"
-                  class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs transition-colors">
-                  ذخیره در شخصی
+                  class="inline-flex items-center justify-center h-8 px-3 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-xs font-medium transition-colors whitespace-nowrap">ذخیره در شخصی</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== رسپی‌های شخصی ===== -->
+    <div v-else class="p-4 sm:p-5">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <h3 class="text-base font-semibold text-gray-900 dark:text-white flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+          <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          رسپی‌های شخصی من
+          <span class="text-[11px] font-normal text-gray-400 tabular-nums whitespace-nowrap">{{ userRecipes.length.toLocaleString('fa-IR') }} از {{ PERSONAL_RECIPE_LIMIT.toLocaleString('fa-IR') }}</span>
+        </h3>
+        <button type="button" @click="openSaveModal"
+          class="inline-flex items-center gap-1.5 h-9 px-3 flex-shrink-0 whitespace-nowrap rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-xs sm:text-sm font-medium transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+          افزودن رسپی جدید
+        </button>
+      </div>
+
+      <div v-if="userRecipes.length === 0" class="text-center py-8 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
+        <p class="text-sm text-gray-500 dark:text-gray-400">هنوز رسپی شخصی ندارید.</p>
+      </div>
+
+      <div v-else class="max-h-[320px] overflow-y-auto custom-scrollbar pl-1 pr-1">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div v-for="recipe in userRecipes" :key="recipe.id"
+            class="group relative bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3 border border-gray-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all hover:shadow-md">
+            <div class="flex items-start justify-between mb-2">
+              <h4 class="font-medium text-gray-900 dark:text-white text-sm truncate pl-24 sm:pl-0">{{ recipe.name }}</h4>
+              <div class="absolute top-2 left-2 flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                <button type="button" @click="applyRecipe(recipe.id)" title="اعمال در جدول"
+                  class="p-1.5 rounded bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-gray-500 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                </button>
+                <button type="button" @click="updateFromTable(recipe)" title="به‌روزرسانی با مقادیر فعلی جدول"
+                  class="p-1.5 rounded bg-white dark:bg-gray-600 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-gray-500 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                </button>
+                <button type="button" @click="openEditModal(recipe)" title="ویرایش نام و توضیحات"
+                  class="p-1.5 rounded bg-white dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-500 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </button>
+                <button type="button" @click="deleteRecipe(recipe.id)" title="حذف"
+                  class="p-1.5 rounded bg-white dark:bg-gray-600 text-danger-600 dark:text-danger-400 hover:bg-danger-50 dark:hover:bg-gray-500 shadow-sm">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
               </div>
+            </div>
+            <div class="space-y-1 text-[10px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700/50 rounded p-2">
+              <div class="flex flex-wrap gap-1">
+                <span v-if="recipe.category" class="bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 px-1.5 rounded">{{ recipe.category }}</span>
+                <span v-if="recipe.stage" class="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 rounded">{{ recipe.stage }}</span>
+                <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 rounded">{{ elementCount(recipe).toLocaleString('fa-IR') }} عنصر</span>
+              </div>
+              <div v-if="recipe.description" class="pt-1 border-t border-gray-200 dark:border-gray-600 italic text-gray-600 dark:text-gray-300">"{{ recipe.description }}"</div>
+              <div class="flex flex-wrap items-center gap-1 pt-1">
+                <span v-for="(value, element) in getTopElements(recipe.target_values, 4)" :key="element" class="px-1.5 rounded bg-gray-100 dark:bg-gray-700 tabular-nums" dir="ltr">{{ element }} {{ Number(value).toFixed(1) }}</span>
+                <button v-if="elementCount(recipe) > 4" type="button"
+                  @mouseenter="popFor(recipe, $event)" @mouseleave="pop = null" @click.stop="popFor(recipe, $event, true)"
+                  class="px-1.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50">
+                  +{{ (elementCount(recipe) - 4).toLocaleString('fa-IR') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- منوی همهٔ عناصر رسپی -->
+    <Teleport to="body">
+      <template v-if="pop">
+        <div class="fixed inset-0 z-40 lg:hidden" @click="pop = null"></div>
+        <div class="fixed z-50 w-[232px] rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-3" :style="{ top: pop.top + 'px', left: pop.left + 'px' }">
+          <p class="text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-2 truncate">{{ pop.name }}</p>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+            <div v-for="[el, val] in popEntries" :key="el" class="flex justify-between items-center text-[11px]" dir="ltr">
+              <span class="font-medium text-gray-600 dark:text-gray-300">{{ el }}</span>
+              <span class="tabular-nums text-gray-900 dark:text-white">{{ val.toFixed(2) }}</span>
             </div>
           </div>
         </div>
       </template>
-    </div>
-
-    <!-- ===== رسپی‌های شخصی ===== -->
-    <div v-else class="p-4 sm:p-5 space-y-4">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="text-sm text-gray-600 dark:text-gray-300">
-          {{ userRecipes.length.toLocaleString('fa-IR') }} از {{ PERSONAL_RECIPE_LIMIT.toLocaleString('fa-IR') }} رسپی
-        </p>
-        <button type="button" @click="openSaveModal" :disabled="!hasTableValues"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-          افزودن از جدول
-        </button>
-      </div>
-
-      <div v-if="userRecipes.length === 0" class="text-center py-10 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-        <p class="text-sm text-gray-500 dark:text-gray-400">هنوز رسپی شخصی ندارید.</p>
-        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">مقادیر را در جدول عناصر هدف وارد کنید و «افزودن به رسپی شخصی» را بزنید.</p>
-      </div>
-
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-        <div v-for="recipe in userRecipes" :key="recipe.id"
-          class="flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5 hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-sm transition-all">
-          <div class="flex items-start justify-between gap-2">
-            <h4 class="text-sm font-semibold text-gray-900 dark:text-white leading-6">{{ recipe.name }}</h4>
-            <div class="flex flex-shrink-0 gap-1">
-              <span v-if="recipe.category" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-300">{{ recipe.category }}</span>
-              <span v-if="recipe.stage" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300">{{ recipe.stage }}</span>
-            </div>
-          </div>
-          <p v-if="recipe.description" class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400 line-clamp-3">{{ recipe.description }}</p>
-          <div class="flex flex-wrap gap-1 mt-2.5">
-            <span v-for="(value, element) in getTopElements(recipe.target_values, 5)" :key="element"
-              class="text-[11px] px-1.5 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 tabular-nums" dir="ltr">
-              {{ element }} {{ Number(value).toFixed(1) }}
-            </span>
-            <span v-if="elementCount(recipe) > 5" class="text-[11px] px-1.5 py-0.5 text-gray-400">+{{ (elementCount(recipe) - 5).toLocaleString('fa-IR') }}</span>
-          </div>
-          <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 mt-auto">
-            <button type="button" @click="applyRecipe(recipe.id)"
-              class="flex-1 min-w-[5rem] inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition-colors">اعمال</button>
-            <button type="button" @click="updateFromTable(recipe)" :disabled="!hasTableValues" title="جایگزینی مقادیر رسپی با مقادیر فعلی جدول"
-              class="px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 text-xs transition-colors">به‌روزرسانی با جدول</button>
-            <button type="button" @click="openEditModal(recipe)" title="ویرایش نام و توضیحات"
-              class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-            </button>
-            <button type="button" @click="deleteRecipe(recipe.id)" title="حذف"
-              class="p-1.5 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:text-danger-600 hover:border-danger-300 transition-colors">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </Teleport>
 
     <!-- مودال کوچک: فقط نام و توضیحات (مقادیر از جدول گرفته می‌شود) -->
-    <AppModal :open="showModal" size="sm" :title="isEditing ? 'ویرایش رسپی' : 'افزودن به رسپی شخصی'" @close="closeModal">
+    <AppModal :open="showModal" size="sm" :title="isEditing ? 'ویرایش رسپی' : 'افزودن رسپی جدید'" @close="closeModal">
       <div class="space-y-3">
         <p v-if="!isEditing" class="text-xs text-gray-500 dark:text-gray-400">
           مقادیر فعلی جدول ({{ tableCount.toLocaleString('fa-IR') }} عنصر) ذخیره می‌شود.
@@ -197,6 +223,21 @@ const toastType = ref<'success' | 'error'>('success');
 const formData = reactive({ name: '', description: '', category: '', stage: '' });
 
 // مقادیر فعلی جدول عناصر هدف
+// منوی «همهٔ عناصر» رسپی (با هاور در دسکتاپ، با کلیک در موبایل)
+const pop = ref<{ id: number; name: string; top: number; left: number; values: Record<string, number> } | null>(null);
+const popFor = (recipe: any, e: Event, toggle = false) => {
+  const el = e.currentTarget as HTMLElement;
+  if (toggle && pop.value?.id === recipe.id) { pop.value = null; return; }
+  const r = el.getBoundingClientRect();
+  const width = 232;
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+  const top = r.bottom + 6 + 260 > window.innerHeight ? Math.max(8, r.top - 6 - 260) : r.bottom + 6;
+  pop.value = { id: recipe.id, name: recipe.name, top, left, values: recipe.target_values || {} };
+};
+const popEntries = computed(() =>
+  pop.value ? ALL_ELEMENTS.filter((e) => Number(pop.value!.values[e]) > 0).map((e) => [e, Number(pop.value!.values[e])] as [string, number]) : []
+);
+
 const tableValues = computed<Record<string, number>>(() => {
   const out: Record<string, number> = {};
   for (const el of ALL_ELEMENTS) {
@@ -366,6 +407,11 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+.dark .custom-scrollbar::-webkit-scrollbar-track { background: #374151; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #4b5563; }
 .animate-spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .fade-enter-active, .fade-leave-active { transition: all 0.3s ease; }

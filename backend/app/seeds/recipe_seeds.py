@@ -137,6 +137,13 @@ def seed_system_recipes(db: Session, verify: bool = False) -> Dict[str, int]:
     stats = {"added": 0, "skipped": 0, "removed": 0, "total": len(SYSTEM_RECIPES), "errors": []}
     names = {r["name"] for r in SYSTEM_RECIPES}
 
+    # چند worker همزمان استارت می‌شوند؛ قفل می‌گیریم تا رسپی‌ها دوبار ساخته نشوند
+    try:
+        from sqlalchemy import text as _text
+        db.execute(_text("SELECT pg_advisory_xact_lock(727002)"))
+    except Exception:
+        db.rollback()
+
     try:
         stale = db.query(Recipe).filter(Recipe.is_system == True, ~Recipe.name.in_(names)).all()  # noqa: E712
         for r in stale:
@@ -144,6 +151,19 @@ def seed_system_recipes(db: Session, verify: bool = False) -> Dict[str, int]:
         stats["removed"] = len(stale)
     except Exception as e:
         stats["errors"].append({"name": "CLEANUP", "error": str(e)})
+
+    # حذف تکراری‌ها (اگر قبلاً چند بار seed شده باشد): از هر نام فقط قدیمی‌ترین نگه داشته می‌شود
+    try:
+        seen = set()
+        for r in db.query(Recipe).filter(Recipe.is_system == True).order_by(Recipe.id).all():  # noqa: E712
+            if r.name in seen:
+                db.delete(r)
+                stats["removed"] += 1
+            else:
+                seen.add(r.name)
+        db.flush()
+    except Exception as e:
+        stats["errors"].append({"name": "DEDUPE", "error": str(e)})
 
     for data in SYSTEM_RECIPES:
         try:
