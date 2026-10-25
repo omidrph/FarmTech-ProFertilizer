@@ -1,3 +1,4 @@
+
 // frontend/src/utils/helpers.ts
 import { ElementName, Unit, type IonBalance } from '@/types';
 
@@ -64,7 +65,8 @@ export const getElementMolecularWeight = (element: ElementName): number => {
     [ElementName.Zn]: 65.38,
     [ElementName.B]: 10.81,
     [ElementName.Cu]: 63.546,
-    [ElementName.Mo]: 95.95
+    [ElementName.Mo]: 95.95,
+    [ElementName.Si]: 28.086
   };
   return weights[element] || 0;
 };
@@ -85,7 +87,8 @@ export const getElementValence = (element: ElementName): number => {
     [ElementName.Zn]: 2,
     [ElementName.B]: 1,
     [ElementName.Cu]: 2,
-    [ElementName.Mo]: 2
+    [ElementName.Mo]: 2,
+    [ElementName.Si]: 0
   };
   return valences[element] || 0;
 };
@@ -186,3 +189,5 @@ export const average = (numbers: number[]): number => {
   if (numbers.length === 0) return 0;
   return sum(numbers) / numbers.length;
 };
+
+

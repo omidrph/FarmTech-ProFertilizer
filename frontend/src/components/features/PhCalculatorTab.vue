@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/PhCalculatorTab.vue -->
 <!--
   تب «PH» — اصلاح pH با اسید/باز (۳ مرحلهٔ ساده، هم‌سبک «محاسبه کود»)
@@ -395,6 +396,8 @@ function prefillFromContext() {
   const ctx = phStore.context;
   if (!ctx) return;
   if (!form.tankVolume && ctx.tank_volume_l) form.tankVolume = String(ctx.tank_volume_l);
+  // pH آب فقط وقتی کاربر در آنالیز آب وارد کرده باشد، به‌عنوان pH فعلی پیشنهاد می‌شود (قابل‌ویرایش)
+  if (!form.initialPh && ctx.water_ph) form.initialPh = String(ctx.water_ph);
 }
 onMounted(async () => { phStore.clearResult(); await phStore.refreshAll(); prefillFromContext(); });
 watch(() => reportStore.currentReportId, async () => { phStore.reset(); form.tankVolume = ''; form.targetPh = ''; currentStep.value = 1; await phStore.refreshAll(); prefillFromContext(); });
@@ -418,3 +421,6 @@ watch(() => reportStore.currentReportId, async () => { phStore.reset(); form.tan
 .step-enter-from { opacity: 0; transform: translateY(6px); }
 .step-leave-to { opacity: 0; transform: translateY(-6px); }
 </style>
+
+
+

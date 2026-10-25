@@ -1,3 +1,4 @@
+
 // src/utils/constants.ts
 
 import { ElementName, Unit, type ElementList } from '@/types';
@@ -39,7 +40,8 @@ export const ELEMENT_DISPLAY_NAMES: Record<ElementName, string> = {
   [ElementName.Zn]: 'Zn',
   [ElementName.B]: 'B',
   [ElementName.Cu]: 'Cu',
-  [ElementName.Mo]: 'Mo'
+  [ElementName.Mo]: 'Mo',
+  [ElementName.Si]: 'Si'
 };
 
 export const WATER_ELEMENTS = [
@@ -97,3 +99,5 @@ export const SUCCESS_MESSAGES = {
   UPDATED: 'با موفقیت به‌روزرسانی شد',
   PRINTED: 'گزارش در حال چاپ...'
 };
+
+

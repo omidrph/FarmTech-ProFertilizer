@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/FertilizerDBTab.vue -->
 <template>
   <div class="space-y-6">
@@ -126,7 +127,7 @@ const copyStatus = ref({
 // لیست عناصر برای فرم
 const elementsList = [
   'N-NO3', 'N-NH4', 'P', 'K', 'Ca', 'Mg', 'S', 
-  'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'Na', 'Cl'
+  'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'Na', 'Cl', 'Si'
 ];
 
 // داده‌های فرم
@@ -493,3 +494,6 @@ watch(() => fertilizerStore.fertilizers, (newVal) => {
   transform: translate(-50%, 10px);
 }
 </style>
+
+
+

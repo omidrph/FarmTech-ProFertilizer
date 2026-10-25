@@ -129,6 +129,14 @@ export const ELEMENT_DEFS: ElementDef[] = [
       f('NaMo', 'Na₆Mo₇O₂₄', 'مولیبدات سدیم', 0.5627),
       f('MoO3', 'MoO₃', 'اکسید مولیبدن', 95.95 / 143.95),
     ] },
+  { key: 'Si', symbol: 'Si', name: 'سیلیسیم', type: 'neutral', defaultForm: 'Si',
+    forms: [
+      f('Si', 'Si', 'سیلیسیم', 1),
+      f('SiO2', 'SiO₂', 'سیلیس', 28.086 / 60.084),
+      f('K2SiO3', 'K₂SiO₃', 'سیلیکات پتاسیم', 0.182),
+      f('Na2SiO3', 'Na₂SiO₃', 'سیلیکات سدیم', 0.2301),
+      f('H4SiO4', 'H₄SiO₄', 'اسید سیلیسیک', 28.086 / 96.115),
+    ] },
   { key: 'Na', symbol: 'Na', name: 'سدیم', type: 'cation', defaultForm: 'Na2O',
     forms: [f('Na2O', 'Na₂O', 'اکسید سدیم', (2 * 22.99) / 61.979), f('Na', 'Na', 'سدیم', 1)] },
   { key: 'Cl', symbol: 'Cl', name: 'کلر', type: 'anion', defaultForm: 'Cl',
@@ -154,6 +162,7 @@ export const ELEMENT_SEARCH_ALIASES: Record<string, string[]> = {
   Mo: ['mo', 'moo3', 'مولیبدن'],
   Na: ['na', 'na2o', 'سدیم'],
   Cl: ['cl', 'کلر', 'کلرید'],
+  Si: ['si', 'sio2', 'سیلیسیم', 'سیلیس', 'سیلیکات'],
 };
 
 export const getElementDef = (key: string): ElementDef | undefined => ELEMENT_DEFS.find((e) => e.key === key);

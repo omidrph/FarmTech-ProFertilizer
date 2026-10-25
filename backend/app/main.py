@@ -1,3 +1,4 @@
+
 # backend/app/main.py
 """
 نقطه ورود اصلی برنامه FastAPI
@@ -360,26 +361,15 @@ async def startup_event():
             db.rollback()
         
         try:
-            recipe_count = get_system_recipes_count(db)
-            logger.info(f"📊 تعداد رسپی‌های سیستمی فعلی: {recipe_count}")
-            
-            if recipe_count == 0:
-                logger.info("📋 در حال بارگذاری رسپی‌های سیستمی...")
-                stats = seed_system_recipes(db)
-                
-                logger.info(
-                    f"✅ رسپی‌های سیستمی بارگذاری شدند - "
-                    f"اضافه شده: {stats['added']} | "
-                    f"رد شده: {stats['skipped']} | "
-                    f"خطا: {len(stats['errors'])}"
-                )
-                
-                if stats['errors']:
-                    for err in stats['errors']:
-                        logger.warning(f"⚠️  خطا در {err['name']}: {err['error']}")
-            else:
-                logger.info(f"✅ رسپی‌های سیستمی از قبل موجود هستند ({recipe_count} مورد)")
-                
+            # همگام‌سازی رسپی‌های سیستمی با فهرست استاندارد (حذف قدیمی‌ها + افزودن/به‌روزرسانی)
+            stats = seed_system_recipes(db)
+            logger.info(
+                f"✅ رسپی‌های سیستمی همگام شدند - اضافه: {stats['added']} | به‌روز: {stats['skipped']} | "
+                f"حذف: {stats['removed']} | خطا: {len(stats['errors'])}"
+            )
+            for err in stats['errors']:
+                logger.warning(f"⚠️  خطا در {err['name']}: {err['error']}")
+
         except Exception as e:
             logger.error(f"❌ خطا در بارگذاری رسپی‌های سیستمی: {e}")
             db.rollback()
@@ -395,3 +385,6 @@ async def startup_event():
 async def shutdown_event():
     """رویداد توقف برنامه"""
     logger.info(f"👋 Shutting down {settings.APP_NAME}")
+
+
+

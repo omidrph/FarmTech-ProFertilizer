@@ -1,10 +1,11 @@
+
 // frontend/src/store/modules/waterStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { WaterMixData } from '@/types';
 import { WATER_GROUPS } from '@/utils/waterForms';
 
-const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'];
+const WATER_ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'Si'];
 
 export const EC_STANDARDS = {
   MIN_VALID_EC: 0.1,
@@ -128,6 +129,9 @@ export const useWaterStore = defineStore('water', () => {
       const v = (waterValues.value[key] || 0) * waterPct + (wastewaterValues.value[key] || 0) * wastePct;
       if (v > 0) out[key] = v;
     }
+    // نیتروژن کل: اگر تفکیک نیترات/آمونیوم وارد نشده باشد، کل آن به‌عنوان نیتروژن نیتراتی در محاسبه لحاظ می‌شود
+    const nTotal = (waterValues.value['N-total'] || 0) * waterPct + (wastewaterValues.value['N-total'] || 0) * wastePct;
+    if (nTotal > 0 && !(out['N-NO3'] > 0) && !(out['N-NH4'] > 0)) out['N-NO3'] = nTotal;
     const ph = waterValues.value['pH'];
     if (typeof ph === 'number' && ph > 0) out['pH'] = ph;
     return out;
@@ -299,3 +303,5 @@ export const useWaterStore = defineStore('water', () => {
 });
 
 export default useWaterStore;
+
+

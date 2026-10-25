@@ -1,4 +1,5 @@
 
+
 // frontend/src/store/modules/calcStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -15,7 +16,7 @@ import { useReportStore } from './reportStore';
 
 const ELEMENTS: ElementName[] = [
     'N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl',
-    'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'
+    'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'Si'
 ] as ElementName[];
 
 export const useCalcStore = defineStore('calc', () => {
@@ -835,3 +836,6 @@ export const useCalcStore = defineStore('calc', () => {
 });
 
 export default useCalcStore;
+
+
+

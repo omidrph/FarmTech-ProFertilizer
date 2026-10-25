@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/target/BalanceAndGuide.vue -->
 <template>
   <div id="balance-guide-section" class="space-y-2">
@@ -449,6 +450,18 @@ const ELEMENTS_DATA: Record<string, any> = {
     category: 'micro',
     mobility: 'mobile'
   },
+  'Si': {
+    name: 'سیلیسیم',
+    symbol: 'Si',
+    role: 'تقویت دیوارهٔ سلولی، افزایش مقاومت به قارچ‌ها و تنش‌های شوری و گرما، استحکام ساقه',
+    deficiency: 'کمبود آشکار ندارد؛ بوته‌ها نرم‌تر و حساس‌تر به بیماری‌های قارچی می‌شوند',
+    toxicity: 'سمیت شناخته‌شده‌ای ندارد؛ مقدار زیاد pH محلول را بالا می‌برد',
+    idealRange: { min: 10, max: 50, unit: 'ppm' },
+    sources: ['سیلیکات پتاسیم', 'اسید سیلیسیک', 'سیلیکات سدیم'],
+    notes: 'سیلیسیم بدون بار است و در تعادل یونی دخالت ندارد. سیلیکات‌ها را جدا از کلسیم و اسید مخلوط کنید.',
+    category: 'micro',
+    mobility: 'immobile'
+  },
   'Na': {
     name: 'سدیم',
     symbol: 'Na',
@@ -680,3 +693,5 @@ watch(() => props.selectedElement, (newVal) => {
   }
 }
 </style>
+
+

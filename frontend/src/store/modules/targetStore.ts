@@ -1,3 +1,4 @@
+
 // frontend/src/store/modules/targetStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -6,7 +7,7 @@ import { useReportStore } from './reportStore';
 
 type Unit = 'ppm' | 'meq' | 'mmol';
 
-const ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo'] as const;
+const ELEMENTS = ['N-NO3', 'P', 'S', 'N-NH4', 'K', 'Ca', 'Mg', 'Na', 'Cl', 'Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'Si'] as const;
 type ElementName = typeof ELEMENTS[number];
 
 const DEFAULT_UNIT: Unit = 'ppm';
@@ -211,3 +212,5 @@ export const useTargetStore = defineStore('target', () => {
 });
 
 export default useTargetStore;
+
+

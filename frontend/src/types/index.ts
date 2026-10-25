@@ -1,3 +1,5 @@
+
+
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -24,7 +26,8 @@ export enum ElementName {
     Zn = 'Zn',
     B = 'B',
     Cu = 'Cu',
-    Mo = 'Mo'
+    Mo = 'Mo',
+    Si = 'Si'
 }
 
 export enum ReservoirType {
@@ -509,3 +512,6 @@ export interface User {
     updated_at?: string;
     full_name: string;
 }
+
+
+

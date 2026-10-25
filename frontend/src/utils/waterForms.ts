@@ -60,7 +60,7 @@ export const WATER_MICRO: WaterRow[] = [
   { key: 'Cu', name: 'مس', symbol: 'Cu', type: 'cation', defaultForm: 'Cu', forms: [f('Cu', 'Cu', 'مس', 1, 63.546, 2)] },
   { key: 'Mo', name: 'مولیبدن', symbol: 'Mo', type: 'anion', defaultForm: 'Mo',
     forms: [f('Mo', 'Mo', 'مولیبدن', 1, 95.95, 2), f('MoO4', 'MoO₄²⁻', 'یون مولیبدات', 95.95 / 159.95, 159.95, 2)] },
-  { key: 'Si', name: 'سیلیسیم', symbol: 'Si', type: 'neutral', defaultForm: 'Si', info: true,
+  { key: 'Si', name: 'سیلیسیم', symbol: 'Si', type: 'neutral', defaultForm: 'Si',
     forms: [f('Si', 'Si', 'سیلیسیم', 1, 28.086, 0), f('SiO2', 'SiO₂', 'سیلیس', 28.086 / 60.084, 60.084, 0), f('H4SiO4', 'H₄SiO₄', 'اسید سیلیسیک', 28.086 / 96.115, 96.115, 0)] },
 ];
 

@@ -544,6 +544,7 @@
                   <option value="Mn">منگنز (Mn)</option>
                   <option value="Cu">مس (Cu)</option>
                   <option value="Mo">مولیبدن (Mo)</option>
+                  <option value="Si">سیلیسیم (Si)</option>
                 </select>
               </div>
 
