@@ -1,3 +1,4 @@
+
 <template>
   <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-bl from-primary-600 via-primary-700 to-primary-900 dark:from-primary-900 dark:via-primary-950 dark:to-gray-900">
     <div class="absolute inset-0 overflow-hidden">
@@ -45,7 +46,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 
 const slides = [
   { title: 'فرمول غذایی دقیق، در چند دقیقه',
-    text: 'کودها را با حالت دقیق‌ترین، کم‌هزینه‌ترین یا کمترین تعداد کود محاسبه کنید؛ یا با محاسبهٔ دستی، مقدار دلخواه خودتان را وارد کنید.',
+    text: 'کودها را با حالت دقیق‌ترین یا کم‌هزینه‌ترین محاسبه کنید؛ یا با محاسبهٔ دستی، مقدار دلخواه خودتان را وارد کنید.',
     icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z' },
   { title: 'تنظیم pH با اسید و باز',
     text: 'از محلول نمونه بردارید و اسید یا باز را مرحله‌به‌مرحله اضافه کنید؛ مقدار لازم برای مخزن حساب می‌شود و مستقیم در فرمول لحاظ می‌گردد.',

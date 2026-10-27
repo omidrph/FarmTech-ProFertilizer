@@ -1,3 +1,4 @@
+
 """
 تابع اصلی بهینه‌سازی فرمول کود
 ================================
@@ -68,7 +69,10 @@ def optimize_fertilizers(
     cost_weight = options.get('cost_weight', 0.01)
     use_precipitation_check = options.get('use_precipitation_check', True)
     use_ion_balance_check = options.get('use_ion_balance_check', True)
-    auto_balance = options.get('auto_balance', True)  # 🆕 پیش‌فرض فعال
+    # تعادل یونی خودکار و حالت «کمترین تعداد کود» حذف شده‌اند (گزینه‌های قدیمی نادیده گرفته می‌شوند)
+    auto_balance = False
+    options['prefer_fewer_fertilizers'] = False
+    options['max_fertilizers_count'] = None
 
     # ============================================================
     # 🆕 گزینه «دقیق‌ترین ترکیب» (prefer_most_accurate)
@@ -89,7 +93,6 @@ def optimize_fertilizers(
     logger.info(f"🚀 Starting optimization with method: {method}")
     logger.info(f"   Targets: {len(target_values)} elements")
     logger.info(f"   Fertilizers: {len(fertilizers)} items")
-    logger.info(f"   Auto Balance: {'✅ فعال' if auto_balance else '❌ غیرفعال'}")
     
     # ===== ۲. ساخت ماتریس =====
     try:
@@ -163,8 +166,8 @@ def optimize_fertilizers(
                 tolerance=tolerance,
                 element_weights=element_weights,
                 active_elements=active_elements,
-                prefer_fewer_fertilizers=options.get('prefer_fewer_fertilizers', False),
-                max_fertilizers_count=options.get('max_fertilizers_count'),
+                prefer_fewer_fertilizers=False,
+                max_fertilizers_count=None,
                 prefer_cheapest=options.get('prefer_cheapest', False),
                 cheapest_tolerance_pct=float(options.get('cheapest_tolerance_pct', 2.5) or 2.5)
             )
@@ -218,7 +221,6 @@ def optimize_fertilizers(
         logger.info(f"✅ Optimization completed in {result['convergence_time_ms']:.2f}ms")
         logger.info(f"   Residual error: {result['residual_error']:.4f}")
         logger.info(f"   Total cost: {result['cost_total']:,.0f} تومان")
-        logger.info(f"   Auto Balance: {'✅ اعمال شد' if result.get('auto_balanced', False) else '❌ اعمال نشد'}")
         
         return result
         

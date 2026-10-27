@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/FertilizerCalcTab.vue -->
 <!--
   ============================================================
@@ -116,7 +117,7 @@
           <div v-if="manualMode" class="rounded-lg bg-primary-50/70 dark:bg-primary-900/10 border border-primary-200 dark:border-primary-800 px-3 py-2.5 text-xs leading-6 text-primary-800 dark:text-primary-200">
             محاسبهٔ دستی فعال است: مقدار هر کود را در کادر بالا خودتان می‌نویسید و بهینه‌ساز اجرا نمی‌شود. نرم‌افزار بقیهٔ مراحل (غلظت عناصر، تعادل یونی، EC، رسوب، هزینه و مخازن) را انجام می‌دهد.
           </div>
-          <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               v-for="mode in optimizationModes"
               :key="mode.key"
@@ -163,31 +164,6 @@
                 </p>
               </div>
 
-              <label class="flex items-start gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  v-model="autoBalanceEnabled"
-                  class="mt-0.5 w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500"
-                />
-                <span class="min-w-0">
-                  <span class="block text-sm font-medium text-gray-700 dark:text-gray-200">تعادل یونی خودکار</span>
-                  <span class="block text-[11px] text-gray-500 dark:text-gray-400">
-                    در صورت فعال بودن، یون‌های پادبار (Na یا Cl) برای متعادل کردن فرمول اضافه می‌شوند. پیش‌فرض: خاموش.
-                  </span>
-                </span>
-              </label>
-
-              <div v-if="optimizationMode === 'fewer'" class="flex items-center gap-2">
-                <span class="text-sm text-gray-600 dark:text-gray-300">حداکثر تعداد کود</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  v-model.number="maxFertilizersCount"
-                  class="w-16 text-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none"
-                />
-              </div>
-
               <p v-if="optimizationMode !== 'accurate'" class="text-[11px] text-amber-600 dark:text-amber-400">
                 در این حالت ممکن است دقت رسیدن به عناصر هدف کمی کاهش پیدا کند.
               </p>
@@ -206,6 +182,7 @@
           :tank-volume="mainTankVolume"
           :active-ph="activePh"
           @update-weight="handleWeightEdit"
+          @set-ec="handleSetEc"
           @go-to-selection="goToStep(2)"
         />
 
@@ -459,16 +436,11 @@ const toastType = ref<'success' | 'error'>('success');
 const showResetConfirm = ref(false);
 const showAdvanced = ref(false);
 
-// پیش‌فرض خاموش
-const autoBalanceEnabled = ref(false);
-
-type OptimizationMode = 'accurate' | 'fewer' | 'cheapest';
+type OptimizationMode = 'accurate' | 'cheapest';
 const optimizationMode = ref<OptimizationMode>('accurate');
-const maxFertilizersCount = ref(6);
 
 const optimizationModes: Array<{ key: OptimizationMode; title: string; description: string }> = [
   { key: 'accurate', title: 'دقیق‌ترین ترکیب', description: 'کمترین اختلاف با عناصر هدف' },
-  { key: 'fewer', title: 'کمترین تعداد کود', description: 'ساخت ساده‌تر با کود کمتر' },
   { key: 'cheapest', title: 'کم‌هزینه‌ترین', description: 'اولویت با پایین‌ترین هزینه' }
 ];
 
@@ -585,17 +557,11 @@ const syncRestoredState = () => {
 
   const restoredOptions = calcStore.restoredOptimizationOptions;
   if (restoredOptions) {
-    if (restoredOptions.prefer_fewer_fertilizers) {
-      optimizationMode.value = 'fewer';
-      if (restoredOptions.max_fertilizers_count) {
-        maxFertilizersCount.value = restoredOptions.max_fertilizers_count;
-      }
-    } else if (restoredOptions.prefer_cheapest) {
+    if (restoredOptions.prefer_cheapest) {
       optimizationMode.value = 'cheapest';
     } else {
       optimizationMode.value = 'accurate';
     }
-    autoBalanceEnabled.value = !!restoredOptions.auto_balance;
   }
 
   if (hasOptimizationResult.value && currentStep.value !== 3) {
@@ -666,9 +632,6 @@ const handleOptimize = async () => {
 
   try {
     const options = {
-      auto_balance: autoBalanceEnabled.value,
-      prefer_fewer_fertilizers: optimizationMode.value === 'fewer',
-      max_fertilizers_count: optimizationMode.value === 'fewer' ? maxFertilizersCount.value : undefined,
       prefer_cheapest: optimizationMode.value === 'cheapest',
       prefer_most_accurate: optimizationMode.value === 'accurate'
     };
@@ -738,6 +701,11 @@ const handleWeightEdit = async (payload: { fertilizerId: string; weight: number 
   }
 };
 
+const handleSetEc = async (ec: number) => {
+  const r = await calcStore.scaleToTargetEc(ec);
+  showToast(r.ok ? `EC روی ${ec.toLocaleString('fa-IR')} تنظیم و مقدار کودها متناسب شد` : (r.message || 'تنظیم EC انجام نشد'), r.ok ? 'success' : 'error');
+};
+
 const handleExportPdf = async () => {
   if (!calcStore.optimizationResult) {
     showToast('ابتدا محاسبه را انجام دهید', 'error');
@@ -755,6 +723,7 @@ const handleExportPdf = async () => {
         reportName: report.reportName,
         plantName: report.plantName,
         season: report.season,
+        date: report.date,
         tankVolume: mainTankVolume.value,
         stockVolume: stockVolume.value,
         injectionRatio: injectionRatio.value
@@ -777,7 +746,6 @@ const resetAll = () => {
   calcStore.setStockSettings({ tankVolume: 5000, stockVolume: 25, injectionRatio: 100 });
   calcStore.clearOptimizationResult();
   optimizationMode.value = 'accurate';
-  autoBalanceEnabled.value = false;
   currentStep.value = 1;
   showToast('همه داده‌ها پاک شدند', 'success');
 };

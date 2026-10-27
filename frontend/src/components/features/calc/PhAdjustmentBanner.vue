@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/PhAdjustmentBanner.vue -->
 <!--
   اصلاح pH اعمال‌شده در این محاسبه (از تب PH).
@@ -17,6 +18,14 @@
           <template v-if="adjustment.initial_ph != null && adjustment.final_ph != null">
             · pH {{ fmt(adjustment.initial_ph, 2) }} ← {{ fmt(adjustment.final_ph, 2) }}
           </template>
+        </p>
+        <p v-if="adjustment.dose_total" class="text-xs text-emerald-900/80 dark:text-emerald-100/80 leading-6">
+          مقدار برای مخزن این محاسبه: <b>{{ fmtDose(adjustment.dose_total, adjustment.dose_unit) }}</b>
+          <template v-if="adjustment.price_per_kg">
+            · هزینه: <b>{{ Math.round(adjustment.cost || 0).toLocaleString('fa-IR') }}</b> تومان
+            <span class="opacity-70">(در هزینهٔ کل لحاظ شده)</span>
+          </template>
+          <template v-else> · قیمت این ماده در «پایگاه کود» ثبت نشده است</template>
         </p>
         <p class="text-xs text-emerald-900/80 dark:text-emerald-100/80 leading-6">
           عناصر واردشده: {{ contribText }}

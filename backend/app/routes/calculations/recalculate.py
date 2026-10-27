@@ -1,4 +1,5 @@
 
+
 # backend/app/routes/calculations/recalculate.py
 """
 مسیر محاسبه مجدد نتیجه پس از ویرایش دستی وزن یک کود
@@ -43,7 +44,8 @@ from app.core import (
     ALL_ELEMENTS,
 )
 from app.core.optimizer.matrix_builder import prepare_fertilizer_data, calculate_full_solution_concentrations
-from app.core.ph_calculator import load_active_for_cycle, merge_into_water
+from app.core.ph_calculator import load_active_for_cycle, merge_into_water, apply_ph_cost
+from app.core.reservoir.precipitation_guard import build_precipitation_alerts
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +142,8 @@ def recalculate_manual_weights(
         for fert in prepared:
             w = actual_weights.get(fert['id'], 0)
             cost_total += (w / 1000.0) * fert.get('price_per_kg', 0)
+        # 🆕 هزینهٔ اسید/باز تب PH
+        cost_total += apply_ph_cost(db, ph_summary, getattr(request, 'tank_volume', None)) if ph_summary else 0.0
 
         # تعادل یونی
         cation, anion, is_balanced, ion_details = calculate_ion_balance(full_concentrations, unit="ppm")
@@ -171,6 +175,17 @@ def recalculate_manual_weights(
 
         # توزیع مخازن بر مبنای وزن واقعی
         reservoir_data = calculate_reservoir_data(fertilizers, actual_weights)
+
+        # 🆕 هشدارهای ساختاریافتهٔ رسوب
+        _inj = getattr(request, 'injection_ratio', None) or 100
+        precipitation_alerts = build_precipitation_alerts(
+            concentrations=full_concentrations,
+            reservoir_data=reservoir_data,
+            fertilizers=fertilizers,
+            stock_liters=(tank_volume / _inj) if _inj else None,
+            water_values=effective_water,
+            ph=prelim_ph_result.get('ph'),
+        )
 
         # هشدار و پیشنهاد
         warnings = []
@@ -318,6 +333,7 @@ def recalculate_manual_weights(
             ec=ec_result['ec'],
             ec_status=ec_result['status_label'],
             ph_adjustment=ph_summary,
+            precipitation_alerts=precipitation_alerts,
             stock_info={
                 'tank_volume': tank_volume,
                 'manual_edit': True

@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/ManualAmountsPanel.vue -->
 <!--
   محاسبهٔ دستی: مقدار هر کودِ انتخاب‌شده را برای «کل مخزن» می‌نویسید.
@@ -31,7 +32,7 @@
       <div class="px-4 sm:px-5 py-3 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700">
         <div class="relative flex-1">
           <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" /></svg>
-          <input v-model="q" placeholder="جستجوی کود…" class="w-full h-9 pr-9 pl-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
+          <input v-model="q" placeholder="جستجوی نام، فرمول یا عنصر (Ca، کلسیم)…" class="w-full h-9 pr-9 pl-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
         <button type="button" @click="onlyFilled = !onlyFilled" class="h-9 px-3 rounded-lg border text-xs font-medium transition-colors flex-shrink-0"
           :class="onlyFilled ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'">فقط پرشده‌ها</button>
@@ -50,6 +51,7 @@
                 <span v-if="isCompany(f)" class="text-[10px] px-1.5 py-0.5 rounded bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">{{ f.brand }}</span>
                 <span v-if="f.form === 'liquid'" class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300">مایع</span>
               </p>
+              <p v-if="f.formula" class="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400" dir="ltr" style="text-align:right">{{ f.formula }}</p>
               <p class="mt-1 flex flex-wrap gap-1">
                 <span v-for="el in mainElements(f)" :key="el.symbol" class="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 tabular-nums">{{ el.symbol }} {{ el.value }}٪</span>
               </p>
@@ -79,17 +81,27 @@
         <li v-if="!visible.length" class="col-span-full py-8 text-center text-sm text-gray-500">موردی یافت نشد.</li>
       </ul>
 
-      <!-- پیش‌نمایش زنده -->
-      <div v-if="targetRows.length" class="px-4 sm:px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30">
-        <p class="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-2.5">پیش‌نمایش پوشش عناصر هدف (با احتساب آب)</p>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          <div v-for="row in targetRows" :key="row.symbol" class="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-2">
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="font-bold text-gray-700 dark:text-gray-200">{{ row.symbol }}</span>
-              <span class="tabular-nums" :class="row.pct > 115 ? 'text-rose-600' : row.pct >= 90 ? 'text-emerald-600' : 'text-amber-600'">{{ fmt(row.pct) }}٪</span>
+      <!-- پیش‌نمایش زنده: ماکرو و میکرو جدا، رنگ سه‌سطحی (۵٪ / ۱۰٪) -->
+      <div v-if="targetRows.length" class="px-4 sm:px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30 space-y-3">
+        <p class="text-xs font-semibold text-gray-600 dark:text-gray-300">پیش‌نمایش زندهٔ پوشش عناصر هدف (با احتساب آب)</p>
+        <div v-for="g in previewGroups" :key="g.group">
+          <div v-if="g.count" class="mb-2 flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-[11px]" :class="[LEVEL_CLASS[g.level].bg, LEVEL_CLASS[g.level].border]">
+            <span class="font-bold text-gray-800 dark:text-gray-100">{{ GROUP_TITLES[g.group] }}</span>
+            <span class="tabular-nums" :class="LEVEL_CLASS[g.level].text">
+              میانگین خطا {{ faNum(g.meanAbs, 1) }}٪ · {{ LEVEL_LABEL[g.level] }}
+            </span>
+          </div>
+          <div v-if="g.count" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div v-for="row in g.rows" :key="row.element" class="rounded-lg bg-white dark:bg-gray-800 border px-2.5 py-2" :class="LEVEL_CLASS[row.level].border">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-bold text-gray-700 dark:text-gray-200">{{ row.element }}</span>
+                <span class="tabular-nums" :class="LEVEL_CLASS[row.level].text">{{ faNum(row.absPct, 1) }}٪ {{ row.deviationPct >= 0 ? 'بیش' : 'کم' }}</span>
+              </div>
+              <div class="mt-1.5 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                <div class="h-full rounded-full" :class="LEVEL_CLASS[row.level].dot" :style="{ width: Math.min((row.actual / row.target) * 100, 100) + '%' }"></div>
+              </div>
+              <p class="mt-1 text-[10px] text-gray-400 tabular-nums">{{ fmt(row.actual, 1) }} / {{ fmt(row.target, 1) }}</p>
             </div>
-            <div class="mt-1.5 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><div class="h-full rounded-full" :class="row.pct > 115 ? 'bg-rose-500' : row.pct >= 90 ? 'bg-emerald-500' : 'bg-amber-500'" :style="{ width: Math.min(row.pct, 100) + '%' }"></div></div>
-            <p class="mt-1 text-[10px] text-gray-400 tabular-nums">{{ fmt(row.supplied, 1) }} / {{ fmt(row.target, 1) }}</p>
           </div>
         </div>
       </div>
@@ -121,6 +133,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
+import { computeGroupErrors, faNum, GROUP_TITLES, LEVEL_CLASS, LEVEL_LABEL } from '@/utils/errorLevels';
 import { amountToGrams, canShowVolume, defaultUnit, formatFertilizerAmount, unitOptions, type AmountUnit } from '@/utils/fertilizerUnits';
 
 type Row = { amount: number | null; unit: AmountUnit };
@@ -147,6 +160,14 @@ watch(() => props.fertilizers.map((f) => f.id).join(','), () => {
   if (changed) emit('update:amounts', next);
 }, { immediate: true });
 
+const EL_FA: Record<string, string> = { 'N-NO3': 'نیترات نیتروژن', 'N-NH4': 'آمونیوم نیتروژن', P: 'فسفر فسفات', K: 'پتاسیم', Ca: 'کلسیم', Mg: 'منیزیم', S: 'گوگرد سولفات', Na: 'سدیم', Cl: 'کلر', Fe: 'آهن', Mn: 'منگنز', Zn: 'روی', B: 'بور', Cu: 'مس', Mo: 'مولیبدن', Si: 'سیلیسیم' };
+const matchQ = (f: any): boolean => {
+  const tokens = q.value.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  const els = Object.entries(f.elements || {}).filter(([, v]) => Number(v) > 0).map(([k]) => `${k} ${EL_FA[k] || ''}`).join(' ');
+  const hay = `${f.name} ${f.brand || ''} ${f.formula || ''} ${els} ${f.isAcid ? 'اسید' : ''} ${f.isBase ? 'باز' : ''} ${f.form === 'liquid' ? 'مایع' : ''}`.toLowerCase();
+  return tokens.every((t) => hay.includes(t));
+};
 const q = ref(''); const onlyFilled = ref(false);
 const rowOf = (f: any): Row => props.amounts[f.id] || { amount: null, unit: defaultUnit(f) };
 const setAmount = (f: any, text: string) => emit('update:amounts', { ...props.amounts, [f.id]: { ...rowOf(f), amount: text.trim() === '' ? null : parse(text) } });
@@ -159,7 +180,7 @@ const rowError = (f: any): string => {
   return '';
 };
 const filledCount = computed(() => props.fertilizers.filter((f) => gramsOf(f) > 0).length);
-const visible = computed(() => props.fertilizers.filter((f) => (!onlyFilled.value || gramsOf(f) > 0) && (!q.value.trim() || `${f.name} ${f.brand || ''}`.toLowerCase().includes(q.value.trim().toLowerCase()))));
+const visible = computed(() => props.fertilizers.filter((f) => (!onlyFilled.value || gramsOf(f) > 0) && (!q.value.trim() || matchQ(f))));
 const clearAll = () => emit('update:amounts', Object.fromEntries(props.fertilizers.map((f) => [f.id, { amount: null, unit: defaultUnit(f) }])));
 
 const mainElements = (f: any) => Object.entries(f.elements || {}).filter(([, v]) => Number(v) > 0).map(([symbol, v]) => ({ symbol, value: Math.round(Number(v) * 100) / 100 })).sort((a, b) => b.value - a.value).slice(0, 4);
@@ -170,6 +191,7 @@ const suppliedPpm = computed(() => {
     for (const [el, pct] of Object.entries<any>(f.elements || {})) if (Number(pct) > 0) out[el] = (out[el] || 0) + (g * (Number(pct) / 100) * ((f.concentration || 100) / 100) * 1000) / props.tankVolume; }
   return out;
 });
+const previewGroups = computed(() => { const g = computeGroupErrors(props.targets || {}, suppliedPpm.value); return [g.macro, g.micro]; });
 const targetRows = computed(() => Object.entries(props.targets || {}).filter(([, t]) => Number(t) > 0).map(([symbol, t]) => { const supplied = suppliedPpm.value[symbol] || 0; return { symbol, target: Number(t), supplied, pct: (supplied / Number(t)) * 100 }; }));
 
 // ----- کمک‌محاسبه -----

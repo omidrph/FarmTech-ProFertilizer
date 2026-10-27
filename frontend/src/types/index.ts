@@ -1,5 +1,6 @@
 
 
+
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -335,6 +336,8 @@ export interface OptimizationResponse {
     // مثل آب یک منبع پایه لحاظ شده‌اند و در concentrations / تعادل یونی / EC هستند.
     ph_adjustment?: {
         id: number;
+        fertilizer_id?: number | null;
+        chemical?: { density_g_ml?: number | null } | null;
         chemical_name: string;
         kind: 'acid' | 'base';
         mode: 'known' | 'trial';
@@ -349,7 +352,13 @@ export interface OptimizationResponse {
         strength_meq_l?: number;
         ec_delta?: number | null;
         updated_at?: string | null;
+        // 🆕 هزینه و مقدار اسید/باز برای حجم مخزن همین محاسبه
+        cost?: number;
+        dose_total?: number;
+        dose_total_g?: number;
+        price_per_kg?: number;
     } | null;
+    precipitation_alerts?: PrecipitationAlert[] | null;
     stock_info?: {
         tank_volume: number;
         stock_volume?: number;
@@ -514,4 +523,14 @@ export interface User {
 }
 
 
-
+// 🆕 هشدار ساختاریافتهٔ رسوب (سیستم هشدار ترکیبات رسوب‌زا)
+export interface PrecipitationAlert {
+    id: string;
+    severity: 'danger' | 'warn' | 'info';
+    scope: 'stock' | 'final' | 'water';
+    tank?: string | null;
+    title: string;
+    detail: string;
+    solution: string;
+    elements?: string[];
+}

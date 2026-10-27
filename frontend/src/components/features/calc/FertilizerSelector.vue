@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/FertilizerSelector.vue -->
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -68,7 +69,7 @@
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="جستجوی نام یا برند کود..."
+              placeholder="نام، فرمول، عنصر (Ca، کلسیم، k>20)، اسید، مایع..."
               class="w-full pr-9 pl-8 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             <button
@@ -83,6 +84,20 @@
               </svg>
             </button>
           </div>
+        </div>
+
+        <!-- میان‌برهای جستجو بر اساس عنصر -->
+        <div class="px-3 pb-2 flex flex-wrap gap-1.5">
+          <button
+            v-for="chip in quickChips"
+            :key="chip"
+            type="button"
+            @click="toggleChip(chip)"
+            class="px-2 py-0.5 rounded-full text-[11px] border transition-colors"
+            :class="chipActive(chip)
+              ? 'bg-primary-600 border-primary-600 text-white'
+              : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400'"
+          >{{ chip }}</button>
         </div>
 
         <!-- لیست -->
@@ -369,13 +384,80 @@ const availableList = computed(() =>
   userFertilizers.value.filter((f) => !props.selectedFertilizers.includes(f.id))
 );
 
+// ===== 🆕 جستجوی هوشمند: نام، برند، فرمول، عنصر (نماد یا نام فارسی)، اسید/باز، شکل کود =====
+const EL_ALIASES: Record<string, string[]> = {
+  'N-NO3': ['n-no3', 'no3', 'نیترات', 'نیتروژن نیتراتی'],
+  'N-NH4': ['n-nh4', 'nh4', 'آمونیوم', 'نیتروژن آمونیومی'],
+  P: ['p', 'فسفر', 'فسفات'],
+  K: ['k', 'پتاسیم'],
+  Ca: ['ca', 'کلسیم'],
+  Mg: ['mg', 'منیزیم'],
+  S: ['s', 'گوگرد', 'سولفات'],
+  Na: ['na', 'سدیم'],
+  Cl: ['cl', 'کلر', 'کلرید'],
+  Fe: ['fe', 'آهن'],
+  Mn: ['mn', 'منگنز'],
+  Zn: ['zn', 'روی'],
+  B: ['b', 'بور'],
+  Cu: ['cu', 'مس'],
+  Mo: ['mo', 'مولیبدن'],
+  Si: ['si', 'سیلیسیم', 'سیلیس']
+};
+const FORM_ALIASES: Record<string, string[]> = {
+  liquid: ['مایع', 'liquid'],
+  powder: ['پودر', 'powder'],
+  crystal: ['کریستال', 'بلوری', 'crystal'],
+  granular: ['granular', 'گرانول', 'دانه‌ای', 'دانه ای']
+};
+const norm = (t: string) => t.toLowerCase().replace(/[ي]/g, 'ی').replace(/[ك]/g, 'ک').replace(/\u200c/g, ' ').trim();
+
+/** یک عبارت (توکن) با یک کود می‌خواند؟ «Ca»، «کلسیم»، «ca>15» (حداقل درصد عنصر)، «اسید»، «مایع»، نام/فرمول/برند */
+const tokenMatches = (f: Fertilizer, raw: string): boolean => {
+  const t = norm(raw);
+  if (!t) return true;
+  const els: Record<string, number> = ((f as any).elements || {}) as Record<string, number>;
+
+  // شرط مقدار: ca>15 ، k>=20 ، n-no3<5
+  const cmp = t.match(/^([a-z0-9\-\u0600-\u06ff]+)\s*(>=|<=|>|<|=)\s*(\d+(?:\.\d+)?)$/);
+  if (cmp) {
+    const key = Object.keys(EL_ALIASES).find((k) => EL_ALIASES[k].includes(cmp[1]));
+    if (!key) return false;
+    const v = Number(els[key]) || 0;
+    const n = Number(cmp[3]);
+    return cmp[2] === '>' ? v > n : cmp[2] === '>=' ? v >= n : cmp[2] === '<' ? v < n && v > 0 : cmp[2] === '<=' ? v <= n && v > 0 : v === n;
+  }
+
+  // عنصر (تطبیق دقیق نماد/نام؛ فقط اگر کود آن عنصر را داشته باشد)
+  for (const [key, aliases] of Object.entries(EL_ALIASES)) {
+    if (aliases.includes(t)) return (Number(els[key]) || 0) > 0;
+  }
+  if (['اسید', 'acid'].includes(t)) return !!(f as any).isAcid;
+  if (['باز', 'base'].includes(t)) return !!(f as any).isBase;
+  for (const [form, aliases] of Object.entries(FORM_ALIASES)) {
+    if (aliases.includes(t)) return (f as any).form === form;
+  }
+  if (['کلاته', 'chelate', 'chelated'].includes(t)) return /کلات|edta|dtpa|eddha|chelate/i.test(f.name || '');
+
+  const hay = norm([f.name, (f as any).brand, (f as any).formula].filter(Boolean).join(' '));
+  return hay.includes(t);
+};
+
 const filteredAvailable = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  if (!query) return availableList.value;
-  return availableList.value.filter(
-    (f) => f.name.toLowerCase().includes(query) || (f.brand || '').toLowerCase().includes(query)
-  );
+  const tokens = searchQuery.value.split(/[\s,،+]+/).filter(Boolean);
+  if (!tokens.length) return availableList.value;
+  return availableList.value.filter((f) => tokens.every((t) => tokenMatches(f, t)));
 });
+
+// میان‌برهای عنصری برای جستجوی سریع
+const quickChips = ['N-NO3', 'P', 'K', 'Ca', 'Mg', 'S', 'Fe', 'اسید', 'مایع'];
+const toggleChip = (chip: string) => {
+  const parts = searchQuery.value.split(/\s+/).filter(Boolean);
+  const i = parts.findIndex((p) => norm(p) === norm(chip));
+  if (i >= 0) parts.splice(i, 1);
+  else parts.push(chip);
+  searchQuery.value = parts.join(' ');
+};
+const chipActive = (chip: string) => searchQuery.value.split(/\s+/).some((p) => norm(p) === norm(chip));
 
 const emptyAvailableTitle = computed(() => {
   if (searchQuery.value) return 'کودی با این عبارت پیدا نشد';
@@ -384,7 +466,7 @@ const emptyAvailableTitle = computed(() => {
 });
 
 const emptyAvailableHint = computed(() => {
-  if (searchQuery.value) return 'عبارت جستجو را تغییر دهید';
+  if (searchQuery.value) return 'عبارت‌ها با «و» ترکیب می‌شوند؛ یکی را بردارید';
   if (userFertilizers.value.length === 0) return 'ابتدا از بخش پایگاه داده کود، کودهای خود را اضافه کنید';
   return '';
 });

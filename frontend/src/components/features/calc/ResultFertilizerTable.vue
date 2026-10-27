@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/ResultFertilizerTable.vue -->
 <!--
   جدول مقادیر کود، گروه‌بندی‌شده بر اساس مخزن.
@@ -34,23 +35,26 @@
 
       <!-- دسکتاپ: ردیف‌های هم‌ارتفاع (۵۲px) در هر دو حالت نمایش -->
       <div class="hidden sm:block">
-        <div class="grid grid-cols-[minmax(0,1fr)_230px_140px] bg-gray-50 dark:bg-gray-700/40 text-xs font-semibold text-gray-600 dark:text-gray-300">
+        <div class="grid grid-cols-[minmax(0,1fr)_120px_230px_140px] bg-gray-50 dark:bg-gray-700/40 text-xs font-semibold text-gray-600 dark:text-gray-300">
           <div class="px-4 py-2.5 text-right">نام کود</div>
+          <div class="px-2 py-2.5 text-center">فرمول</div>
           <div class="px-3 py-2.5 text-center">{{ weightColumnLabel }}</div>
           <div class="px-4 py-2.5 text-left">هزینه (تومان)</div>
         </div>
         <div class="divide-y divide-gray-100 dark:divide-gray-700">
-          <div v-for="item in group.items" :key="item.id" class="grid grid-cols-[minmax(0,1fr)_230px_140px] items-center h-[52px] hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+          <div v-for="item in group.items" :key="item.id" class="grid grid-cols-[minmax(0,1fr)_120px_230px_140px] items-center h-[52px] hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
             <div class="px-4 flex items-center gap-1.5 min-w-0">
               <span class="font-medium text-sm text-gray-900 dark:text-white truncate">{{ item.name }}</span>
               <span v-if="item.isAcid || item.isBase" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
+              <span v-if="item.readonly" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" title="از تب PH؛ مقدار آن را همان‌جا تغییر دهید">تنظیم pH</span>
               <span v-if="item.fixed" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300" title="مقدار را خودتان تعیین کرده‌اید">مقدار شما</span>
             </div>
+            <div class="px-2 text-center text-[12px] text-gray-600 dark:text-gray-300 truncate" dir="ltr" :title="item.formula">{{ item.formula || '—' }}</div>
             <div class="px-3 flex items-center justify-center gap-2">
               <span v-if="litersText(item)" class="text-[10px] text-gray-400 whitespace-nowrap">{{ litersText(item) }}</span>
-              <div class="amount-pill" :class="activeMode === 'stock' ? 'amount-pill-edit' : ''">
+              <div class="amount-pill" :class="activeMode === 'stock' && !item.readonly ? 'amount-pill-edit' : ''">
                 <input
-                  v-if="activeMode === 'stock'"
+                  v-if="activeMode === 'stock' && !item.readonly"
                   type="number" step="0.001" min="0" dir="ltr"
                   class="w-20 text-center tabular-nums bg-transparent outline-none text-sm font-semibold text-gray-900 dark:text-white"
                   :value="displayWeight(item)"
@@ -71,13 +75,14 @@
       <div class="sm:hidden divide-y divide-gray-100 dark:divide-gray-700">
         <div v-for="item in group.items" :key="item.id" class="px-3 py-3">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ item.name }}</span>
+            <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ item.name }}<span v-if="item.formula" class="mr-1.5 text-[11px] font-normal text-gray-500 dark:text-gray-400" dir="ltr">{{ item.formula }}</span></span>
+            <span v-if="item.readonly" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">تنظیم pH</span>
             <span v-if="item.isAcid || item.isBase" class="text-[10px] px-1.5 py-0.5 rounded flex-shrink-0" :class="item.isBase ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'">{{ item.isBase ? 'باز' : 'اسید' }}</span>
           </div>
           <div class="flex items-center justify-between mt-2 gap-2">
             <span class="text-[11px] text-gray-500 dark:text-gray-400">{{ weightColumnLabel }}</span>
-            <div class="amount-pill" :class="activeMode === 'stock' ? 'amount-pill-edit' : ''">
-              <input v-if="activeMode === 'stock'" type="number" step="0.001" min="0" dir="ltr" class="w-20 text-center tabular-nums bg-transparent outline-none text-sm font-semibold text-gray-900 dark:text-white" :value="displayWeight(item)" @input="onWeightInput(item.id, $event)" @change="onWeightCommit(item.id)" />
+            <div class="amount-pill" :class="activeMode === 'stock' && !item.readonly ? 'amount-pill-edit' : ''">
+              <input v-if="activeMode === 'stock' && !item.readonly" type="number" step="0.001" min="0" dir="ltr" class="w-20 text-center tabular-nums bg-transparent outline-none text-sm font-semibold text-gray-900 dark:text-white" :value="displayWeight(item)" @input="onWeightInput(item.id, $event)" @change="onWeightCommit(item.id)" />
               <span v-else class="w-20 text-center tabular-nums text-sm font-semibold text-gray-900 dark:text-white" dir="ltr">{{ formatNumber(convertAmount(item), item.isVolume ? 1 : 2) }}</span>
               <span class="amount-unit">{{ unitText(item) }}</span>
             </div>
@@ -117,6 +122,9 @@ interface RowItem {
   isVolume: boolean;
   density: number;
   fixed: boolean;
+  formula?: string;
+  /** 🆕 ردیف اسید/باز تب PH (فقط نمایشی؛ ویرایش از تب PH) */
+  readonly?: boolean;
   weight: number;
   cost: number;
   tank: string;
@@ -234,12 +242,35 @@ const rows = computed<RowItem[]>(() => {
         isVolume: fert?.form === 'liquid' && density > 0,
         density,
         fixed: !!(props.result as any)?.fixed_fertilizers?.[id],
+        formula: fert?.formula || '',
         weight: weight as number,
         cost: fert ? ((weight as number) / 1000) * (fert.pricePerKg || 0) : 0,
         tank: tankMap.value[id] || 'other'
       };
     })
     .sort((a, b) => b.weight - a.weight);
+});
+
+// 🆕 اسید/باز تب PH: قبلاً در جدول و هزینهٔ نمایش‌داده‌شده اصلاً دیده نمی‌شد
+const phRow = computed<RowItem | null>(() => {
+  const adj: any = props.result?.ph_adjustment;
+  if (!adj || !(Number(adj.dose_total_g) > 0)) return null;
+  const density = Number(adj.chemical?.density_g_ml) || 0;
+  const fert = props.fertilizers.find((f) => String(f.id) === String(adj.fertilizer_id));
+  return {
+    id: 'ph-adjustment',
+    name: adj.chemical_name,
+    isAcid: adj.kind === 'acid',
+    isBase: adj.kind === 'base',
+    isVolume: adj.dose_unit === 'ml' && density > 0,
+    density,
+    fixed: false,
+    formula: fert?.formula || '',
+    readonly: true,
+    weight: Number(adj.dose_total_g),
+    cost: Number(adj.cost) || 0,
+    tank: 'C'
+  };
 });
 
 const groups = computed(() => {
@@ -253,7 +284,7 @@ const groups = computed(() => {
 
   return order
     .map((tank) => {
-      const items = rows.value.filter((row) => row.tank === tank);
+      const items = [...rows.value.filter((row) => row.tank === tank), ...(tank === 'C' && phRow.value ? [phRow.value] : [])];
       return {
         tank,
         title: titles[tank],

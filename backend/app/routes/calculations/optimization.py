@@ -1,4 +1,5 @@
 
+
 # backend/app/routes/calculations/optimization.py
 """
 مسیر بهینه‌سازی خودکار فرمول کود
@@ -28,8 +29,9 @@ from app.core import (
     get_plant_ec_range,
 )
 from app.core.optimizer.result_processor import validate_optimization_result
-from app.core.ph_calculator import load_active_for_cycle, merge_into_water
+from app.core.ph_calculator import load_active_for_cycle, merge_into_water, apply_ph_cost
 from app.core.optimizer.fixed_amounts import apply_fixed_amounts, FixedAmountError
+from app.core.reservoir.precipitation_guard import build_precipitation_alerts
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,8 @@ def optimize_fertilizers_endpoint(
         effective_water = merge_into_water(
             water_values, ph_contrib, (ph_summary or {}).get('alkalinity_shift_ppm')
         )
+        # 🆕 هزینهٔ اسید/باز تب PH (قبلاً در هزینهٔ کل و جدول نتیجه اصلاً لحاظ نمی‌شد)
+        ph_cost = apply_ph_cost(db, ph_summary, request.tank_volume) if ph_summary else 0.0
         if ph_summary:
             logger.info(f"   🧪 pH adjustment applied: {ph_summary['chemical_name']} -> {list(ph_contrib)}")
         
@@ -91,9 +95,10 @@ def optimize_fertilizers_endpoint(
         # تنظیمات بهینه‌سازی
         options = request.options.dict() if request.options else {}
         
-        # 🆕 اضافه کردن گزینه auto_balance (پیش‌فرض فعال)
-        if 'auto_balance' not in options:
-            options['auto_balance'] = True
+        # تعادل یونی خودکار و «کمترین تعداد کود» حذف شده‌اند؛ گزینه‌های قدیمی خاموش می‌شوند
+        options['auto_balance'] = False
+        options['prefer_fewer_fertilizers'] = False
+        options['max_fertilizers_count'] = None
 
         # 🆕 pH آب کاربر به options اضافه می‌شود تا بررسی رسوب (که داخل
         # موتور بهینه‌سازی، پیش از این‌که pH نهایی محاسبه شود، اجرا
@@ -123,6 +128,9 @@ def optimize_fertilizers_endpoint(
                 detail=result['error']
             )
         
+        # هزینهٔ کل = کودها + اسید/باز تب PH
+        result['cost_total'] = float(result.get('cost_total') or 0) + float(ph_cost or 0)
+
         # ============================================================
         # 🆕 محاسبه اطلاعات استوک (تعداد سطل، حجم کل استوک، وزن هر سطل)
         # ============================================================
@@ -226,6 +234,17 @@ def optimize_fertilizers_endpoint(
         # پیش از اجرای بهینه‌سازی)
         result.setdefault('warnings', []).extend(manual_selection_warnings)
 
+        # 🆕 سیستم هشدار ترکیبات رسوب‌زا (استوک + محلول نهایی + آب منبع)
+        precipitation_alerts = build_precipitation_alerts(
+            concentrations=concentrations,
+            reservoir_data=result.get('reservoir_data'),
+            fertilizers=fertilizers,
+            stock_liters=(stock_info or {}).get('total_stock_liters'),
+            water_values=effective_water,
+            ph=ph_result.get('ph'),
+        )
+        result['precipitation_alerts'] = precipitation_alerts
+
         # ============================================================
         # 🆕 هشدار EC اختصاصی بر اساس نوع گیاه (اگر گزارش/گیاه مشخص باشد)
         # ============================================================
@@ -323,7 +342,8 @@ def optimize_fertilizers_endpoint(
                         'ec_status': ec_result['status_label'],
                         'ph_adjustment': ph_summary,
                         'fixed_fertilizers': result.get('fixed_fertilizers'),
-                        'stock_info': stock_info
+                        'stock_info': stock_info,
+                        'precipitation_alerts': precipitation_alerts
                     }
 
                     from app.schemas import CalculationUpdate, CalculationCreate
@@ -376,6 +396,7 @@ def optimize_fertilizers_endpoint(
             ec_status=ec_result['status_label'],
             ph_adjustment=ph_summary,
             fixed_fertilizers=result.get('fixed_fertilizers'),
+            precipitation_alerts=precipitation_alerts,
             stock_info=stock_info
         )
         

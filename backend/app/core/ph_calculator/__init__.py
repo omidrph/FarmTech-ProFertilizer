@@ -1,3 +1,4 @@
+
 # backend/app/core/ph_calculator/__init__.py
 """
 موتور محاسباتی «اصلاح pH» (نسخهٔ جدید - روش نسبتی/آزمون روی نمونه)
@@ -25,7 +26,7 @@ from .contributions import (
     ion_meq_l,
     neutralization_strength_meq_l,
 )
-from .integration import load_active_for_cycle, merge_into_water, summary_from_record
+from .integration import apply_ph_cost, load_active_for_cycle, merge_into_water, summary_from_record
 from .engine import (
     AdjustmentError,
     TankDose,
@@ -44,5 +45,5 @@ __all__ = [
     "neutralization_strength_meq_l",
     "AdjustmentError", "TankDose", "TrialSolution", "TrialStep", "check_direction",
     "direction_of", "scale_to_tank", "solve_trial",
-    "load_active_for_cycle", "merge_into_water", "summary_from_record",
+    "apply_ph_cost", "load_active_for_cycle", "merge_into_water", "summary_from_record",
 ]

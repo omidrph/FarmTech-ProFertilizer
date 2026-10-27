@@ -1,3 +1,4 @@
+
 """
 پردازش نتایج بهینه‌سازی
 ================================
@@ -247,33 +248,6 @@ def process_optimization_result(
     )
     
     # ============================================================
-    # 🆕 تعادل یونی خودکار (اگر فعال باشد)
-    # ============================================================
-    auto_balance = options.get('auto_balance', True)
-    
-    if auto_balance:
-        cation, anion, is_balanced, _ = calculate_ion_balance(
-            final_concentrations, unit="ppm"
-        )
-        
-        if not is_balanced:
-            logger.info(f"🔄 تعادل یونی خودکار فعال شد. اختلاف فعلی: {abs(cation - anion):.2f} meq/L")
-            
-            balance_result = auto_balance_ion(final_concentrations, unit="ppm")
-            
-            if balance_result['is_balanced']:
-                final_concentrations = balance_result['concentrations']
-                logger.info(f"✅ تعادل یونی با اضافه کردن {balance_result['added_element']} برقرار شد.")
-                
-                if 'warnings' not in options:
-                    options['warnings'] = []
-                if 'suggestions' not in options:
-                    options['suggestions'] = []
-                
-                options['warnings'].append(f"🔧 تعادل یونی خودکار: {balance_result['added_element']} اضافه شد")
-                options['suggestions'].append(f"برای برقراری تعادل یونی، {balance_result['added_element']} به ترکیب اضافه شد.")
-    
-    # ============================================================
     # 🆕 مقیاس‌دهی وزن‌ها به حجم واقعی مخزن (رفع باگ نادیده گرفتن تنظیمات استوک)
     # ============================================================
     # `weights` تا این‌جا بر مبنای «گرم به ازای ۱۰۰۰ لیتر» است (چون ماتریس
@@ -407,7 +381,5 @@ def process_optimization_result(
         'is_converged': solver_result.get('is_converged', True),
         'method': solver_result.get('method', 'nnls'),
         'summary': summary,
-        'auto_balanced': auto_balance and is_balanced
+        'auto_balanced': False
     }
-
-

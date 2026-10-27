@@ -1,5 +1,6 @@
 
 
+
 // frontend/src/store/modules/calcStore.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
@@ -470,7 +471,7 @@ export const useCalcStore = defineStore('calc', () => {
                 }
                 
                 calculationRows.value = newRows;
-                totalCost.value = totalCostValue;
+                totalCost.value = totalCostValue + (Number((result as any).ph_adjustment?.cost) || 0); // 🆕 با هزینهٔ اسید/باز تب PH
                 
                 if (result.reservoir_data) {
                     reservoirData.value = result.reservoir_data;
@@ -578,7 +579,7 @@ export const useCalcStore = defineStore('calc', () => {
                 }
             }
             calculationRows.value = newRows;
-            totalCost.value = totalCostValue;
+            totalCost.value = totalCostValue + (Number((result as any).ph_adjustment?.cost) || 0); // 🆕 با هزینهٔ اسید/باز تب PH
             if (result.reservoir_data) reservoirData.value = result.reservoir_data;
 
             if (reportStore.currentReportId) {
@@ -594,15 +595,17 @@ export const useCalcStore = defineStore('calc', () => {
         }
     }
 
-    async function recalculateManualWeight(fertilizerId: string, newWeightGrams: number): Promise<boolean> {
+    async function recalculateManualWeight(fertilizerId: string, newWeightGrams: number, weightsOverride?: Record<string, number>): Promise<boolean> {
         if (!optimizationResult.value) {
             errorMessages.value.push('ابتدا باید یک‌بار محاسبه بهینه انجام شود');
             return false;
         }
         isLoading.value = true;
         try {
-            const currentWeights: Record<string, number> = { ...optimizationResult.value.weights };
-            currentWeights[fertilizerId] = Math.max(0, newWeightGrams);
+            const currentWeights: Record<string, number> = weightsOverride
+                ? { ...weightsOverride }
+                : { ...optimizationResult.value.weights };
+            if (!weightsOverride) currentWeights[fertilizerId] = Math.max(0, newWeightGrams);
 
             const reportStore = useReportStore();
 
@@ -651,7 +654,7 @@ export const useCalcStore = defineStore('calc', () => {
                 }
             }
             calculationRows.value = newRows;
-            totalCost.value = totalCostValue;
+            totalCost.value = totalCostValue + (Number((result as any).ph_adjustment?.cost) || 0); // 🆕 با هزینهٔ اسید/باز تب PH
             if (result.reservoir_data) {
                 reservoirData.value = result.reservoir_data;
             }
@@ -669,6 +672,38 @@ export const useCalcStore = defineStore('calc', () => {
         } finally {
             isLoading.value = false;
         }
+    }
+
+    /**
+     * 🆕 تنظیم EC توسط کاربر: وزن همهٔ کودهای «آزاد» با یک ضریب مشترک مقیاس می‌شود
+     * (نسبت عناصر ثابت می‌ماند، پس چیزی خراب نمی‌شود). کودهای با مقدار ثابت کاربر
+     * (اسید/باز) و اسید تب PH مقیاس نمی‌شوند. چون EC کاملاً خطی نیست، حداکثر ۳ بار
+     * با بک‌اند هم‌گرا می‌شود. EC پایهٔ آب از سهم کودها کسر می‌شود.
+     */
+    async function scaleToTargetEc(targetEc: number): Promise<{ ok: boolean; message?: string }> {
+        const res = optimizationResult.value;
+        if (!res) return { ok: false, message: 'ابتدا محاسبه را انجام دهید' };
+        if (!isFinite(targetEc) || targetEc < 0.3 || targetEc > 6) {
+            return { ok: false, message: 'EC باید بین ۰٫۳ و ۶ dS/m باشد' };
+        }
+        const base = Number((lastWaterValuesUsed.value as any)?.EC) || 0;
+        if (targetEc <= base) return { ok: false, message: `EC هدف باید بیشتر از EC آب (${base}) باشد` };
+        const fixedIds = new Set(Object.keys((res as any).fixed_fertilizers || {}));
+        for (let i = 0; i < 3; i++) {
+            const cur = Number(optimizationResult.value?.ec) || 0;
+            if (Math.abs(cur - targetEc) < 0.02) break;
+            const fertEc = cur - base;
+            if (fertEc <= 0.01) return { ok: false, message: 'سهم کودها از EC بسیار کم است؛ مقیاس‌دهی ممکن نیست' };
+            let k = (targetEc - base) / fertEc;
+            k = Math.min(5, Math.max(0.2, k));
+            const w: Record<string, number> = {};
+            for (const [id, v] of Object.entries(optimizationResult.value!.weights)) {
+                w[id] = fixedIds.has(id) ? Number(v) : Number(v) * k;
+            }
+            const ok = await recalculateManualWeight('', 0, w);
+            if (!ok) return { ok: false, message: errorMessages.value[errorMessages.value.length - 1] };
+        }
+        return { ok: true };
     }
 
     async function saveOptimizationToReport(reportId: string): Promise<boolean> {
@@ -831,11 +866,9 @@ export const useCalcStore = defineStore('calc', () => {
         setRestoredOptimizationOptions,
         restoreOptimizationResult,
         recalculateManualWeight,
+        scaleToTargetEc,
         calculateManual,
     };
 });
 
 export default useCalcStore;
-
-
-

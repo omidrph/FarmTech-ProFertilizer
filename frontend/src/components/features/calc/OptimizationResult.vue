@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/OptimizationResult.vue -->
 <!--
   نمایش نتیجه بهینه‌سازی (بازطراحی‌شده)
@@ -10,7 +11,7 @@
     <!-- ============================================================ -->
     <!-- خلاصه -->
     <!-- ============================================================ -->
-    <ResultKpiBar :result="result" :used-count="usedCount" />
+    <ResultKpiBar :result="result" :used-count="usedCount" :target-values="targetValues" @set-ec="$emit('set-ec', $event)" />
 
     <!-- ============================================================ -->
     <!-- مقادیر کود (باز به‌صورت پیش‌فرض) -->
@@ -86,6 +87,7 @@
         :accuracy="accuracy"
         :unused-count="unusedCount"
         :bad-elements-count="badElementsCount"
+        :alerts="alerts"
         @go-to-selection="$emit('go-to-selection')"
       />
     </ResultAccordion>
@@ -119,6 +121,7 @@ const props = withDefaults(
 defineEmits<{
   (e: 'update-weight', payload: { fertilizerId: string; weight: number }): void;
   (e: 'go-to-selection'): void;
+  (e: 'set-ec', value: number): void;
 }>();
 
 const result = computed(() => props.result);
@@ -175,9 +178,14 @@ const accuracy = computed(() => {
   return Math.max(0, Math.min(100, sum / values.length));
 });
 
+const alerts = computed(() => result.value?.precipitation_alerts || []);
+
 const warningsTone = computed<'neutral' | 'warning' | 'danger'>(() => {
-  const hasPrecipitation = warnings.value.some((text) => text.startsWith('خطر رسوب:'));
+  const hasPrecipitation =
+    alerts.value.some((a) => a.severity === 'danger') ||
+    (!alerts.value.length && warnings.value.some((text) => text.startsWith('خطر رسوب:')));
   if (hasPrecipitation) return 'danger';
+  if (alerts.value.some((a) => a.severity === 'warn')) return 'warning';
   if (!result.value?.is_converged || accuracy.value < 85 || badElementsCount.value > 0) return 'warning';
   return 'neutral';
 });
@@ -189,7 +197,7 @@ const warningsBadge = computed(() => {
 });
 
 const warningsSubtitle = computed(() => {
-  if (warningsTone.value === 'danger') return 'خطر رسوب شیمیایی شناسایی شد';
+  if (warningsTone.value === 'danger') return `${alerts.value.filter((a) => a.severity === 'danger').length || ''} خطر رسوب شیمیایی شناسایی شد`.trim();
   if (warningsTone.value === 'warning') return 'چند نکته برای بهبود ترکیب وجود دارد';
   return 'مشکلی در ترکیب یافت نشد';
 });

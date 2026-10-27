@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/HomeTab.vue -->
 <template>
   <div class="space-y-3 sm:space-y-4">
@@ -474,6 +475,7 @@ const handleExportPdf = async () => {
         reportName: report.reportName,
         plantName: report.plantName,
         season: report.season,
+        date: report.date,
         tankVolume: calcStore.stockSettings.tankVolume,
         stockVolume: calcStore.stockSettings.stockVolume,
         injectionRatio: calcStore.stockSettings.injectionRatio

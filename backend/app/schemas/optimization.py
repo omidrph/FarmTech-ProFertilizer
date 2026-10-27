@@ -1,4 +1,5 @@
 
+
 # backend/app/schemas/optimization.py
 """
 طرح‌های مربوط به بهینه‌سازی (Optimization)
@@ -24,7 +25,7 @@ class OptimizationOptions(BaseModel):
     cost_weight: float = Field(0.01, ge=0, le=1, description="ضریب اهمیت هزینه در بهینه‌سازی")
     use_precipitation_check: bool = Field(True, description="بررسی رسوب")
     use_ion_balance_check: bool = Field(True, description="بررسی تعادل یونی")
-    auto_balance: bool = Field(True, description="تعادل یونی خودکار (اضافه کردن Na یا Cl)")
+    auto_balance: bool = Field(False, description="[منسوخ و نادیده گرفته می‌شود] تعادل یونی خودکار حذف شده است")
     reservoir_mode: str = Field("auto", description="حالت مخازن: auto (خودکار), manual (دستی)")
 
     # ============================================================
@@ -32,7 +33,7 @@ class OptimizationOptions(BaseModel):
     # ============================================================
     prefer_fewer_fertilizers: bool = Field(
         False,
-        description="🆕 اولویت با تعداد کمتر کود (حتی با کمی افزایش خطا). "
+        description="[منسوخ و نادیده گرفته می‌شود] اولویت با تعداد کمتر کود (حتی با کمی افزایش خطا). "
                     "برای کشاورزانی که نمی‌توانند/نمی‌خواهند تعداد زیادی کود تهیه کنند."
     )
     max_fertilizers_count: Optional[int] = Field(
@@ -120,6 +121,10 @@ class OptimizationResponse(BaseModel):
         None,
         description="🆕 اصلاح pH فعال گزارش که در این محاسبه اعمال شده (عناصر اسید/باز مثل آب به‌عنوان "
                     "منبع پایه لحاظ می‌شوند). شامل id، نام ماده، دوز، سهم عناصر (mg/L) و ΔEC."
+    )
+    precipitation_alerts: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="🆕 هشدارهای ساختاریافتهٔ رسوب (استوک/محلول نهایی/آب): severity, scope, tank, title, detail, solution"
     )
     stock_info: Optional[Dict[str, Any]] = Field(
         None,

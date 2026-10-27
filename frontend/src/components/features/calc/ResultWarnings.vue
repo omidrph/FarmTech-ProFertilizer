@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/ResultWarnings.vue -->
 <!--
   ============================================================
@@ -23,10 +24,33 @@
   <div class="space-y-3">
 
     <!-- ============================================================ -->
-    <!-- ۱) خطر رسوب شیمیایی -->
+    <!-- ۱) سیستم هشدار ترکیبات رسوب‌زا (ساختاریافته: استوک / محلول نهایی / آب) -->
     <!-- ============================================================ -->
     <div
-      v-for="item in precipitationItems"
+      v-for="item in alertItems"
+      :key="item.id"
+      class="rounded-lg border p-3"
+      :class="SEV[item.severity].box"
+    >
+      <div class="flex items-start gap-2.5">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" :class="SEV[item.severity].icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <p class="text-sm font-semibold" :class="SEV[item.severity].title">{{ item.title }}</p>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full" :class="SEV[item.severity].chip">{{ SCOPE[item.scope] }}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded-full" :class="SEV[item.severity].chip">{{ SEV[item.severity].label }}</span>
+          </div>
+          <p class="text-xs mt-1 leading-5" :class="SEV[item.severity].text">{{ item.detail }}</p>
+          <p class="text-xs mt-1 leading-5 font-medium" :class="SEV[item.severity].text">راه‌حل: {{ item.solution }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- سازگاری با نتیجه‌های قدیمی که هنوز هشدار ساختاریافته ندارند -->
+    <div
+      v-for="item in legacyPrecipitation"
       :key="'precip-' + item.compound"
       class="flex items-start gap-2.5 rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-3"
     >
@@ -35,9 +59,7 @@
       </svg>
       <div class="min-w-0">
         <p class="text-sm font-semibold text-rose-700 dark:text-rose-400">خطر رسوب: {{ item.compound }}</p>
-        <p class="text-xs text-rose-600 dark:text-rose-300 mt-0.5">
-          احتمال ته‌نشین شدن این ترکیب در مخزن استوک وجود دارد. کودهای مربوطه را در سطل‌های جدا حل کنید و از مخلوط‌کردن مستقیم آن‌ها پیش از رقیق‌سازی خودداری کنید.
-        </p>
+        <p class="text-xs text-rose-600 dark:text-rose-300 mt-0.5">کودهای مربوطه را در سطل‌های جدا حل کنید و پیش از رقیق‌سازی مخلوط نکنید.</p>
       </div>
     </div>
 
@@ -102,7 +124,7 @@
     <!-- ۴) وضعیت مطلوب -->
     <!-- ============================================================ -->
     <div
-      v-if="precipitationItems.length === 0 && qualityIssues.length === 0 && otherNotes.length === 0"
+      v-if="alertItems.length === 0 && legacyPrecipitation.length === 0 && qualityIssues.length === 0 && otherNotes.length === 0"
       class="flex items-center gap-2.5 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3"
     >
       <svg class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -116,6 +138,14 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { cleanNote, isCoveredElsewhere, isGenericNote } from '@/utils/resultNotes';
+import type { PrecipitationAlert } from '@/types';
+
+const SEV = {
+  danger: { label: 'خطر', box: 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20', icon: 'text-rose-600 dark:text-rose-400', title: 'text-rose-700 dark:text-rose-400', text: 'text-rose-700/90 dark:text-rose-300', chip: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' },
+  warn: { label: 'هشدار', box: 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20', icon: 'text-amber-600 dark:text-amber-400', title: 'text-amber-700 dark:text-amber-400', text: 'text-amber-800 dark:text-amber-300', chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' },
+  info: { label: 'نکته', box: 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20', icon: 'text-sky-600 dark:text-sky-400', title: 'text-sky-700 dark:text-sky-400', text: 'text-sky-800 dark:text-sky-300', chip: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' }
+} as const;
+const SCOPE = { stock: 'داخل استوک', final: 'محلول نهایی', water: 'آب منبع' } as const;
 
 const props = defineProps<{
   warnings: string[];
@@ -124,13 +154,17 @@ const props = defineProps<{
   accuracy: number;
   unusedCount: number;
   badElementsCount: number;
+  alerts?: PrecipitationAlert[];
 }>();
 
 defineEmits<{
   (e: 'go-to-selection'): void;
 }>();
 
-const precipitationItems = computed(() => {
+const alertItems = computed(() => props.alerts || []);
+
+const legacyPrecipitation = computed(() => {
+  if (alertItems.value.length) return [];
   const seen = new Set<string>();
   return props.warnings
     .map((raw) => {

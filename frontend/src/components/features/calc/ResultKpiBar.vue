@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/calc/ResultKpiBar.vue -->
 <!--
   نوار خلاصه نتیجه. «دقت رسیدن به هدف» چون ذاتاً یک درصد است، به‌شکل
@@ -6,27 +7,35 @@
   می‌مانند.
 -->
 <template>
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
 
-    <!-- دقت رسیدن به هدف: نمودار دایره‌ای -->
-    <article class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 flex items-center gap-3">
+    <!-- خطای ماکرو و میکرو (جدا): تا ۵٪ سبز، ۵ تا ۱۰٪ زرد، بالای ۱۰٪ قرمز -->
+    <article
+      v-for="g in errorCards"
+      :key="g.group"
+      class="rounded-xl border bg-white dark:bg-gray-800 p-3 flex items-center gap-3"
+      :class="LEVEL_CLASS[g.level].border"
+    >
       <svg width="56" height="56" viewBox="0 0 56 56" class="flex-shrink-0">
         <circle cx="28" cy="28" r="21" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="5" />
         <circle
           cx="28" cy="28" r="21" fill="none" stroke-width="5" stroke-linecap="round"
-          :class="accuracyRingClass"
+          :class="LEVEL_CLASS[g.level].ring"
           stroke="currentColor"
           :stroke-dasharray="RING_CIRC"
-          :stroke-dashoffset="accuracyOffset"
+          :stroke-dashoffset="RING_CIRC * (1 - Math.min(g.meanAbs, 20) / 20)"
           transform="rotate(-90 28 28)"
           style="transition: stroke-dashoffset 0.6s ease"
         />
       </svg>
       <div class="min-w-0">
-        <p class="text-[11px] text-gray-500 dark:text-gray-400">دقت رسیدن به هدف</p>
-        <p class="text-lg font-bold tabular-nums" :class="accuracyTextClass">{{ format(accuracy, 1) }}<span class="text-xs font-normal text-gray-400">٪</span></p>
-        <p class="text-[10px]" :class="result.is_converged ? 'text-emerald-500' : 'text-amber-500'">
-          {{ result.is_converged ? 'همگرا شد' : 'همگرا نشد' }}
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.group === 'macro' ? 'خطای ماکرو' : 'خطای میکرو' }}</p>
+        <p v-if="g.count" class="text-lg font-bold tabular-nums" :class="LEVEL_CLASS[g.level].text">
+          {{ faNum(g.meanAbs, 1) }}<span class="text-xs font-normal text-gray-400">٪</span>
+        </p>
+        <p v-else class="text-lg font-bold text-gray-400">—</p>
+        <p class="text-[10px] truncate" :class="g.count ? LEVEL_CLASS[g.level].text : 'text-gray-400'">
+          {{ g.count ? `${LEVEL_LABEL[g.level]} · بیشترین ${g.worst} ${faNum(g.maxAbs, 1)}٪` : 'هدفی ثبت نشده' }}
         </p>
       </div>
     </article>
@@ -45,9 +54,20 @@
       <div class="min-w-0 flex-1">
         <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate">{{ item.label }}</p>
         <p class="mt-0.5 flex items-baseline gap-1">
-          <span class="text-lg sm:text-xl font-bold tabular-nums" :class="item.color">{{ item.value }}</span>
+          <template v-if="item.key === 'ec'">
+            <input
+              type="number" step="0.1" min="0.3" max="6" dir="ltr"
+              v-model="ecDraft"
+              @keyup.enter="commitEc"
+              @blur="commitEc"
+              title="EC را ویرایش کنید؛ مقدار کودها متناسب تغییر می‌کند"
+              class="w-20 text-lg sm:text-xl font-bold tabular-nums bg-transparent border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-primary-500 outline-none text-gray-900 dark:text-white"
+            />
+          </template>
+          <span v-else class="text-lg sm:text-xl font-bold tabular-nums" :class="item.color">{{ item.value }}</span>
           <span v-if="item.unit" class="text-[10px] text-gray-400">{{ item.unit }}</span>
         </p>
+        <p v-if="item.key === 'ec'" class="text-[10px] mt-0.5 text-primary-600 dark:text-primary-400">قابل ویرایش · کودها متناسب می‌شوند</p>
         <p v-if="item.note" class="text-[10px] mt-0.5 truncate" :class="item.noteColor || 'text-gray-400'">
           {{ item.note }}
         </p>
@@ -57,12 +77,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { OptimizationResponse } from '@/types';
+
+import { computeGroupErrors, faNum, LEVEL_CLASS, LEVEL_LABEL } from '@/utils/errorLevels';
 
 const props = defineProps<{
   result: OptimizationResponse;
   usedCount: number;
+  targetValues?: Record<string, number>;
 }>();
 
 const format = (value: unknown, digits = 2): string => {
@@ -70,27 +93,25 @@ const format = (value: unknown, digits = 2): string => {
   return isFinite(parsed) ? parsed.toFixed(digits) : '—';
 };
 
-// 🆕 رفع باگ «دقت محاسبه اشتباه»: residual_error یک عدد خام NNLS است
-// (می‌تواند خیلی بزرگ‌تر از ۱ باشد، نه یک کسر ۰ تا ۱)، و فرمول قبلی
-// `100 - residual_error*100` تقریباً همیشه منفی و صفر می‌شد. دقت واقعی
-// از میانگین «درصد تحقق» هر عنصر هدف (target_achievement، همان مقداری
-// که بک‌اند برای هر عنصر ۰ تا ۱۰۰ محاسبه می‌کند) به‌دست می‌آید.
-const accuracy = computed(() => {
-  const values = Object.values(props.result.target_achievement || {});
-  if (values.length === 0) return 0;
-  const sum = values.reduce((total, value) => total + (Number(value) || 0), 0);
-  return Math.max(0, Math.min(100, sum / values.length));
-});
+const emit = defineEmits<{ (e: 'set-ec', value: number): void }>();
+
+// EC قابل ویرایش: با Enter یا خروج از فیلد، فقط اگر مقدار واقعاً عوض شده باشد اعمال می‌شود
+const ecDraft = ref<string>(format(props.result.ec, 2));
+watch(() => props.result.ec, (v) => { ecDraft.value = format(v, 2); });
+const commitEc = () => {
+  const v = parseFloat(String(ecDraft.value));
+  if (!isFinite(v)) { ecDraft.value = format(props.result.ec, 2); return; }
+  if (Math.abs(v - Number(props.result.ec)) < 0.015) return;
+  emit('set-ec', v);
+};
 
 const RING_CIRC = 2 * Math.PI * 21;
-const accuracyOffset = computed(() => RING_CIRC * (1 - Math.min(accuracy.value, 100) / 100));
 
-const accuracyRingClass = computed(() =>
-  accuracy.value >= 95 ? 'stroke-emerald-500' : accuracy.value >= 85 ? 'stroke-amber-500' : 'stroke-rose-500'
-);
-const accuracyTextClass = computed(() =>
-  accuracy.value >= 95 ? 'text-emerald-600 dark:text-emerald-400' : accuracy.value >= 85 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'
-);
+// خطای ماکرو و میکرو جدا (میانگین خطای مطلق هر گروه؛ رنگ بر پایهٔ بدترین عنصر گروه)
+const errorCards = computed(() => {
+  const g = computeGroupErrors(props.targetValues || {}, props.result.concentrations || {});
+  return [g.macro, g.micro];
+});
 
 const statusColor = (status?: string): string => {
   if (!status) return 'text-gray-500 dark:text-gray-400';

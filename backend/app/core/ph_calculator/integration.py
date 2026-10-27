@@ -1,3 +1,4 @@
+
 # backend/app/core/ph_calculator/integration.py
 """
 اتصال «اصلاح pH فعال» به چرخهٔ محاسبهٔ کود
@@ -51,6 +52,8 @@ def summary_from_record(record: Any) -> Dict[str, Any]:
     shift = -strength * CACO3_EQ_WEIGHT if record.kind == "acid" else strength * CACO3_EQ_WEIGHT
     return {
         "id": record.id,
+        "fertilizer_id": record.fertilizer_id,
+        "chemical": {"density_g_ml": (record.chemical or {}).get("density_g_ml")},
         "chemical_name": record.chemical_name,
         "kind": record.kind,
         "mode": record.mode,
@@ -83,3 +86,47 @@ def load_active_for_cycle(db: Any, crud_module: Any, user_id: int, report_id: Op
     if not record:
         return {}, None
     return dict(record.element_contributions or {}), summary_from_record(record)
+
+
+def apply_ph_cost(db: Any, summary: Optional[Dict[str, Any]], tank_volume: Optional[float]) -> float:
+    """
+    هزینهٔ اسید/باز تب PH برای «حجم مخزن همین محاسبه».
+    - مقدار برای هر ۱۰۰۰ لیتر (dose_per_1000l) × (حجم مخزن / ۱۰۰۰)
+    - مایع (ml) با چگالی به گرم تبدیل می‌شود؛ قیمت کود همیشه به‌ازای کیلوگرم ذخیره است.
+    خلاصهٔ ورودی (summary) درجا با فیلدهای cost / dose_total / price_per_kg تکمیل می‌شود.
+    خطا یا نبودن قیمت هرگز محاسبهٔ اصلی را نمی‌شکند (هزینه = ۰).
+    """
+    if not summary:
+        return 0.0
+    try:
+        from app.models import Fertilizer
+        vol = float(tank_volume or 0) or 1000.0
+        dose_total = float(summary.get("dose_per_1000l") or 0) * vol / 1000.0
+        unit = summary.get("dose_unit") or "g"
+        price = 0.0
+        density = None
+        fid = None
+        try:
+            fid = (summary.get("chemical") or {}).get("fertilizer_id")
+        except Exception:
+            fid = None
+        fert = None
+        if fid is None:
+            fid = summary.get("fertilizer_id")
+        if fid:
+            fert = db.query(Fertilizer).filter(Fertilizer.id == fid).first()
+        if fert is not None:
+            price = float(fert.price_per_kg or 0)
+            density = getattr(fert, "density_g_ml", None)
+        grams = dose_total
+        if unit == "ml":
+            d = float(density or (summary.get("chemical") or {}).get("density_g_ml") or 0)
+            grams = dose_total * d if d > 0 else 0.0
+        cost = grams / 1000.0 * price
+        summary["dose_total"] = round(dose_total, 3)
+        summary["dose_total_g"] = round(grams, 3)
+        summary["price_per_kg"] = price
+        summary["cost"] = round(cost, 2)
+        return cost
+    except Exception:
+        return 0.0
