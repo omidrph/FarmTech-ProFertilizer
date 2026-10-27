@@ -3,10 +3,10 @@
 // خروجی PDF حرفه‌ای (طراحی مجدد از صفر)
 // ------------------------------------------------------------
 // سند HTML مستقل A4 / RTL داخل iframe مخفی ساخته و چاپ می‌شود (Save as PDF).
-// - سربرگ برند + مشخصات گزارش + تاریخ
-// - خلاصه: EC، هزینه، خطای ماکرو، خطای میکرو (سه‌رنگ: ۵٪ / ۱۰٪)
+// - سربرگ با لوگوی برنامه + مشخصات گزارش + تاریخ (تم سفید/بنفش/خاکستری با لهجهٔ آبی)
+// - خلاصه: EC، هزینه، پوشش ماکرو و میکرو (حلقه‌ای؛ سه‌رنگ ۵٪ / ۱۰٪)
 // - جدول کودها با ستون فرمول + مقدار در استوک و در ۱۰۰۰ لیتر + هزینه
-// - کارت مخازن A/B/C، عناصر ماکرو/میکرو با نوار انحراف، تعادل یونی، هشدار رسوب
+// - کارت مخازن A/B/C، عناصر ماکرو/میکرو با نمودار دایره‌ای، تعادل یونی، هشدار رسوب
 // - نام فایل از مشخصات گزارش + تاریخ (کوتاه)
 // ============================================================
 import { ref } from 'vue';
@@ -31,11 +31,14 @@ export interface PdfExportPayload {
     meta?: PdfReportMeta;
 }
 
+// وضعیت خطا (سه‌رنگ) فقط برای نشانگرها؛ تم کلی گزارش بنفش/خاکستری/آبی است
 const COLORS: Record<ErrorLevel, { fg: string; bg: string; bar: string }> = {
-    ok: { fg: '#047857', bg: '#ecfdf5', bar: '#10b981' },
+    ok: { fg: '#059669', bg: '#f0fdf8', bar: '#10b981' },
     warn: { fg: '#b45309', bg: '#fffbeb', bar: '#f59e0b' },
     bad: { fg: '#be123c', bg: '#fff1f2', bar: '#f43f5e' }
 };
+const PURPLE = '#6d28d9';
+const BLUE = '#2563eb';
 
 const toLatin = (s: string): string =>
     s.replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
@@ -65,7 +68,7 @@ export function buildPdfFileName(meta: PdfReportMeta = {}): string {
     const parts = [clean(meta.greenhouseName), clean(meta.reportName, 22), clean(meta.plantName)].filter(Boolean);
     let name = ['سهند کود', ...parts].join(' - ');
     const room = 60 - date.length - 3;
-    if (name.length > room) name = name.slice(0, room).trim();
+    if (name.length > room) name = name.slice(0, room).replace(/[\s-]+$/, '');
     return `${name} - ${date}`;
 }
 
@@ -112,8 +115,25 @@ export function usePdfExport() {
         return map;
     }
 
+    // ---------- حلقهٔ دایره‌ای (هم‌شکل پوشش عناصر در برنامه) ----------
+    function ring(actual: number, target: number, level: ErrorLevel, size = 54): string {
+        const C1 = 2 * Math.PI * 18;
+        const C2 = 2 * Math.PI * 22;
+        const ratio = target > 0 ? actual / target : 0;
+        const inner = C1 * (1 - Math.min(ratio, 1));
+        const outer = ratio > 1 ? C2 * (1 - Math.min((ratio - 1) / 0.5, 1)) : 0;
+        const col = COLORS[level].bar;
+        return `<svg width="${size}" height="${size}" viewBox="0 0 48 48">
+  <circle cx="24" cy="24" r="18" fill="none" stroke="#e5e7eb" stroke-width="4"/>
+  <circle cx="24" cy="24" r="18" fill="none" stroke="${col}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C1.toFixed(2)}" stroke-dashoffset="${inner.toFixed(2)}" transform="rotate(-90 24 24)"/>
+  ${ratio > 1 ? `<circle cx="24" cy="24" r="22" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-dasharray="${C2.toFixed(2)}" stroke-dashoffset="${outer.toFixed(2)}" transform="rotate(-90 24 24)"/>` : ''}
+  <text x="24" y="27" text-anchor="middle" font-size="10" font-weight="700" fill="${COLORS[level].fg}">${fa(ratio * 100, 0)}٪</text>
+</svg>`;
+    }
+
     // ---------- سربرگ ----------
     function buildHeader(meta: PdfReportMeta): string {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
         const rows = [
             meta.greenhouseName ? ['گلخانه', meta.greenhouseName] : null,
             meta.reportName ? ['گزارش', meta.reportName] : null,
@@ -124,15 +144,12 @@ export function usePdfExport() {
             meta.injectionRatio ? ['نسبت تزریق', `۱ به ${fa(meta.injectionRatio, 0)}`] : null
         ].filter(Boolean) as string[][];
         return `
-<header class="hero">
-  <div class="hero-brand">
-    <div class="logo">سک</div>
-    <div>
-      <h1>گزارش فرمول تغذیه</h1>
-      <p>سهند کود · سیستم هوشمند نسخه‌نویسی کود</p>
-    </div>
+<header class="top">
+  <div class="brand">
+    <img src="${origin}/Logo.webp" alt="" onerror="this.style.display='none'" />
+    <div><h1>گزارش فرمول تغذیه</h1><p>سهند کود · سیستم هوشمند نسخه‌نویسی کود</p></div>
   </div>
-  <div class="hero-date"><span>تاریخ گزارش</span><strong>${esc(meta.date || todayFa())}</strong></div>
+  <div class="date"><span>تاریخ گزارش</span><b>${esc(meta.date || todayFa())}</b></div>
 </header>
 ${rows.length ? `<section class="meta">${rows.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</section>` : ''}`;
     }
@@ -141,21 +158,27 @@ ${rows.length ? `<section class="meta">${rows.map(([l, v]) => `<div><span>${esc(
     function buildKpis(payload: PdfExportPayload): string {
         const { result, targetValues } = payload;
         const g = computeGroupErrors(targetValues, result.concentrations || {});
-        const errCard = (title: string, grp: typeof g.macro) => {
-            if (!grp.count) return `<div class="kpi"><span>${title}</span><b class="muted">—</b><small>هدفی ثبت نشده</small></div>`;
-            const c = COLORS[grp.level];
-            return `<div class="kpi" style="border-color:${c.bar};background:${c.bg}">
-  <span>${title}</span>
-  <b style="color:${c.fg}">${fa(grp.meanAbs, 1)}٪</b>
-  <small style="color:${c.fg}">${LEVEL_LABEL[grp.level]} · بیشترین ${esc(grp.worst)} ${fa(grp.maxAbs, 1)}٪</small>
+        const cov = (title: string, grp: typeof g.macro) => {
+            if (!grp.count) return `<div class="kpi"><span>${title}</span><b class="muted">—</b></div>`;
+            const coverage = Math.max(0, 100 - grp.meanAbs);
+            const over = grp.rows.reduce((a, r) => a + Math.max(r.deviationPct, 0), 0) / grp.count;
+            const C = 2 * Math.PI * 18;
+            const col = COLORS[grp.level];
+            return `<div class="kpi kpi-ring">
+  <svg width="50" height="50" viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="18" fill="none" stroke="#e5e7eb" stroke-width="4"/>
+    <circle cx="24" cy="24" r="18" fill="none" stroke="${col.bar}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - coverage / 100)).toFixed(2)}" transform="rotate(-90 24 24)"/>
+    ${over > 0.5 ? `<circle cx="24" cy="24" r="22" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * 22).toFixed(2)}" stroke-dashoffset="${(2 * Math.PI * 22 * (1 - Math.min(over / 50, 1))).toFixed(2)}" transform="rotate(-90 24 24)"/>` : ''}
+  </svg>
+  <div><span>${title}</span><b style="color:${col.fg}">${fa(coverage, 1)}٪</b><small style="color:${col.fg}">${LEVEL_LABEL[grp.level]}</small></div>
 </div>`;
         };
         return `
 <section class="kpis">
-  <div class="kpi"><span>EC نهایی</span><b>${fa(result.ec, 2)}</b><small>dS/m ${result.ec_status ? '· ' + esc(result.ec_status) : ''}</small></div>
+  <div class="kpi"><span>EC نهایی</span><b>${fa(result.ec, 2)}</b><small>dS/m</small></div>
   <div class="kpi"><span>هزینه کل</span><b>${money(result.cost_total)}</b><small>تومان</small></div>
-  ${errCard('خطای ماکرو', g.macro)}
-  ${errCard('خطای میکرو', g.micro)}
+  ${cov('پوشش ماکرو', g.macro)}
+  ${cov('پوشش میکرو', g.micro)}
 </section>`;
     }
 
@@ -241,46 +264,36 @@ ${rows.length ? `<section class="meta">${rows.map(([l, v]) => `<div><span>${esc(
         return cards ? `<section class="block"><h2>چیدمان مخازن استوک</h2><div class="tanks">${cards}</div></section>` : '';
     }
 
-    // ---------- عناصر (ماکرو / میکرو) ----------
+    // ---------- عناصر (ماکرو / میکرو) با نمودار دایره‌ای ----------
     function buildElements(payload: PdfExportPayload): string {
         const g = computeGroupErrors(payload.targetValues, payload.result.concentrations || {});
         if (!g.all.length) return '';
+        const order: Record<ErrorLevel, number> = { bad: 0, warn: 1, ok: 2 };
         const section = (title: string, grp: typeof g.macro) => {
             if (!grp.count) return '';
-            const c = COLORS[grp.level];
-            const rows = grp.rows
+            const col = COLORS[grp.level];
+            const cells = [...grp.rows]
+                .sort((a, b) => (a.level !== b.level ? order[a.level] - order[b.level] : b.absPct - a.absPct))
                 .map((r) => {
-                    const col = COLORS[r.level];
-                    const w = Math.min(100, (r.actual / r.target) * 100);
-                    const sign = r.deviationPct > 0 ? '+' : r.deviationPct < 0 ? '−' : '';
-                    return `<tr>
-  <td class="r"><b>${esc(r.element)}</b></td>
-  <td class="m">${fa(r.target, 1)}</td>
-  <td class="m">${fa(r.actual, 1)}</td>
-  <td class="barcell"><div class="bar"><i style="width:${w.toFixed(0)}%;background:${col.bar}"></i></div></td>
-  <td class="m" style="color:${col.fg}"><b>${sign}${fa(r.absPct, 1)}٪</b></td>
-  <td><span class="pill" style="background:${col.bg};color:${col.fg}">${LEVEL_LABEL[r.level]}</span></td>
-</tr>`;
+                    const c = COLORS[r.level];
+                    return `<div class="el">
+  ${ring(r.actual, r.target, r.level, 52)}
+  <div class="el-t"><b>${esc(r.element)}</b><small style="color:${c.fg}">${fa(r.absPct, 1)}٪ ${r.deviationPct >= 0 ? 'بیش' : 'کم'}</small></div>
+  <div class="el-v"><span>هدف ${fa(r.target, 1)}</span><span>فعلی ${fa(r.actual, 1)}</span></div>
+</div>`;
                 })
                 .join('');
-            return `
-<div class="grp">
-  <div class="grp-h" style="background:${c.bg};border-color:${c.bar}">
-    <b>${title}</b>
-    <span style="color:${c.fg}">میانگین خطا ${fa(grp.meanAbs, 1)}٪ · ${LEVEL_LABEL[grp.level]}</span>
-  </div>
-  <table class="tbl">
-    <thead><tr><th class="r">عنصر</th><th>هدف (ppm)</th><th>تأمین‌شده</th><th>پوشش</th><th>انحراف</th><th>وضعیت</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
+            return `<div class="grp">
+  <div class="grp-h"><b>${title}</b><span style="color:${col.fg}">میانگین خطا ${fa(grp.meanAbs, 1)}٪ · ${LEVEL_LABEL[grp.level]}</span></div>
+  <div class="els">${cells}</div>
 </div>`;
         };
         return `
 <section class="block">
-  <h2>عناصر هدف در برابر عناصر تأمین‌شده</h2>
+  <h2>عناصر هدف در برابر عناصر تأمین‌شده <small>ppm</small></h2>
   ${section('عناصر ماکرو (پرمصرف)', g.macro)}
   ${section('عناصر میکرو (کم‌مصرف)', g.micro)}
-  <p class="legend"><i style="background:${COLORS.ok.bar}"></i>تا ۵٪ قابل قبول <i style="background:${COLORS.warn.bar}"></i>۵ تا ۱۰٪ هشدار <i style="background:${COLORS.bad.bar}"></i>بالای ۱۰٪ عدم اعتماد</p>
+  <p class="legend"><i style="background:${COLORS.ok.bar}"></i>تا ۵٪ قابل قبول <i style="background:${COLORS.warn.bar}"></i>۵ تا ۱۰٪ هشدار <i style="background:${COLORS.bad.bar}"></i>بالای ۱۰٪ عدم اعتماد <i style="background:#f43f5e;border-radius:2px;height:3px;width:12px"></i>حلقهٔ بیرونی: بیش‌تأمین</p>
 </section>`;
     }
 
@@ -334,52 +347,57 @@ ${rows.length ? `<section class="meta">${rows.map(([l, v]) => `<div><span>${esc(
 <style>
 @font-face{font-family:'Vazirmatn';src:url('${origin}/fonts/Vazirmatn-Regular.woff2') format('woff2');font-weight:400;font-display:block}
 @font-face{font-family:'Vazirmatn';src:url('${origin}/fonts/Vazirmatn-Bold.woff2') format('woff2');font-weight:700;font-display:block}
-@page{size:A4;margin:12mm 11mm 16mm}
+@page{size:A4;margin:12mm 12mm 16mm}
 *{box-sizing:border-box}
 body{font-family:'Vazirmatn',Tahoma,sans-serif;margin:0;color:#1f2937;font-size:10.5px;line-height:1.75;direction:rtl;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.hero{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-radius:14px;color:#fff;background:linear-gradient(135deg,#047857 0%,#10b981 60%,#34d399 100%)}
-.hero-brand{display:flex;align-items:center;gap:12px}
-.logo{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
-.hero h1{margin:0;font-size:17px}.hero p{margin:0;font-size:10px;opacity:.9}
-.hero-date{text-align:left}.hero-date span{display:block;font-size:9.5px;opacity:.85}.hero-date strong{font-size:13px}
-.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 4px}
-.meta div{background:#f8fafc;border:1px solid #e5e7eb;border-radius:9px;padding:5px 9px}
-.meta span{display:block;font-size:9px;color:#6b7280}.meta b{font-size:11px}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 6px}
-.kpi{border:1.5px solid #e5e7eb;border-radius:12px;padding:8px 11px;background:#fff;break-inside:avoid}
-.kpi span{display:block;font-size:9.5px;color:#6b7280}.kpi b{display:block;font-size:19px;line-height:1.3}.kpi small{font-size:9px;color:#6b7280}.muted{color:#9ca3af}
-.block{margin-top:13px}.avoid{break-inside:avoid}
-h2{font-size:12.5px;margin:0 0 7px;padding-right:9px;border-right:4px solid #10b981;color:#064e3b}
+.top{display:flex;justify-content:space-between;align-items:center;padding:0 0 10px;border-bottom:2px solid ${PURPLE}}
+.brand{display:flex;align-items:center;gap:11px}
+.brand img{width:46px;height:46px;object-fit:contain;border-radius:10px}
+.brand h1{margin:0;font-size:18px;color:#2e1065}.brand p{margin:0;font-size:9.5px;color:#6b7280}
+.date{text-align:left}.date span{display:block;font-size:9px;color:#6b7280}.date b{font-size:12.5px;color:#374151}
+.meta{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:10px 0 2px;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden}
+.meta div{padding:5px 10px;border-left:1px solid #eef0f4;border-bottom:1px solid #eef0f4;background:#fff}
+.meta span{display:block;font-size:8.8px;color:#9ca3af}.meta b{font-size:10.8px;color:#1f2937}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0 4px}
+.kpi{border:1px solid #e5e7eb;border-radius:12px;padding:8px 12px;background:#faf9ff;break-inside:avoid}
+.kpi span{display:block;font-size:9.5px;color:#6b7280}.kpi b{display:block;font-size:18px;line-height:1.3;color:${PURPLE}}.kpi small{font-size:9px;color:#9ca3af}.muted{color:#9ca3af!important}
+.kpi-ring{display:flex;align-items:center;gap:9px}
+.block{margin-top:14px}.avoid{break-inside:avoid}
+h2{font-size:12.5px;margin:0 0 8px;color:#2e1065;display:flex;align-items:center;gap:8px}
+h2::before{content:'';width:4px;height:14px;border-radius:3px;background:${PURPLE}}
+h2 small{font-size:9px;color:#9ca3af;font-weight:400}
 .tbl{width:100%;border-collapse:collapse;font-size:10px}
-.tbl th{background:#064e3b;color:#fff;padding:6px 6px;font-weight:700;text-align:center;font-size:9.5px}
-.tbl th:first-child{border-radius:0 8px 0 0}.tbl th:last-child{border-radius:8px 0 0 0}
-.tbl td{padding:5px 6px;text-align:center;border-bottom:1px solid #eef2f7}
-.tbl tbody tr:nth-child(even){background:#f8fafc}
+.tbl th{background:#f5f3ff;color:#4c1d95;padding:6px;font-weight:700;text-align:center;font-size:9.5px;border-bottom:1.5px solid #ddd6fe}
+.tbl td{padding:5px 6px;text-align:center;border-bottom:1px solid #f1f2f6}
 .tbl tr{break-inside:avoid}
-.tbl tfoot td{background:#ecfdf5;border-top:2px solid #10b981;font-size:11px}
-.r{text-align:right!important}.n{color:#9ca3af;width:22px}.m{font-variant-numeric:tabular-nums;white-space:nowrap}.dim{color:#6b7280}
-.ltr{direction:ltr}.f{font-family:'Times New Roman',serif;font-size:10.5px;color:#334155}
-.tag{font-style:normal;font-size:8.5px;background:#fef3c7;color:#92400e;border-radius:5px;padding:0 5px;margin-right:4px}
-.tag-ph{background:#d1fae5;color:#065f46}
-.tank{display:inline-block;font-size:9px;border-radius:6px;padding:0 7px;background:#f3f4f6;color:#374151}
-.t-A{background:#dbeafe;color:#1d4ed8}.t-B{background:#ede9fe;color:#6d28d9}.t-C{background:#fef3c7;color:#b45309}
+.tbl tfoot td{background:#faf9ff;border-top:1.5px solid #ddd6fe;font-size:11px;color:#4c1d95}
+.r{text-align:right!important}.n{color:#c4c7d0;width:22px}.m{font-variant-numeric:tabular-nums;white-space:nowrap}.dim{color:#9ca3af}
+.ltr{direction:ltr}.f{font-family:'Times New Roman',serif;font-size:10.5px;color:#475569}
+.tag{font-style:normal;font-size:8.5px;background:#ede9fe;color:#5b21b6;border-radius:5px;padding:0 5px;margin-right:4px}
+.tag-ph{background:#dbeafe;color:#1d4ed8}
+.tank{display:inline-block;font-size:9px;border-radius:6px;padding:0 7px;background:#f3f4f6;color:#4b5563}
+.t-A{background:#dbeafe;color:#1d4ed8}.t-B{background:#ede9fe;color:#6d28d9}.t-C{background:#e5e7eb;color:#374151}
 .tanks{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.tankcard{border:1.5px solid #e5e7eb;border-radius:12px;padding:8px 10px;break-inside:avoid}
-.tankcard h3{margin:0 0 5px;font-size:10.5px}
-.tankcard.t-A{border-color:#93c5fd;background:#eff6ff}.tankcard.t-B{border-color:#c4b5fd;background:#f5f3ff}.tankcard.t-C{border-color:#fcd34d;background:#fffbeb}
-.tankcard ul{list-style:none;margin:0;padding:0}.tankcard li{display:flex;justify-content:space-between;gap:6px;font-size:9.5px;border-bottom:1px dashed #d1d5db;padding:2px 0}
+.tankcard{border:1px solid #e5e7eb;border-top:3px solid #9ca3af;border-radius:10px;padding:8px 10px;break-inside:avoid;background:#fff}
+.tankcard h3{margin:0 0 5px;font-size:10.5px;color:#374151}
+.tankcard.t-A{border-top-color:#3b82f6}.tankcard.t-B{border-top-color:#8b5cf6}.tankcard.t-C{border-top-color:#9ca3af}
+.tankcard ul{list-style:none;margin:0;padding:0}.tankcard li{display:flex;justify-content:space-between;gap:6px;font-size:9.5px;border-bottom:1px dashed #e5e7eb;padding:2px 0}
 .tankcard em{font-style:normal;color:#374151;font-weight:700;white-space:nowrap}
-.grp{margin-bottom:9px}.grp-h{display:flex;justify-content:space-between;align-items:center;border:1px solid;border-radius:9px;padding:4px 10px;margin-bottom:5px;font-size:10.5px}
-.barcell{width:26%}.bar{height:7px;background:#e5e7eb;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;border-radius:6px}
-.pill{display:inline-block;font-size:9px;border-radius:999px;padding:0 8px}
-.legend{font-size:9px;color:#6b7280;margin:4px 0 0}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 8px 0 3px;vertical-align:middle}
-.ion-bar{display:flex;height:12px;border-radius:7px;overflow:hidden;background:#e5e7eb}.ion-bar .cat,.ion i.cat{background:#3b82f6}.ion-bar .ani,.ion i.ani{background:#ef4444}
+.grp{margin-bottom:10px}.grp-h{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5e7eb;padding:0 2px 3px;margin-bottom:7px;font-size:10.5px}
+.grp-h b{color:#4c1d95}
+.els{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.el{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:center;border:1px solid #eef0f4;border-radius:11px;padding:6px 8px;background:#fff;break-inside:avoid}
+.el svg{grid-row:1 / span 2}
+.el-t b{display:block;font-size:11px;color:#1f2937;line-height:1.3}.el-t small{font-size:9px}
+.el-v{display:flex;flex-direction:column;font-size:8.6px;color:#9ca3af;line-height:1.5;font-variant-numeric:tabular-nums}
+.legend{font-size:8.8px;color:#9ca3af;margin:4px 0 0}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 8px 0 3px;vertical-align:middle}
+.ion-bar{display:flex;height:11px;border-radius:7px;overflow:hidden;background:#e5e7eb}.ion-bar .cat,.ion i.cat{background:#3b82f6}.ion-bar .ani,.ion i.ani{background:#ef4444}
 .ion-l{display:flex;gap:18px;margin-top:6px;font-size:10px}.ion-l i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:5px}
-.alert{border:1px solid #e5e7eb;border-right:4px solid;border-radius:9px;padding:6px 10px;margin-bottom:6px;break-inside:avoid;background:#fff}
-.alert p{margin:2px 0;font-size:9.8px;color:#374151}.alert ul{margin:3px 0 0;padding-right:16px;font-size:9.8px}
+.alert{border:1px solid #e5e7eb;border-right:3px solid;border-radius:9px;padding:6px 10px;margin-bottom:6px;break-inside:avoid;background:#fff}
+.alert p{margin:2px 0;font-size:9.8px;color:#4b5563}.alert ul{margin:3px 0 0;padding-right:16px;font-size:9.8px}
 .empty{color:#6b7280}
 .foot{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;font-size:8.5px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:4px}
-.note{margin-top:12px;font-size:9px;color:#6b7280;line-height:1.8}
+.note{margin-top:12px;font-size:9px;color:#9ca3af;line-height:1.8}
 </style></head>
 <body>
 ${buildHeader(meta)}
@@ -390,7 +408,7 @@ ${buildElements(payload)}
 ${buildIonBalance(payload.result)}
 ${buildAlerts(payload.result)}
 <p class="note">مقادیر بر پایهٔ ترکیب کودهای انتخابی و آنالیز آب واردشده محاسبه شده‌اند؛ پیش از مصرف، EC و pH محلول نهایی را با دستگاه اندازه‌گیری و در صورت نیاز تنظیم کنید.</p>
-<div class="foot"><span>سهند کود — سیستم هوشمند نسخه‌نویسی کود</span><span>${esc(meta.date || todayFa())}</span></div>
+<div class="foot"><span>سهند کود · سیستم هوشمند نسخه‌نویسی کود</span><span>${esc(meta.date || todayFa())}</span></div>
 </body></html>`;
     }
 

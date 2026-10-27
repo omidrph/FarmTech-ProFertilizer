@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/RecipeManager.vue -->
 <template>
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -38,12 +39,12 @@
               <p v-if="recipe.description" class="text-[11px] leading-5 text-gray-500 dark:text-gray-400 line-clamp-3">{{ recipe.description }}</p>
               <div class="flex flex-wrap items-center gap-1 mt-2">
                 <span v-for="(value, element) in getTopElements(recipe.target_values, 5)" :key="element"
-                  class="text-[11px] px-1.5 py-0.5 rounded bg-white dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 tabular-nums" dir="ltr">
-                  {{ element }} {{ Number(value).toFixed(1) }}
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-700 dark:text-gray-200 tabular-nums" dir="ltr">
+                  <span class="font-bold">{{ element }}</span><span class="mx-1 text-gray-400">|</span><span>{{ Number(value).toFixed(1) }}</span>
                 </span>
                 <button v-if="elementCount(recipe) > 5" type="button"
                   @mouseenter="popFor(recipe, $event)" @mouseleave="pop = null" @click.stop="popFor(recipe, $event, true)"
-                  class="text-[11px] px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600">
                   +{{ (elementCount(recipe) - 5).toLocaleString('fa-IR') }}
                 </button>
               </div>
@@ -111,10 +112,10 @@
               </div>
               <div v-if="recipe.description" class="pt-1 border-t border-gray-200 dark:border-gray-600 italic text-gray-600 dark:text-gray-300">"{{ recipe.description }}"</div>
               <div class="flex flex-wrap items-center gap-1 pt-1">
-                <span v-for="(value, element) in getTopElements(recipe.target_values, 4)" :key="element" class="px-1.5 rounded bg-gray-100 dark:bg-gray-700 tabular-nums" dir="ltr">{{ element }} {{ Number(value).toFixed(1) }}</span>
+                <span v-for="(value, element) in getTopElements(recipe.target_values, 4)" :key="element" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-700 dark:text-gray-200 tabular-nums" dir="ltr"><span class="font-bold">{{ element }}</span><span class="mx-1 text-gray-400">|</span><span>{{ Number(value).toFixed(1) }}</span></span>
                 <button v-if="elementCount(recipe) > 4" type="button"
                   @mouseenter="popFor(recipe, $event)" @mouseleave="pop = null" @click.stop="popFor(recipe, $event, true)"
-                  class="px-1.5 rounded bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50">
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600">
                   +{{ (elementCount(recipe) - 4).toLocaleString('fa-IR') }}
                 </button>
               </div>
@@ -124,17 +125,15 @@
       </div>
     </div>
 
-    <!-- منوی همهٔ عناصر رسپی -->
+    <!-- پاپ‌اور همهٔ عناصر (هم‌شکل پایگاه کود) -->
     <Teleport to="body">
       <template v-if="pop">
-        <div class="fixed inset-0 z-40 lg:hidden" @click="pop = null"></div>
-        <div class="fixed z-50 w-[232px] rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-3" :style="{ top: pop.top + 'px', left: pop.left + 'px' }">
-          <p class="text-[11px] font-semibold text-gray-700 dark:text-gray-200 mb-2 truncate">{{ pop.name }}</p>
-          <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-            <div v-for="[el, val] in popEntries" :key="el" class="flex justify-between items-center text-[11px]" dir="ltr">
-              <span class="font-medium text-gray-600 dark:text-gray-300">{{ el }}</span>
-              <span class="tabular-nums text-gray-900 dark:text-white">{{ val.toFixed(2) }}</span>
-            </div>
+        <div class="fixed inset-0 z-[70] lg:hidden" @click="pop = null"></div>
+        <div class="fixed z-[80] pointer-events-none w-max max-w-[300px] rounded-xl bg-gray-900 text-white text-xs leading-6 p-3 shadow-2xl"
+          :style="{ left: pop.x + 'px', top: pop.y + 'px', transform: pop.up ? 'translate(-50%, -100%)' : 'translate(-50%, 0)' }">
+          <p class="font-semibold mb-1.5 text-gray-300 truncate max-w-[270px]">{{ pop.name }}</p>
+          <div class="grid grid-cols-2 gap-x-5 gap-y-0.5 tabular-nums" dir="ltr">
+            <div v-for="[el, val] in popEntries" :key="el" class="flex justify-between gap-3"><span class="font-medium">{{ el }}</span><span class="text-gray-300">{{ val.toFixed(2) }}</span></div>
           </div>
         </div>
       </template>
@@ -224,15 +223,16 @@ const formData = reactive({ name: '', description: '', category: '', stage: '' }
 
 // مقادیر فعلی جدول عناصر هدف
 // منوی «همهٔ عناصر» رسپی (با هاور در دسکتاپ، با کلیک در موبایل)
-const pop = ref<{ id: number; name: string; top: number; left: number; values: Record<string, number> } | null>(null);
+const pop = ref<{ id: number; name: string; x: number; y: number; up: boolean; values: Record<string, number> } | null>(null);
 const popFor = (recipe: any, e: Event, toggle = false) => {
-  const el = e.currentTarget as HTMLElement;
   if (toggle && pop.value?.id === recipe.id) { pop.value = null; return; }
-  const r = el.getBoundingClientRect();
-  const width = 232;
-  const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
-  const top = r.bottom + 6 + 260 > window.innerHeight ? Math.max(8, r.top - 6 - 260) : r.bottom + 6;
-  pop.value = { id: recipe.id, name: recipe.name, top, left, values: recipe.target_values || {} };
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const up = r.top > 220;
+  pop.value = {
+    id: recipe.id, name: recipe.name,
+    x: Math.min(Math.max(r.left + r.width / 2, 160), window.innerWidth - 160),
+    y: up ? r.top - 8 : r.bottom + 8, up, values: recipe.target_values || {}
+  };
 };
 const popEntries = computed(() =>
   pop.value ? ALL_ELEMENTS.filter((e) => Number(pop.value!.values[e]) > 0).map((e) => [e, Number(pop.value!.values[e])] as [string, number]) : []

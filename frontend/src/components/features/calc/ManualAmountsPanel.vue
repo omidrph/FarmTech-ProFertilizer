@@ -32,7 +32,7 @@
       <div class="px-4 sm:px-5 py-3 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700">
         <div class="relative flex-1">
           <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" /></svg>
-          <input v-model="q" placeholder="جستجوی نام، فرمول یا عنصر (Ca، کلسیم)…" class="w-full h-9 pr-9 pl-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
+          <input v-model="q" placeholder="جستجو: نام، فرمول یا عنصر" class="w-full h-9 pr-9 pl-3 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
         <button type="button" @click="onlyFilled = !onlyFilled" class="h-9 px-3 rounded-lg border text-xs font-medium transition-colors flex-shrink-0"
           :class="onlyFilled ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'">فقط پرشده‌ها</button>

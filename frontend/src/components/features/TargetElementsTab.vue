@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/TargetElementsTab.vue -->
 <template>
   <div class="space-y-4">
@@ -34,13 +35,6 @@
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
           ذخیره شد
         </span>
-
-        <button type="button" @click="saveAsRecipe" :disabled="!hasAnyTarget"
-          class="flex-1 sm:flex-none px-2.5 sm:px-4 py-1.5 sm:py-2 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800 rounded-lg hover:bg-primary-100 dark:hover:bg-primary-900/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap"
-          title="ذخیرهٔ مقادیر جدول به‌عنوان رسپی شخصی">
-          <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-          افزودن به رسپی شخصی
-        </button>
 
         <button @click="resetTargets"
           class="flex-1 sm:flex-none px-2.5 sm:px-4 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 min-w-[60px] sm:min-w-0"
@@ -282,10 +276,6 @@ const resetTargets = () => {
   showToast('همه مقادیر بازنشانی شدند', 'success');
   triggerAutoSave();
   setTimeout(() => { loadConvertedValues(); }, 200);
-};
-
-const saveAsRecipe = () => {
-  recipeRef.value?.openSaveModal();
 };
 
 const openElementGuide = (element: string) => {

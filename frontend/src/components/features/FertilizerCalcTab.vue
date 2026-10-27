@@ -54,6 +54,96 @@
           ></span>
         </li>
       </ol>
+
+      <!-- دکمه‌ها: داخل کارت مراحل، زیر نوار ۳ مرحله (هم‌سبک تب PH) -->
+      <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
+
+        <!-- قبلی -->
+        <button
+          v-if="currentStep > 1"
+          type="button"
+          @click="goToStep(currentStep - 1)"
+          class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+          قبلی
+        </button>
+
+        <div class="flex-1"></div>
+
+        <!-- بازنشانی -->
+        <button
+          type="button"
+          @click="showResetConfirm = true"
+          class="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
+          </svg>
+          <span class="hidden sm:inline">بازنشانی</span>
+        </button>
+
+        <!-- مرحله ۱ -->
+        <button
+          v-if="currentStep === 1"
+          type="button"
+          @click="goToStep(2)"
+          class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
+        >
+          ادامه: انتخاب کود
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <!-- مرحله ۲ -->
+        <button
+          v-else-if="currentStep === 2"
+          type="button"
+          @click="handleOptimize"
+          :disabled="isOptimizing || !canOptimize"
+          :title="optimizeBlockReason"
+          class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+        >
+          <svg v-if="!isOptimizing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          {{ isOptimizing ? 'در حال محاسبه...' : 'محاسبه و مشاهده نتیجه' }}
+        </button>
+
+        <!-- مرحله ۳ -->
+        <template v-else>
+          <button
+            type="button"
+            @click="handleOptimize"
+            :disabled="isOptimizing || !canOptimize"
+            class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            </svg>
+            <span class="hidden sm:inline">محاسبه مجدد</span>
+          </button>
+
+          <button
+            type="button"
+            @click="handleExportPdf"
+            :disabled="!hasOptimizationResult || isExporting"
+            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
+          </button>
+        </template>
+      </div>
     </nav>
 
     <!-- ============================================================ -->
@@ -204,98 +294,6 @@
           <p v-for="err in calcErrors" :key="err" class="text-sm text-rose-700 dark:text-rose-400">{{ err }}</p>
         </div>
       </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- نوار اقدام (داخل همان کانتینر صفحه، انتهای محتوا) -->
-    <!-- ============================================================ -->
-    <div class="mt-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4 flex items-center gap-2 flex-wrap">
-
-      <!-- قبلی -->
-      <button
-        v-if="currentStep > 1"
-        type="button"
-        @click="goToStep(currentStep - 1)"
-        class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-        قبلی
-      </button>
-
-      <div class="flex-1"></div>
-
-      <!-- بازنشانی -->
-      <button
-        type="button"
-        @click="showResetConfirm = true"
-        class="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3M4 7h16" />
-        </svg>
-        <span class="hidden sm:inline">بازنشانی</span>
-      </button>
-
-      <!-- مرحله ۱ -->
-      <button
-        v-if="currentStep === 1"
-        type="button"
-        @click="goToStep(2)"
-        class="inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors"
-      >
-        ادامه: انتخاب کود
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-
-      <!-- مرحله ۲ -->
-      <button
-        v-else-if="currentStep === 2"
-        type="button"
-        @click="handleOptimize"
-        :disabled="isOptimizing || !canOptimize"
-        :title="optimizeBlockReason"
-        class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-      >
-        <svg v-if="!isOptimizing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-        <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-        </svg>
-        {{ isOptimizing ? 'در حال محاسبه...' : 'محاسبه و مشاهده نتیجه' }}
-      </button>
-
-      <!-- مرحله ۳ -->
-      <template v-else>
-        <button
-          type="button"
-          @click="handleOptimize"
-          :disabled="isOptimizing || !canOptimize"
-          class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-          <span class="hidden sm:inline">محاسبه مجدد</span>
-        </button>
-
-        <button
-          type="button"
-          @click="handleExportPdf"
-          :disabled="!hasOptimizationResult || isExporting"
-          class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
-        </button>
-      </template>
     </div>
 
     <!-- ============================================================ -->

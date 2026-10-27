@@ -69,7 +69,7 @@
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="نام، فرمول، عنصر (Ca، کلسیم، k>20)، اسید، مایع..."
+              placeholder="جستجو: نام، فرمول یا عنصر"
               class="w-full pr-9 pl-8 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
             />
             <button
@@ -84,20 +84,6 @@
               </svg>
             </button>
           </div>
-        </div>
-
-        <!-- میان‌برهای جستجو بر اساس عنصر -->
-        <div class="px-3 pb-2 flex flex-wrap gap-1.5">
-          <button
-            v-for="chip in quickChips"
-            :key="chip"
-            type="button"
-            @click="toggleChip(chip)"
-            class="px-2 py-0.5 rounded-full text-[11px] border transition-colors"
-            :class="chipActive(chip)
-              ? 'bg-primary-600 border-primary-600 text-white'
-              : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400'"
-          >{{ chip }}</button>
         </div>
 
         <!-- لیست -->
@@ -448,17 +434,6 @@ const filteredAvailable = computed(() => {
   return availableList.value.filter((f) => tokens.every((t) => tokenMatches(f, t)));
 });
 
-// میان‌برهای عنصری برای جستجوی سریع
-const quickChips = ['N-NO3', 'P', 'K', 'Ca', 'Mg', 'S', 'Fe', 'اسید', 'مایع'];
-const toggleChip = (chip: string) => {
-  const parts = searchQuery.value.split(/\s+/).filter(Boolean);
-  const i = parts.findIndex((p) => norm(p) === norm(chip));
-  if (i >= 0) parts.splice(i, 1);
-  else parts.push(chip);
-  searchQuery.value = parts.join(' ');
-};
-const chipActive = (chip: string) => searchQuery.value.split(/\s+/).some((p) => norm(p) === norm(chip));
-
 const emptyAvailableTitle = computed(() => {
   if (searchQuery.value) return 'کودی با این عبارت پیدا نشد';
   if (userFertilizers.value.length === 0) return 'هنوز کود شخصی ثبت نکرده‌اید';
@@ -466,7 +441,7 @@ const emptyAvailableTitle = computed(() => {
 });
 
 const emptyAvailableHint = computed(() => {
-  if (searchQuery.value) return 'عبارت‌ها با «و» ترکیب می‌شوند؛ یکی را بردارید';
+  if (searchQuery.value) return 'عبارت جستجو را تغییر دهید';
   if (userFertilizers.value.length === 0) return 'ابتدا از بخش پایگاه داده کود، کودهای خود را اضافه کنید';
   return '';
 });

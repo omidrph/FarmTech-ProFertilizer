@@ -16,26 +16,36 @@
       class="rounded-xl border bg-white dark:bg-gray-800 p-3 flex items-center gap-3"
       :class="LEVEL_CLASS[g.level].border"
     >
-      <svg width="56" height="56" viewBox="0 0 56 56" class="flex-shrink-0">
-        <circle cx="28" cy="28" r="21" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="5" />
-        <circle
-          cx="28" cy="28" r="21" fill="none" stroke-width="5" stroke-linecap="round"
-          :class="LEVEL_CLASS[g.level].ring"
-          stroke="currentColor"
-          :stroke-dasharray="RING_CIRC"
-          :stroke-dashoffset="RING_CIRC * (1 - Math.min(g.meanAbs, 20) / 20)"
-          transform="rotate(-90 28 28)"
-          style="transition: stroke-dashoffset 0.6s ease"
-        />
-      </svg>
+      <div class="relative w-14 h-14 flex-shrink-0">
+        <svg viewBox="0 0 56 56" class="w-full h-full">
+          <circle cx="28" cy="28" r="21" fill="none" class="stroke-gray-100 dark:stroke-gray-700" stroke-width="5" />
+          <circle
+            cx="28" cy="28" r="21" fill="none" stroke-width="5" stroke-linecap="round"
+            :class="LEVEL_CLASS[g.level].ring"
+            :stroke-dasharray="RING_CIRC"
+            :stroke-dashoffset="RING_CIRC * (1 - g.coverage / 100)"
+            transform="rotate(-90 28 28)"
+            style="transition: stroke-dashoffset 0.6s ease"
+          />
+          <!-- حلقهٔ بیرونی قرمز: بیش‌تأمین (مثل پوشش عناصر هدف) -->
+          <circle
+            v-if="g.over > 0.5"
+            cx="28" cy="28" r="26" fill="none" stroke-width="2" stroke-linecap="round"
+            class="stroke-rose-500"
+            :stroke-dasharray="OUTER_CIRC"
+            :stroke-dashoffset="OUTER_CIRC * (1 - Math.min(g.over / 50, 1))"
+            transform="rotate(-90 28 28)"
+          />
+        </svg>
+      </div>
       <div class="min-w-0">
-        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.group === 'macro' ? 'خطای ماکرو' : 'خطای میکرو' }}</p>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.group === 'macro' ? 'پوشش ماکرو' : 'پوشش میکرو' }}</p>
         <p v-if="g.count" class="text-lg font-bold tabular-nums" :class="LEVEL_CLASS[g.level].text">
-          {{ faNum(g.meanAbs, 1) }}<span class="text-xs font-normal text-gray-400">٪</span>
+          {{ faNum(g.coverage, 1) }}<span class="text-xs font-normal text-gray-400">٪</span>
         </p>
         <p v-else class="text-lg font-bold text-gray-400">—</p>
         <p class="text-[10px] truncate" :class="g.count ? LEVEL_CLASS[g.level].text : 'text-gray-400'">
-          {{ g.count ? `${LEVEL_LABEL[g.level]} · بیشترین ${g.worst} ${faNum(g.maxAbs, 1)}٪` : 'هدفی ثبت نشده' }}
+          {{ g.count ? LEVEL_LABEL[g.level] : 'هدفی ثبت نشده' }}
         </p>
       </div>
     </article>
@@ -56,18 +66,16 @@
         <p class="mt-0.5 flex items-baseline gap-1">
           <template v-if="item.key === 'ec'">
             <input
-              type="number" step="0.1" min="0.3" max="6" dir="ltr"
+              type="text" inputmode="decimal" dir="ltr"
               v-model="ecDraft"
               @keyup.enter="commitEc"
               @blur="commitEc"
-              title="EC را ویرایش کنید؛ مقدار کودها متناسب تغییر می‌کند"
               class="w-20 text-lg sm:text-xl font-bold tabular-nums bg-transparent border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-primary-500 outline-none text-gray-900 dark:text-white"
             />
           </template>
           <span v-else class="text-lg sm:text-xl font-bold tabular-nums" :class="item.color">{{ item.value }}</span>
           <span v-if="item.unit" class="text-[10px] text-gray-400">{{ item.unit }}</span>
         </p>
-        <p v-if="item.key === 'ec'" class="text-[10px] mt-0.5 text-primary-600 dark:text-primary-400">قابل ویرایش · کودها متناسب می‌شوند</p>
         <p v-if="item.note" class="text-[10px] mt-0.5 truncate" :class="item.noteColor || 'text-gray-400'">
           {{ item.note }}
         </p>
@@ -99,18 +107,24 @@ const emit = defineEmits<{ (e: 'set-ec', value: number): void }>();
 const ecDraft = ref<string>(format(props.result.ec, 2));
 watch(() => props.result.ec, (v) => { ecDraft.value = format(v, 2); });
 const commitEc = () => {
-  const v = parseFloat(String(ecDraft.value));
+  const v = parseFloat(String(ecDraft.value).replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).replace(/٫/g, '.').replace(',', '.'));
   if (!isFinite(v)) { ecDraft.value = format(props.result.ec, 2); return; }
   if (Math.abs(v - Number(props.result.ec)) < 0.015) return;
   emit('set-ec', v);
 };
 
 const RING_CIRC = 2 * Math.PI * 21;
+const OUTER_CIRC = 2 * Math.PI * 26;
 
 // خطای ماکرو و میکرو جدا (میانگین خطای مطلق هر گروه؛ رنگ بر پایهٔ بدترین عنصر گروه)
+// پوشش = ۱۰۰٪ منهای میانگین خطا (بدون مشکل → ۱۰۰٪)؛ over = میانگین بیش‌تأمین
 const errorCards = computed(() => {
   const g = computeGroupErrors(props.targetValues || {}, props.result.concentrations || {});
-  return [g.macro, g.micro];
+  return [g.macro, g.micro].map((x) => ({
+    ...x,
+    coverage: Math.max(0, 100 - x.meanAbs),
+    over: x.count ? x.rows.reduce((a, r) => a + Math.max(r.deviationPct, 0), 0) / x.count : 0
+  }));
 });
 
 const statusColor = (status?: string): string => {
