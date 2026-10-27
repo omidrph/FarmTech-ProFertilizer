@@ -55,8 +55,12 @@ export interface GroupError {
   count: number;
   meanAbs: number; // میانگین خطای مطلق (٪)
   maxAbs: number;
-  level: ErrorLevel; // بر پایهٔ بدترین عنصر آن گروه تا یک عنصر خراب پنهان نماند
+  level: ErrorLevel; // بر پایهٔ میانگین خطای مطلق گروه
   worst: string | null;
+  /** پوشش گروه (٪) دقیقاً مثل حلقه‌های عناصر: میانگین min(فعلی/هدف، ۱) */
+  coverage: number;
+  /** میانگین بیش‌تأمین (٪) برای حلقهٔ بیرونی قرمز */
+  over: number;
   rows: ElementError[];
 }
 
@@ -79,7 +83,9 @@ export function computeGroupErrors(targets: Record<string, number>, actual: Reco
     const meanAbs = rs.length ? rs.reduce((s, r) => s + r.absPct, 0) / rs.length : 0;
     const worstRow = rs.reduce<ElementError | null>((w, r) => (!w || r.absPct > w.absPct ? r : w), null);
     const maxAbs = worstRow ? worstRow.absPct : 0;
-    return { group, count: rs.length, meanAbs, maxAbs, level: errorLevel(maxAbs), worst: worstRow?.element ?? null, rows: rs };
+    const coverage = rs.length ? (rs.reduce((a, r) => a + Math.min(r.actual / r.target, 1), 0) / rs.length) * 100 : 0;
+    const over = rs.length ? (rs.reduce((a, r) => a + Math.max(r.actual / r.target - 1, 0), 0) / rs.length) * 100 : 0;
+    return { group, count: rs.length, meanAbs, maxAbs, level: errorLevel(meanAbs), worst: worstRow?.element ?? null, coverage, over, rows: rs };
   };
   return { macro: build('macro'), micro: build('micro'), all: rows };
 }

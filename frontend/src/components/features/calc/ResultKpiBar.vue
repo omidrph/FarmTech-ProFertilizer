@@ -7,7 +7,7 @@
   می‌مانند.
 -->
 <template>
-  <div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
+  <div class="grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3">
 
     <!-- خطای ماکرو و میکرو (جدا): تا ۵٪ سبز، ۵ تا ۱۰٪ زرد، بالای ۱۰٪ قرمز -->
     <article
@@ -39,7 +39,7 @@
         </svg>
       </div>
       <div class="min-w-0">
-        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.group === 'macro' ? 'پوشش ماکرو' : 'پوشش میکرو' }}</p>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ g.group === 'macro' ? 'ماکرو' : 'میکرو' }}</p>
         <p v-if="g.count" class="text-lg font-bold tabular-nums" :class="LEVEL_CLASS[g.level].text">
           {{ faNum(g.coverage, 1) }}<span class="text-xs font-normal text-gray-400">٪</span>
         </p>
@@ -50,9 +50,37 @@
       </div>
     </article>
 
+    <!-- EC نهایی: قابل ویرایش + نوار محدودهٔ مطلوب -->
+    <article class="col-span-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5">
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">EC نهایی</p>
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" :class="ecPill.cls">{{ ecPill.text }}</span>
+      </div>
+      <div class="mt-1.5 flex items-center gap-2">
+        <label class="flex items-baseline gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 px-3 py-1.5 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition">
+          <input
+            type="text" inputmode="decimal" dir="ltr"
+            v-model="ecDraft"
+            @keyup.enter="commitEc"
+            @blur="commitEc"
+            class="w-16 text-xl font-bold tabular-nums bg-transparent outline-none text-gray-900 dark:text-white"
+          />
+          <span class="text-[11px] text-gray-400">dS/m</span>
+          <svg class="w-3.5 h-3.5 text-gray-400 self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+        </label>
+      </div>
+      <div class="mt-3">
+        <div class="relative h-2 rounded-full bg-gray-100 dark:bg-gray-700">
+          <div class="absolute inset-y-0 rounded-full bg-primary-200 dark:bg-primary-800/60" :style="{ right: (0.8 / EC_MAX) * 100 + '%', width: ((2.5 - 0.8) / EC_MAX) * 100 + '%' }"></div>
+          <div class="absolute top-1/2 w-3.5 h-3.5 -translate-y-1/2 translate-x-1/2 rounded-full border-2 border-white dark:border-gray-800 shadow" :class="ecPill.dot" :style="{ right: ecPos + '%' }"></div>
+        </div>
+        <div class="mt-1 flex justify-between text-[9px] text-gray-400 tabular-nums"><span>۰</span><span>محدودهٔ مطلوب ۰٫۸ تا ۲٫۵</span><span>۴</span></div>
+      </div>
+    </article>
+
     <!-- بقیه شاخص‌ها -->
     <article
-      v-for="item in items"
+      v-for="item in items.filter((i) => i.key !== 'ec')"
       :key="item.key"
       class="rounded-xl border bg-white dark:bg-gray-800 p-3 flex items-start gap-2.5"
       :class="item.border"
@@ -120,11 +148,18 @@ const OUTER_CIRC = 2 * Math.PI * 26;
 // پوشش = ۱۰۰٪ منهای میانگین خطا (بدون مشکل → ۱۰۰٪)؛ over = میانگین بیش‌تأمین
 const errorCards = computed(() => {
   const g = computeGroupErrors(props.targetValues || {}, props.result.concentrations || {});
-  return [g.macro, g.micro].map((x) => ({
-    ...x,
-    coverage: Math.max(0, 100 - x.meanAbs),
-    over: x.count ? x.rows.reduce((a, r) => a + Math.max(r.deviationPct, 0), 0) / x.count : 0
-  }));
+  return [g.macro, g.micro];
+});
+
+const EC_MAX = 4;
+const ecNum = computed(() => Number(props.result.ec) || 0);
+const ecPos = computed(() => Math.min(Math.max(ecNum.value / EC_MAX, 0), 1) * 100);
+const ecPill = computed(() => {
+  const st = props.result.ec_status || '';
+  const v = ecNum.value;
+  if (st.includes('مطلوب') || (!st && v >= 0.8 && v <= 2.5)) return { text: st || 'مطلوب', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', dot: 'bg-emerald-500' };
+  if (st.includes('بسیار') || st.includes('بحرانی')) return { text: st, cls: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', dot: 'bg-rose-500' };
+  return { text: st || (v < 0.8 ? 'کم' : 'بالا'), cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', dot: 'bg-amber-500' };
 });
 
 const statusColor = (status?: string): string => {

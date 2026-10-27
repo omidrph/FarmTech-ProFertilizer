@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerStatsAndTable.vue -->
 <template>
   <div>
@@ -222,7 +223,7 @@
                         <span
                           v-if="elementCount(fertilizer) > 3"
                           class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600"
-                          @mouseenter="showTip($event, fertilizer)" @mouseleave="tip = null" @focus="showTip($event, fertilizer)" @blur="tip = null" tabindex="0"
+                          @pointerenter="onTipEnter($event, fertilizer)" @pointerleave="onTipLeave($event)" @click.stop="toggleTip($event, fertilizer)" tabindex="0"
                         >+{{ elementCount(fertilizer) - 3 }}</span>
                       </template>
 
@@ -391,7 +392,7 @@
                 >
                   {{ element }}: {{ percentage }}%
                 </span>
-                <span v-if="elementCount(fertilizer) > 3" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] border border-gray-300 dark:border-gray-600 text-gray-500" :title="allElementsText(fertilizer)">+{{ elementCount(fertilizer) - 3 }}</span>
+                <button v-if="elementCount(fertilizer) > 3" type="button" @click.stop="toggleTip($event, fertilizer)" class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50">+{{ elementCount(fertilizer) - 3 }}</button>
               </template>
 
               <span
@@ -594,6 +595,7 @@
   </div>
   <!-- پاپ‌اور همهٔ عناصر (Teleport به body؛ از هر ردیفی که +N را هاور کنید) -->
   <Teleport to="body">
+    <div v-if="tip && tipTouch" class="fixed inset-0 z-[79]" @click="tip = null"></div>
     <div v-if="tip" class="fixed z-[80] pointer-events-none w-max max-w-[300px] rounded-xl bg-gray-900 text-white text-xs leading-6 p-3 shadow-2xl"
       :style="{ left: tip.x + 'px', top: tip.y + 'px', transform: tip.up ? 'translate(-50%, -100%)' : 'translate(-50%, 0)' }">
       <p class="font-semibold mb-1.5 text-gray-300 truncate max-w-[270px]">{{ tip.name }}</p>
@@ -669,6 +671,17 @@ const showTip = (e: Event, f: any) => {
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
   const up = r.top > 220;
   tip.value = { x: Math.min(Math.max(r.left + r.width / 2, 160), window.innerWidth - 160), y: up ? r.top - 8 : r.bottom + 8, up, name: f.name, items: sortedElements(f) };
+};
+const tipKey = ref<string | number | null>(null);
+const onTipEnter = (e: PointerEvent, f: any) => { if (e.pointerType === 'mouse') { tipTouch.value = false; showTip(e, f); tipKey.value = f.id; } };
+const onTipLeave = (e: PointerEvent) => { if (e.pointerType === 'mouse') { tip.value = null; tipKey.value = null; } };
+// لمس/کلیک: باز و بسته می‌شود (در موبایل هاور وجود ندارد)
+const tipTouch = ref(false);
+const toggleTip = (e: Event, f: any) => {
+  if ((e as PointerEvent).pointerType === 'mouse') return; // با ماوس، هاور کافی است
+  if (tip.value && tipKey.value === f.id) { tip.value = null; tipKey.value = null; tipTouch.value = false; return; }
+  tipTouch.value = true;
+  showTip(e, f); tipKey.value = f.id;
 };
 const isCompanyFert = (_f: any) => true; // فقط کود شرکتی داریم
 const allElementsText = (f: any) => sortedElements(f).map(([e, p]) => `${e}: ${p}%`).join('، ');
@@ -1037,6 +1050,3 @@ const clearTable = () => {
   background: #4b5563;
 }
 </style>
-
-
-

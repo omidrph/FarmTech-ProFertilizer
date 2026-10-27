@@ -84,24 +84,19 @@
       <!-- پیش‌نمایش زنده: ماکرو و میکرو جدا، رنگ سه‌سطحی (۵٪ / ۱۰٪) -->
       <div v-if="targetRows.length" class="px-4 sm:px-5 py-3.5 border-t border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-900/30 space-y-3">
         <p class="text-xs font-semibold text-gray-600 dark:text-gray-300">پیش‌نمایش زندهٔ پوشش عناصر هدف (با احتساب آب)</p>
-        <div v-for="g in previewGroups" :key="g.group">
-          <div v-if="g.count" class="mb-2 flex items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-[11px]" :class="[LEVEL_CLASS[g.level].bg, LEVEL_CLASS[g.level].border]">
-            <span class="font-bold text-gray-800 dark:text-gray-100">{{ GROUP_TITLES[g.group] }}</span>
-            <span class="tabular-nums" :class="LEVEL_CLASS[g.level].text">
-              میانگین خطا {{ faNum(g.meanAbs, 1) }}٪ · {{ LEVEL_LABEL[g.level] }}
-            </span>
-          </div>
-          <div v-if="g.count" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <div v-for="row in g.rows" :key="row.element" class="rounded-lg bg-white dark:bg-gray-800 border px-2.5 py-2" :class="LEVEL_CLASS[row.level].border">
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="font-bold text-gray-700 dark:text-gray-200">{{ row.element }}</span>
-                <span class="tabular-nums" :class="LEVEL_CLASS[row.level].text">{{ faNum(row.absPct, 1) }}٪ {{ row.deviationPct >= 0 ? 'بیش' : 'کم' }}</span>
-              </div>
-              <div class="mt-1.5 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-                <div class="h-full rounded-full" :class="LEVEL_CLASS[row.level].dot" :style="{ width: Math.min((row.actual / row.target) * 100, 100) + '%' }"></div>
-              </div>
-              <p class="mt-1 text-[10px] text-gray-400 tabular-nums">{{ fmt(row.actual, 1) }} / {{ fmt(row.target, 1) }}</p>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div v-for="row in previewRows" :key="row.element" class="rounded-lg bg-white dark:bg-gray-800 border px-2.5 py-2" :class="LEVEL_CLASS[row.level].border">
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="font-bold text-gray-700 dark:text-gray-200">{{ row.element }}</span>
+              <span class="tabular-nums" :class="LEVEL_CLASS[row.level].text">{{ fmt((row.actual / row.target) * 100) }}٪</span>
             </div>
+            <div class="mt-1.5 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+              <div class="h-full rounded-full" :class="LEVEL_CLASS[row.level].dot" :style="{ width: Math.min((row.actual / row.target) * 100, 100) + '%' }"></div>
+            </div>
+            <p class="mt-1 flex items-center justify-between text-[10px] text-gray-400 tabular-nums">
+              <span>{{ fmt(row.actual, 1) }} / {{ fmt(row.target, 1) }}</span>
+              <span>{{ row.group === 'micro' ? 'میکرو' : 'ماکرو' }}</span>
+            </p>
           </div>
         </div>
       </div>
@@ -133,7 +128,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { computeGroupErrors, faNum, GROUP_TITLES, LEVEL_CLASS, LEVEL_LABEL } from '@/utils/errorLevels';
+import { computeElementErrors, LEVEL_CLASS } from '@/utils/errorLevels';
 import { amountToGrams, canShowVolume, defaultUnit, formatFertilizerAmount, unitOptions, type AmountUnit } from '@/utils/fertilizerUnits';
 
 type Row = { amount: number | null; unit: AmountUnit };
@@ -191,7 +186,7 @@ const suppliedPpm = computed(() => {
     for (const [el, pct] of Object.entries<any>(f.elements || {})) if (Number(pct) > 0) out[el] = (out[el] || 0) + (g * (Number(pct) / 100) * ((f.concentration || 100) / 100) * 1000) / props.tankVolume; }
   return out;
 });
-const previewGroups = computed(() => { const g = computeGroupErrors(props.targets || {}, suppliedPpm.value); return [g.macro, g.micro]; });
+const previewRows = computed(() => computeElementErrors(props.targets || {}, suppliedPpm.value));
 const targetRows = computed(() => Object.entries(props.targets || {}).filter(([, t]) => Number(t) > 0).map(([symbol, t]) => { const supplied = suppliedPpm.value[symbol] || 0; return { symbol, target: Number(t), supplied, pct: (supplied / Number(t)) * 100 }; }));
 
 // ----- کمک‌محاسبه -----

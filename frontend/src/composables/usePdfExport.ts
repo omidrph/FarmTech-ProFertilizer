@@ -4,14 +4,14 @@
 // ------------------------------------------------------------
 // سند HTML مستقل A4 / RTL داخل iframe مخفی ساخته و چاپ می‌شود (Save as PDF).
 // - سربرگ با لوگوی برنامه + مشخصات گزارش + تاریخ (تم سفید/بنفش/خاکستری با لهجهٔ آبی)
-// - خلاصه: EC، هزینه، پوشش ماکرو و میکرو (حلقه‌ای؛ سه‌رنگ ۵٪ / ۱۰٪)
+// - خلاصه: EC، هزینه، ماکرو و میکرو (حلقه‌ای، دقیقاً مثل پوشش عناصر)
 // - جدول کودها با ستون فرمول + مقدار در استوک و در ۱۰۰۰ لیتر + هزینه
 // - کارت مخازن A/B/C، عناصر ماکرو/میکرو با نمودار دایره‌ای، تعادل یونی، هشدار رسوب
 // - نام فایل از مشخصات گزارش + تاریخ (کوتاه)
 // ============================================================
 import { ref } from 'vue';
 import type { OptimizationResponse } from '@/types';
-import { computeGroupErrors, errorLevel, LEVEL_LABEL, type ErrorLevel } from '@/utils/errorLevels';
+import { computeElementErrors, computeGroupErrors, errorLevel, LEVEL_LABEL, type ErrorLevel } from '@/utils/errorLevels';
 
 export interface PdfReportMeta {
     greenhouseName?: string;
@@ -160,25 +160,23 @@ ${rows.length ? `<section class="meta">${rows.map(([l, v]) => `<div><span>${esc(
         const g = computeGroupErrors(targetValues, result.concentrations || {});
         const cov = (title: string, grp: typeof g.macro) => {
             if (!grp.count) return `<div class="kpi"><span>${title}</span><b class="muted">—</b></div>`;
-            const coverage = Math.max(0, 100 - grp.meanAbs);
-            const over = grp.rows.reduce((a, r) => a + Math.max(r.deviationPct, 0), 0) / grp.count;
             const C = 2 * Math.PI * 18;
             const col = COLORS[grp.level];
             return `<div class="kpi kpi-ring">
   <svg width="50" height="50" viewBox="0 0 48 48">
     <circle cx="24" cy="24" r="18" fill="none" stroke="#e5e7eb" stroke-width="4"/>
-    <circle cx="24" cy="24" r="18" fill="none" stroke="${col.bar}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - coverage / 100)).toFixed(2)}" transform="rotate(-90 24 24)"/>
-    ${over > 0.5 ? `<circle cx="24" cy="24" r="22" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * 22).toFixed(2)}" stroke-dashoffset="${(2 * Math.PI * 22 * (1 - Math.min(over / 50, 1))).toFixed(2)}" transform="rotate(-90 24 24)"/>` : ''}
+    <circle cx="24" cy="24" r="18" fill="none" stroke="${col.bar}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${(C * (1 - grp.coverage / 100)).toFixed(2)}" transform="rotate(-90 24 24)"/>
+    ${grp.over > 0.5 ? `<circle cx="24" cy="24" r="22" fill="none" stroke="#f43f5e" stroke-width="2" stroke-linecap="round" stroke-dasharray="${(2 * Math.PI * 22).toFixed(2)}" stroke-dashoffset="${(2 * Math.PI * 22 * (1 - Math.min(grp.over / 50, 1))).toFixed(2)}" transform="rotate(-90 24 24)"/>` : ''}
   </svg>
-  <div><span>${title}</span><b style="color:${col.fg}">${fa(coverage, 1)}٪</b><small style="color:${col.fg}">${LEVEL_LABEL[grp.level]}</small></div>
+  <div><span>${title}</span><b style="color:${col.fg}">${fa(grp.coverage, 1)}٪</b><small style="color:${col.fg}">${LEVEL_LABEL[grp.level]}</small></div>
 </div>`;
         };
         return `
 <section class="kpis">
-  <div class="kpi"><span>EC نهایی</span><b>${fa(result.ec, 2)}</b><small>dS/m</small></div>
+  <div class="kpi"><span>EC نهایی</span><b>${fa(result.ec, 2)}</b><small>dS/m${result.ec_status ? ' · ' + esc(result.ec_status) : ''}</small></div>
   <div class="kpi"><span>هزینه کل</span><b>${money(result.cost_total)}</b><small>تومان</small></div>
-  ${cov('پوشش ماکرو', g.macro)}
-  ${cov('پوشش میکرو', g.micro)}
+  ${cov('ماکرو', g.macro)}
+  ${cov('میکرو', g.micro)}
 </section>`;
     }
 
@@ -264,35 +262,25 @@ ${rows.length ? `<section class="meta">${rows.map(([l, v]) => `<div><span>${esc(
         return cards ? `<section class="block"><h2>چیدمان مخازن استوک</h2><div class="tanks">${cards}</div></section>` : '';
     }
 
-    // ---------- عناصر (ماکرو / میکرو) با نمودار دایره‌ای ----------
+    // ---------- عناصر هدف: یک فهرست یکپارچه با حلقه‌های دایره‌ای ----------
     function buildElements(payload: PdfExportPayload): string {
-        const g = computeGroupErrors(payload.targetValues, payload.result.concentrations || {});
-        if (!g.all.length) return '';
+        const rows = computeElementErrors(payload.targetValues, payload.result.concentrations || {});
+        if (!rows.length) return '';
         const order: Record<ErrorLevel, number> = { bad: 0, warn: 1, ok: 2 };
-        const section = (title: string, grp: typeof g.macro) => {
-            if (!grp.count) return '';
-            const col = COLORS[grp.level];
-            const cells = [...grp.rows]
-                .sort((a, b) => (a.level !== b.level ? order[a.level] - order[b.level] : b.absPct - a.absPct))
-                .map((r) => {
-                    const c = COLORS[r.level];
-                    return `<div class="el">
+        const cells = rows
+            .sort((a, b) => (a.level !== b.level ? order[a.level] - order[b.level] : b.absPct - a.absPct))
+            .map(
+                (r) => `<div class="el">
   ${ring(r.actual, r.target, r.level, 52)}
-  <div class="el-t"><b>${esc(r.element)}</b><small style="color:${c.fg}">${fa(r.absPct, 1)}٪ ${r.deviationPct >= 0 ? 'بیش' : 'کم'}</small></div>
+  <div class="el-t"><b>${esc(r.element)}</b><small>${r.group === 'micro' ? 'میکرو' : 'ماکرو'}</small></div>
   <div class="el-v"><span>هدف ${fa(r.target, 1)}</span><span>فعلی ${fa(r.actual, 1)}</span></div>
-</div>`;
-                })
-                .join('');
-            return `<div class="grp">
-  <div class="grp-h"><b>${title}</b><span style="color:${col.fg}">میانگین خطا ${fa(grp.meanAbs, 1)}٪ · ${LEVEL_LABEL[grp.level]}</span></div>
-  <div class="els">${cells}</div>
-</div>`;
-        };
+</div>`
+            )
+            .join('');
         return `
 <section class="block">
-  <h2>عناصر هدف در برابر عناصر تأمین‌شده <small>ppm</small></h2>
-  ${section('عناصر ماکرو (پرمصرف)', g.macro)}
-  ${section('عناصر میکرو (کم‌مصرف)', g.micro)}
+  <h2>پوشش عناصر هدف <small>ppm</small></h2>
+  <div class="els">${cells}</div>
   <p class="legend"><i style="background:${COLORS.ok.bar}"></i>تا ۵٪ قابل قبول <i style="background:${COLORS.warn.bar}"></i>۵ تا ۱۰٪ هشدار <i style="background:${COLORS.bad.bar}"></i>بالای ۱۰٪ عدم اعتماد <i style="background:#f43f5e;border-radius:2px;height:3px;width:12px"></i>حلقهٔ بیرونی: بیش‌تأمین</p>
 </section>`;
     }
@@ -388,7 +376,7 @@ h2 small{font-size:9px;color:#9ca3af;font-weight:400}
 .els{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .el{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:8px;align-items:center;border:1px solid #eef0f4;border-radius:11px;padding:6px 8px;background:#fff;break-inside:avoid}
 .el svg{grid-row:1 / span 2}
-.el-t b{display:block;font-size:11px;color:#1f2937;line-height:1.3}.el-t small{font-size:9px}
+.el-t b{display:block;font-size:11px;color:#1f2937;line-height:1.3}.el-t small{font-size:8.5px;color:#7c7f8a;background:#f3f4f6;border-radius:5px;padding:0 6px}
 .el-v{display:flex;flex-direction:column;font-size:8.6px;color:#9ca3af;line-height:1.5;font-variant-numeric:tabular-nums}
 .legend{font-size:8.8px;color:#9ca3af;margin:4px 0 0}.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 8px 0 3px;vertical-align:middle}
 .ion-bar{display:flex;height:11px;border-radius:7px;overflow:hidden;background:#e5e7eb}.ion-bar .cat,.ion i.cat{background:#3b82f6}.ion-bar .ani,.ion i.ani{background:#ef4444}

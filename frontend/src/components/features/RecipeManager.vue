@@ -43,7 +43,7 @@
                   <span class="font-bold">{{ element }}</span><span class="mx-1 text-gray-400">|</span><span>{{ Number(value).toFixed(1) }}</span>
                 </span>
                 <button v-if="elementCount(recipe) > 5" type="button"
-                  @mouseenter="popFor(recipe, $event)" @mouseleave="pop = null" @click.stop="popFor(recipe, $event, true)"
+                  @pointerenter="onPopEnter(recipe, $event)" @pointerleave="onPopLeave($event)" @click.stop="onPopClick(recipe, $event)"
                   class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600">
                   +{{ (elementCount(recipe) - 5).toLocaleString('fa-IR') }}
                 </button>
@@ -114,7 +114,7 @@
               <div class="flex flex-wrap items-center gap-1 pt-1">
                 <span v-for="(value, element) in getTopElements(recipe.target_values, 4)" :key="element" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-700 dark:text-gray-200 tabular-nums" dir="ltr"><span class="font-bold">{{ element }}</span><span class="mx-1 text-gray-400">|</span><span>{{ Number(value).toFixed(1) }}</span></span>
                 <button v-if="elementCount(recipe) > 4" type="button"
-                  @mouseenter="popFor(recipe, $event)" @mouseleave="pop = null" @click.stop="popFor(recipe, $event, true)"
+                  @pointerenter="onPopEnter(recipe, $event)" @pointerleave="onPopLeave($event)" @click.stop="onPopClick(recipe, $event)"
                   class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 cursor-pointer bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-600">
                   +{{ (elementCount(recipe) - 4).toLocaleString('fa-IR') }}
                 </button>
@@ -128,7 +128,7 @@
     <!-- پاپ‌اور همهٔ عناصر (هم‌شکل پایگاه کود) -->
     <Teleport to="body">
       <template v-if="pop">
-        <div class="fixed inset-0 z-[70] lg:hidden" @click="pop = null"></div>
+        <div v-if="popTouch" class="fixed inset-0 z-[79]" @click="pop = null"></div>
         <div class="fixed z-[80] pointer-events-none w-max max-w-[300px] rounded-xl bg-gray-900 text-white text-xs leading-6 p-3 shadow-2xl"
           :style="{ left: pop.x + 'px', top: pop.y + 'px', transform: pop.up ? 'translate(-50%, -100%)' : 'translate(-50%, 0)' }">
           <p class="font-semibold mb-1.5 text-gray-300 truncate max-w-[270px]">{{ pop.name }}</p>
@@ -225,7 +225,7 @@ const formData = reactive({ name: '', description: '', category: '', stage: '' }
 // منوی «همهٔ عناصر» رسپی (با هاور در دسکتاپ، با کلیک در موبایل)
 const pop = ref<{ id: number; name: string; x: number; y: number; up: boolean; values: Record<string, number> } | null>(null);
 const popFor = (recipe: any, e: Event, toggle = false) => {
-  if (toggle && pop.value?.id === recipe.id) { pop.value = null; return; }
+  if (toggle && pop.value?.id === recipe.id) { pop.value = null; popTouch.value = false; return; }
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
   const up = r.top > 220;
   pop.value = {
@@ -234,6 +234,14 @@ const popFor = (recipe: any, e: Event, toggle = false) => {
     y: up ? r.top - 8 : r.bottom + 8, up, values: recipe.target_values || {}
   };
 };
+const popTouch = ref(false);
+const onPopClick = (recipe: any, e: Event) => {
+  if ((e as PointerEvent).pointerType === 'mouse') return; // با ماوس، هاور کافی است
+  popTouch.value = true;
+  popFor(recipe, e, true);
+};
+const onPopEnter = (recipe: any, e: PointerEvent) => { if (e.pointerType === 'mouse') { popTouch.value = false; popFor(recipe, e); } };
+const onPopLeave = (e: PointerEvent) => { if (e.pointerType === 'mouse') pop.value = null; };
 const popEntries = computed(() =>
   pop.value ? ALL_ELEMENTS.filter((e) => Number(pop.value!.values[e]) > 0).map((e) => [e, Number(pop.value!.values[e])] as [string, number]) : []
 );
