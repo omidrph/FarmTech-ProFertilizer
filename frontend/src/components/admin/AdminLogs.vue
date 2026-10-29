@@ -1,7 +1,11 @@
 <template>
   <div class="space-y-3">
-    <div class="flex gap-1.5">
+    <div class="flex flex-wrap items-center gap-1.5">
       <button v-for="t in tabs" :key="t.k" class="ad-btn" :class="tab === t.k ? '!border-primary-500 !text-primary-700 dark:!text-primary-300 bg-primary-50 dark:bg-primary-900/20' : ''" @click="tab = t.k">{{ t.l }}</button>
+      <span class="mr-auto flex items-center gap-2 text-xs text-gray-500">
+        <AdminSwitch v-model="auto" /> بازخوانی خودکار (۳۰ ثانیه)
+        <button class="ad-btn ad-btn-sm" @click="exportCsv">خروجی CSV</button>
+      </span>
     </div>
 
     <!-- لاگ امنیتی -->
@@ -59,8 +63,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import AdminPagination from './AdminPagination.vue';
+import AdminSwitch from './AdminSwitch.vue';
 import { adminApi, apiError, faDate } from '@/services/adminApi';
 import { toast } from './adminUi';
 
@@ -96,5 +101,17 @@ async function loadAud() {
 let t: number | undefined;
 watch(sec, () => { clearTimeout(t); t = window.setTimeout(() => { secPage.value = 1; loadSec(); }, 350); });
 watch(aud, () => { audPage.value = 1; loadAud(); });
+const auto = ref(false);
+let timer: number | undefined;
+watch(auto, (on) => { clearInterval(timer); if (on) timer = window.setInterval(() => (tab.value === 'security' ? loadSec() : loadAud()), 30000); });
+onUnmounted(() => clearInterval(timer));
+function exportCsv() {
+  const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = tab.value === 'security'
+    ? [['زمان', 'رویداد', 'شدت', 'کاربر', 'IP', 'مسیر'], ...secRows.value.map((l) => [l.created_at, l.event_type, l.severity, l.user_id, l.ip, `${l.method || ''} ${l.endpoint || ''}`])]
+    : [['زمان', 'مدیر', 'عملیات', 'مورد', 'جزئیات', 'IP'], ...audRows.value.map((a) => [a.created_at, a.admin_name, actionLabel(a.action), a.target_label, JSON.stringify(a.details || ''), a.ip])];
+  const blob = new Blob(['\ufeff' + rows.map((r) => r.map(esc).join(',')).join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${tab.value}-log-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+}
 onMounted(() => { loadSec(); loadAud(); });
 </script>

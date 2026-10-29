@@ -42,7 +42,7 @@ class AdminApi {
   private async put<T>(url: string, body?: any): Promise<T> { return (await this.http.put<T>(url, body ?? {})).data; }
   private async del<T>(url: string): Promise<T> { return (await this.http.delete<T>(url)).data; }
 
-  stats = () => this.get<any>('/stats');
+  stats = (days = 14) => this.get<any>('/stats', { days });
   system = () => this.get<any>('/system');
 
   users = (p: Record<string, any>) => this.get<Paged<AdminUserRow>>('/users', p);
@@ -61,6 +61,7 @@ class AdminApi {
   bulk = (b: any) => this.post<{ done: number[]; skipped: { id: number; reason: string }[] }>('/users/bulk', b);
 
   fertilizers = (q?: string) => this.get<{ items: any[]; total: number }>('/fertilizers', { q });
+  bulkPrice = (b: { percent: number; ids?: number[]; form?: string | null }) => this.post<{ updated: number }>('/fertilizers/bulk-price', b);
   createFertilizer = (b: any) => this.post<any>('/fertilizers', b);
   updateFertilizer = (id: number, b: any) => this.put<any>(`/fertilizers/${id}`, b);
   deleteFertilizer = (id: number) => this.del(`/fertilizers/${id}`);

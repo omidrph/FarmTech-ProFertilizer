@@ -1,5 +1,14 @@
 <template>
   <div class="space-y-3">
+    <!-- خلاصهٔ ۷ روز اخیر -->
+    <div v-if="sum" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div v-for="c in tiles" :key="c.l" class="ad-card ad-hover p-4">
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">{{ c.l }}</p>
+        <p class="mt-1 text-2xl font-extrabold tabular-nums" :class="c.cls || 'text-gray-900 dark:text-white'">{{ c.v }}</p>
+        <div v-if="c.bar !== undefined" class="mt-2 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden"><div class="h-full rounded-full bg-emerald-500 transition-all duration-700" :style="{ width: c.bar + '%' }"></div></div>
+      </div>
+    </div>
+
     <div class="ad-card p-3 flex flex-wrap items-end gap-2.5">
       <div class="w-44"><label class="ad-label">نتیجه</label>
         <select v-model="success" class="ad-input"><option value="">همه</option><option value="true">موفق</option><option value="false">ناموفق</option></select></div>
@@ -47,6 +56,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import AppModal from '@/components/common/AppModal.vue';
 import AdminPagination from './AdminPagination.vue';
 import { adminApi, apiError, faDate, faN } from '@/services/adminApi';
+import { faNum } from './charts/chartUtils';
 import { toast } from './adminUi';
 
 const rows = ref<any[]>([]);
@@ -62,7 +72,14 @@ async function load() {
   } catch (e) { toast(apiError(e), 'error'); } finally { loading.value = false; }
 }
 watch([success, warnOnly, userId], () => { page.value = 1; load(); });
-onMounted(load);
+const sum = ref<any>(null);
+const tiles = computed(() => !sum.value ? [] : [
+  { l: 'محاسبه در ۷ روز', v: faN(sum.value.period.current.calculations) },
+  { l: 'نرخ موفقیت', v: sum.value.period.current.success_rate === null ? '—' : faNum(sum.value.period.current.success_rate, 1) + '٪', bar: sum.value.period.current.success_rate ?? 0 },
+  { l: 'ناموفق', v: faN(sum.value.period.current.failed), cls: sum.value.period.current.failed ? 'text-rose-600 dark:text-rose-400' : undefined },
+  { l: 'میانگین زمان', v: sum.value.period.current.avg_time_ms === null ? '—' : faN(Math.round(sum.value.period.current.avg_time_ms)) + ' ms' }
+]);
+onMounted(async () => { load(); try { sum.value = await adminApi.stats(7); } catch { /* خلاصه اختیاری است */ } });
 
 async function show(id: number) { try { detail.value = await adminApi.calculation(id); } catch (e) { toast(apiError(e), 'error'); } }
 const pretty = (v: any) => JSON.stringify(v ?? null, null, 2);

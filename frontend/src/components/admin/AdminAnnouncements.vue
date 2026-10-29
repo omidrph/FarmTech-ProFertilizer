@@ -7,7 +7,7 @@
 
     <div class="space-y-2">
       <div v-if="!items.length" class="ad-card p-8 text-center text-sm text-gray-400">{{ loading ? 'در حال بارگذاری…' : 'اعلانی ثبت نشده است.' }}</div>
-      <div v-for="a in items" :key="a.id" class="ad-card p-3.5 flex flex-wrap items-start justify-between gap-3">
+      <div v-for="a in items" :key="a.id" class="ad-card ad-hover p-3.5 flex flex-wrap items-start justify-between gap-3 border-r-4" :class="BORDER[a.level]">
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="ad-chip" :class="LEVELS[a.level].cls">{{ LEVELS[a.level].label }}</span>
@@ -36,7 +36,15 @@
           <div><label class="ad-label">شروع (اختیاری)</label><input v-model="edit.starts_at" type="datetime-local" class="ad-input" dir="ltr" /></div>
           <div><label class="ad-label">پایان (اختیاری)</label><input v-model="edit.ends_at" type="datetime-local" class="ad-input" dir="ltr" /></div>
         </div>
-        <label class="flex items-center gap-2 text-sm"><input type="checkbox" v-model="edit.is_active" /> فعال باشد</label>
+        <label class="flex items-center gap-2.5 text-sm"><AdminSwitch v-model="edit.is_active" /> فعال باشد</label>
+        <div>
+          <p class="ad-label">پیش‌نمایش (همان‌طور که کاربران می‌بینند)</p>
+          <div class="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            <div class="px-4 py-2 text-sm flex items-start justify-between gap-3" :class="PREVIEW[edit.level]">
+              <p class="min-w-0"><b>{{ edit.title || 'عنوان اعلان' }}</b><span v-if="edit.body" class="opacity-90"> — {{ edit.body }}</span></p><span class="opacity-80 text-lg leading-none">×</span>
+            </div>
+          </div>
+        </div>
       </div>
       <template #footer><div class="flex justify-end gap-2 p-3"><button class="ad-btn" @click="edit = null">انصراف</button><button class="ad-btn-primary" :disabled="saving || !edit?.title" @click="save">ذخیره</button></div></template>
     </AppModal>
@@ -46,6 +54,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import AppModal from '@/components/common/AppModal.vue';
+import AdminSwitch from './AdminSwitch.vue';
 import { adminApi, apiError, faDate } from '@/services/adminApi';
 import { confirmDialog, toast } from './adminUi';
 
@@ -53,6 +62,8 @@ const LEVELS: Record<string, { label: string; cls: string }> = {
   info: { label: 'اطلاع‌رسانی', cls: 'bg-sky-100 text-sky-700' }, success: { label: 'خبر خوب', cls: 'bg-emerald-100 text-emerald-700' },
   warning: { label: 'هشدار', cls: 'bg-amber-100 text-amber-700' }, danger: { label: 'مهم', cls: 'bg-rose-100 text-rose-700' }
 };
+const PREVIEW: Record<string, string> = { info: 'bg-sky-600 text-white', success: 'bg-emerald-600 text-white', warning: 'bg-amber-500 text-white', danger: 'bg-rose-600 text-white' };
+const BORDER: Record<string, string> = { info: '!border-r-sky-500', success: '!border-r-emerald-500', warning: '!border-r-amber-500', danger: '!border-r-rose-500' };
 const AUD: Record<string, string> = { all: 'همه', user: 'فقط کاربران معمولی', plus: 'کاربران پلاس و مدیران' };
 
 const items = ref<any[]>([]);

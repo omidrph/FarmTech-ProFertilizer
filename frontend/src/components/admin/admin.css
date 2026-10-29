@@ -1,5 +1,9 @@
 /* کلاس‌های مشترک پنل مدیریت */
-.ad-card { @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700; }
+.ad-card { @apply bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm; }
+.ad-hover { @apply transition duration-200 hover:shadow-md hover:-translate-y-0.5; }
+.ad-title { @apply text-sm font-bold text-gray-900 dark:text-white; }
+.ad-avatar { @apply w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0; }
+.hero-btn { @apply inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium text-white bg-white/15 hover:bg-white/25 border border-white/20 backdrop-blur transition; }
 .ad-input { @apply w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700/50 text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition; }
 .ad-label { @apply block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1; }
 .ad-btn { @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50 disabled:cursor-not-allowed; }

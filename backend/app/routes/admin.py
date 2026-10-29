@@ -80,34 +80,99 @@ def _iso(dt: Optional[datetime]) -> Optional[str]:
 # ============================================================
 # 📊 آمار داشبورد
 # ============================================================
+def _trend(cur: float, prev: float) -> Optional[float]:
+    """درصد تغییر نسبت به دورهٔ قبل (None وقتی دورهٔ قبل صفر بوده)"""
+    if not prev:
+        return None
+    return round((cur - prev) / prev * 100, 1)
+
+
 @router.get("/stats")
-def stats(db: Session = Depends(get_db)):
+def stats(days: int = Query(14, ge=7, le=90), db: Session = Depends(get_db)):
     now = _now()
     d1, d7, d30 = now - timedelta(days=1), now - timedelta(days=7), now - timedelta(days=30)
+    today0 = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = today0 - timedelta(days=days - 1)
+    prev_start = start - timedelta(days=days)
 
     by_role = {r: c for r, c in db.query(User.role, func.count(User.id)).group_by(User.role).all()}
-    by_status = {s: c for s, c in db.query(User.status, func.count(User.id)).group_by(User.status).all()}
+    by_status = {s_: c for s_, c in db.query(User.status, func.count(User.id)).group_by(User.status).all()}
     total_users = sum(by_role.values())
 
-    opt_total = db.query(func.count(OptimizationLog.id)).scalar() or 0
-    opt_24h = db.query(func.count(OptimizationLog.id)).filter(OptimizationLog.created_at >= d1).scalar() or 0
-    opt_7d = db.query(func.count(OptimizationLog.id)).filter(OptimizationLog.created_at >= d7).scalar() or 0
-    opt_failed_7d = db.query(func.count(OptimizationLog.id)).filter(
-        OptimizationLog.created_at >= d7, OptimizationLog.is_successful == False  # noqa: E712
-    ).scalar() or 0
+    OL = OptimizationLog
 
-    # سری ۱۴ روزه
-    start = (now - timedelta(days=13)).replace(hour=0, minute=0, second=0, microsecond=0)
-    days = [(start + timedelta(days=i)).date() for i in range(14)]
+    def calc_block(lo: datetime, hi: Optional[datetime] = None) -> dict:
+        q = db.query(func.count(OL.id), func.count(func.distinct(OL.user_id)),
+                     func.avg(OL.convergence_time_ms), func.avg(OL.cost_total)).filter(OL.created_at >= lo)
+        qf = db.query(func.count(OL.id)).filter(OL.created_at >= lo, OL.is_successful == False)  # noqa: E712
+        if hi is not None:
+            q, qf = q.filter(OL.created_at < hi), qf.filter(OL.created_at < hi)
+        total, active, avg_ms, avg_cost = q.one()
+        failed = qf.scalar() or 0
+        users_new_q = db.query(func.count(User.id)).filter(User.created_at >= lo)
+        if hi is not None:
+            users_new_q = users_new_q.filter(User.created_at < hi)
+        return {"calculations": total or 0, "failed": failed, "active_users": active or 0,
+                "avg_time_ms": float(avg_ms) if avg_ms is not None else None,
+                "avg_cost": float(avg_cost) if avg_cost is not None else None,
+                "new_users": users_new_q.scalar() or 0}
 
-    def series(col, extra=None):
-        q = db.query(func.date(col), func.count()).filter(col >= start)
+    cur, prev = calc_block(start), calc_block(prev_start, start)
+    success_rate = round((cur["calculations"] - cur["failed"]) / cur["calculations"] * 100, 1) if cur["calculations"] else None
+    prev_rate = round((prev["calculations"] - prev["failed"]) / prev["calculations"] * 100, 1) if prev["calculations"] else None
+
+    day_list = [(start + timedelta(days=i)).date() for i in range(days)]
+
+    def series(col, extra=None, distinct=None):
+        agg = func.count(func.distinct(distinct)) if distinct is not None else func.count()
+        q = db.query(func.date(col), agg).filter(col >= start)
         if extra is not None:
             q = q.filter(extra)
         got = {str(d): c for d, c in q.group_by(func.date(col)).all()}
-        return [got.get(str(d), 0) for d in days]
+        return [got.get(str(d), 0) for d in day_list]
 
+    new_users_series = series(User.created_at)
+    users_before = db.query(func.count(User.id)).filter(User.created_at < start).scalar() or 0
+    cumulative, run = [], users_before
+    for n in new_users_series:
+        run += n
+        cumulative.append(run)
+
+    tz_hour = func.extract("hour", func.timezone("Asia/Tehran", OL.created_at))
+    hours = {int(h): c for h, c in db.query(tz_hour, func.count()).filter(OL.created_at >= start).group_by(tz_hour).all()}
+    tz_dow = func.extract("dow", func.timezone("Asia/Tehran", OL.created_at))
+    dow = {int(h): c for h, c in db.query(tz_dow, func.count()).filter(OL.created_at >= start).group_by(tz_dow).all()}
+    # ترتیب هفتهٔ ایرانی: شنبه … جمعه (dow در PG: یکشنبه=۰ … شنبه=۶)
+    by_weekday = [{"label": lbl, "count": dow.get(i, 0)} for lbl, i in
+                  [("شنبه", 6), ("یکشنبه", 0), ("دوشنبه", 1), ("سه‌شنبه", 2), ("چهارشنبه", 3), ("پنج‌شنبه", 4), ("جمعه", 5)]]
+
+    top_users = [
+        {"id": uid, "name": f"{fn} {ln}", "count": c}
+        for uid, fn, ln, c in db.query(User.id, User.first_name, User.last_name, func.count(OL.id))
+        .join(OL, OL.user_id == User.id).filter(OL.created_at >= start)
+        .group_by(User.id, User.first_name, User.last_name).order_by(func.count(OL.id).desc()).limit(6).all()
+    ]
+    top_plants = [
+        {"label": name, "count": c}
+        for name, c in db.query(Report.plant_name, func.count(Report.id)).filter(Report.plant_name.isnot(None), Report.plant_name != "")
+        .group_by(Report.plant_name).order_by(func.count(Report.id).desc()).limit(8).all()
+    ]
+    # پرمصرف‌ترین کودها (از ۴۰۰ محاسبهٔ اخیرِ همین بازه)
+    fert_counter: Dict[str, int] = {}
+    for sel, weights in db.query(OL.fertilizers_selected, OL.optimized_weights).filter(OL.created_at >= start, OL.is_successful == True)\
+            .order_by(OL.created_at.desc()).limit(400).all():  # noqa: E712
+        try:
+            used = {str(k) for k, v in (weights or {}).items() if v and float(v) > 0}
+            for f in (sel or []):
+                if str(f.get("id")) in used and f.get("name"):
+                    fert_counter[f["name"]] = fert_counter.get(f["name"], 0) + 1
+        except Exception:
+            continue
+    top_fertilizers = [{"label": k, "count": v} for k, v in sorted(fert_counter.items(), key=lambda x: -x[1])[:8]]
+
+    opt_total = db.query(func.count(OL.id)).scalar() or 0
     return {
+        "range_days": days,
         "users": {
             "total": total_users, "by_role": by_role, "by_status": by_status,
             "new_7d": db.query(func.count(User.id)).filter(User.created_at >= d7).scalar() or 0,
@@ -122,13 +187,36 @@ def stats(db: Session = Depends(get_db)):
             "user_fertilizers": db.query(func.count(Fertilizer.id)).filter(Fertilizer.user_id != None).scalar() or 0,  # noqa: E711
             "ph_adjustments": db.query(func.count(PhAdjustment.id)).scalar() or 0,
         },
-        "calculations": {"total": opt_total, "last_24h": opt_24h, "last_7d": opt_7d, "failed_7d": opt_failed_7d},
-        "series": {
-            "days": [str(d) for d in days],
-            "new_users": series(User.created_at),
-            "calculations": series(OptimizationLog.created_at),
-            "failed": series(OptimizationLog.created_at, OptimizationLog.is_successful == False),  # noqa: E712
+        # سازگار با نسخهٔ قبل + فیلدهای جدید
+        "calculations": {
+            "total": opt_total,
+            "last_24h": db.query(func.count(OL.id)).filter(OL.created_at >= d1).scalar() or 0,
+            "last_7d": db.query(func.count(OL.id)).filter(OL.created_at >= d7).scalar() or 0,
+            "failed_7d": db.query(func.count(OL.id)).filter(OL.created_at >= d7, OL.is_successful == False).scalar() or 0,  # noqa: E712
         },
+        "period": {
+            "current": {**cur, "success_rate": success_rate},
+            "previous": {**prev, "success_rate": prev_rate},
+            "trend": {
+                "calculations": _trend(cur["calculations"], prev["calculations"]),
+                "new_users": _trend(cur["new_users"], prev["new_users"]),
+                "active_users": _trend(cur["active_users"], prev["active_users"]),
+                "failed": _trend(cur["failed"], prev["failed"]),
+            },
+        },
+        "series": {
+            "days": [str(d) for d in day_list],
+            "new_users": new_users_series,
+            "total_users": cumulative,
+            "calculations": series(OL.created_at),
+            "failed": series(OL.created_at, OL.is_successful == False),  # noqa: E712
+            "active_users": series(OL.created_at, None, OL.user_id),
+        },
+        "by_hour": [hours.get(h, 0) for h in range(24)],
+        "by_weekday": by_weekday,
+        "top_users": top_users,
+        "top_plants": top_plants,
+        "top_fertilizers": top_fertilizers,
         "recent_users": [
             {"id": u.id, "name": u.full_name, "phone": u.phone_number, "role": u.role, "created_at": _iso(u.created_at)}
             for u in db.query(User).order_by(User.created_at.desc()).limit(8).all()
@@ -179,6 +267,8 @@ def _guard_last_admin(db: Session, user: User) -> None:
 @router.get("/users")
 def list_users(
     q: Optional[str] = None, role: Optional[str] = None, status_: Optional[str] = Query(None, alias="status"),
+    new_days: Optional[int] = Query(None, ge=1, le=365), never_logged_in: Optional[bool] = None,
+    two_fa: Optional[bool] = None,
     sort: str = Query("created_at"), direction: str = Query("desc"),
     page: int = Query(1, ge=1), page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -193,6 +283,12 @@ def list_users(
         query = query.filter(User.role == role)
     if status_ in ("active", "blocked", "banned"):
         query = query.filter(User.status == status_)
+    if new_days:
+        query = query.filter(User.created_at >= _now() - timedelta(days=new_days))
+    if never_logged_in:
+        query = query.filter(User.last_login == None)  # noqa: E711
+    if two_fa is not None:
+        query = query.filter(User.is_2fa_enabled == two_fa)
     sort_col = {"created_at": User.created_at, "last_login": User.last_login,
                 "name": User.last_name, "role": User.role}.get(sort, User.created_at)
     query = query.order_by(sort_col.asc().nullslast() if direction == "asc" else sort_col.desc().nullslast(), User.id.desc())
@@ -582,6 +678,31 @@ def delete_system_fertilizer(fert_id: int, request: Request, db: Session = Depen
     db.delete(f)
     db.commit()
     return {"ok": True}
+
+
+class BulkPriceBody(BaseModel):
+    percent: float = Field(..., ge=-90, le=500)       # +10 = ده درصد گران‌تر
+    ids: Optional[List[int]] = None                   # خالی = همهٔ کودهای سیستمی
+    form: Optional[str] = None                        # فقط یک شکل (مثلاً liquid)
+
+
+@router.post("/fertilizers/bulk-price")
+def bulk_price(body: BulkPriceBody, request: Request, db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    q = db.query(Fertilizer).filter(Fertilizer.is_system_default == True, Fertilizer.user_id == None)  # noqa: E712,E711
+    if body.ids:
+        q = q.filter(Fertilizer.id.in_(body.ids))
+    if body.form:
+        q = q.filter(Fertilizer.form == body.form)
+    factor = 1 + body.percent / 100.0
+    n = 0
+    for f in q.all():
+        if f.price_per_kg:
+            f.price_per_kg = round(float(f.price_per_kg) * factor)
+            n += 1
+    audit(db, admin, request, "fertilizer.bulk_price", "fertilizer", None, f"{body.percent:+g}٪",
+          {"percent": body.percent, "count": n, "ids": body.ids, "form": body.form})
+    db.commit()
+    return {"updated": n}
 
 
 # ============================================================

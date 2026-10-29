@@ -1,14 +1,23 @@
 <template>
   <div class="space-y-3">
-    <!-- فیلترها -->
+    <!-- میان‌برهای فیلتر -->
+    <div class="flex flex-wrap items-center gap-2">
+      <button v-for="c in chips" :key="c.k" class="px-3 py-1.5 rounded-full text-xs border transition"
+        :class="chip === c.k ? 'bg-primary-600 border-primary-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary-400'"
+        @click="chip = c.k">{{ c.l }}</button>
+    </div>
+
+    <!-- جستجو و ابزارها -->
     <div class="ad-card p-3 flex flex-wrap items-end gap-2.5">
-      <div class="flex-1 min-w-[12rem]"><label class="ad-label">جستجو</label><input v-model="q" class="ad-input" placeholder="نام یا شماره تلفن" /></div>
-      <div class="w-36"><label class="ad-label">نقش</label>
-        <select v-model="role" class="ad-input"><option value="">همه</option><option value="user">معمولی</option><option value="plus">پلاس</option><option value="admin">مدیر</option></select></div>
-      <div class="w-36"><label class="ad-label">وضعیت</label>
-        <select v-model="status" class="ad-input"><option value="">همه</option><option value="active">فعال</option><option value="blocked">مسدود</option><option value="banned">بن‌شده</option></select></div>
+      <div class="flex-1 min-w-[12rem]"><label class="ad-label">جستجو</label>
+        <div class="relative"><svg class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" /></svg>
+          <input v-model="q" class="ad-input !pr-9" placeholder="نام یا شماره تلفن" /></div></div>
       <div class="w-40"><label class="ad-label">مرتب‌سازی</label>
         <select v-model="sort" class="ad-input"><option value="created_at">تاریخ عضویت</option><option value="last_login">آخرین ورود</option><option value="name">نام خانوادگی</option><option value="role">نقش</option></select></div>
+      <button class="ad-btn" :disabled="exporting" @click="exportCsv">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+        {{ exporting ? 'در حال آماده‌سازی…' : 'خروجی CSV' }}
+      </button>
       <button class="ad-btn-primary" @click="createOpen = true">+ کاربر جدید</button>
     </div>
 
@@ -38,7 +47,7 @@
             <tr v-else-if="!rows.length"><td colspan="9" class="ad-td text-center text-gray-400 py-8">کاربری پیدا نشد.</td></tr>
             <tr v-for="u in rows" :key="u.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
               <td class="ad-td"><input type="checkbox" :checked="selected.has(u.id)" @change="toggle(u.id)" /></td>
-              <td class="ad-td font-medium"><button class="hover:text-primary-600" @click="openId = u.id">{{ u.full_name }}</button></td>
+              <td class="ad-td font-medium"><button class="flex items-center gap-2.5 hover:text-primary-600" @click="openId = u.id"><span class="ad-avatar" :style="avatarStyle(u.full_name)">{{ initials(u.full_name) }}</span>{{ u.full_name }}</button></td>
               <td class="ad-td tabular-nums" dir="ltr">{{ u.phone_number }}</td>
               <td class="ad-td"><div class="flex flex-wrap gap-1"><AdminBadges :role="u.role" :status="u.status" /></div></td>
               <td class="ad-td tabular-nums">{{ faN(u.reports_count) }}</td>
@@ -81,14 +90,27 @@ import AdminBadges from './AdminBadges.vue';
 import AdminPagination from './AdminPagination.vue';
 import AdminUserModal from './AdminUserModal.vue';
 import { adminApi, apiError, faDate, faN, type AdminUserRow } from '@/services/adminApi';
-import { confirmDialog, toast } from './adminUi';
+import { avatarStyle, confirmDialog, initials, toast } from './adminUi';
 
-const props = defineProps<{ selfId?: number; openUserId?: number | null }>();
+const props = defineProps<{ selfId?: number; openUserId?: number | null; initialQuery?: string }>();
 
 const rows = ref<AdminUserRow[]>([]);
 const total = ref(0), pages = ref(1), page = ref(1);
 const loading = ref(false);
-const q = ref(''), role = ref(''), status = ref(''), sort = ref('created_at');
+const q = ref(props.initialQuery || ''), sort = ref('created_at');
+const chips = [
+  { k: 'all', l: 'همه' }, { k: 'admin', l: 'مدیران' }, { k: 'plus', l: 'کاربران پلاس' }, { k: 'blocked', l: 'مسدود' },
+  { k: 'banned', l: 'بن‌شده' }, { k: 'new', l: 'جدید (۷ روز)' }, { k: 'never', l: 'هرگز وارد نشده' }, { k: 'twofa', l: 'دارای ۲FA' }
+];
+const chip = ref('all');
+const exporting = ref(false);
+const filterParams = () => ({
+  q: q.value.trim(), sort: sort.value,
+  role: chip.value === 'admin' ? 'admin' : chip.value === 'plus' ? 'plus' : '',
+  status: chip.value === 'blocked' ? 'blocked' : chip.value === 'banned' ? 'banned' : '',
+  new_days: chip.value === 'new' ? 7 : '', never_logged_in: chip.value === 'never' ? true : '',
+  two_fa: chip.value === 'twofa' ? true : ''
+});
 const selected = reactive(new Set<number>());
 const openId = ref<number | null>(props.openUserId ?? null);
 const createOpen = ref(false), creating = ref(false);
@@ -101,14 +123,14 @@ const toggleAll = () => (allSelected.value ? selected.clear() : rows.value.forEa
 async function load() {
   loading.value = true;
   try {
-    const r = await adminApi.users({ q: q.value.trim(), role: role.value, status: status.value, sort: sort.value, page: page.value, page_size: 20 });
+    const r = await adminApi.users({ ...filterParams(), page: page.value, page_size: 20 });
     rows.value = r.items; total.value = r.total; pages.value = r.pages;
   } catch (e) { toast(apiError(e, 'دریافت کاربران ناموفق بود'), 'error'); }
   finally { loading.value = false; }
 }
 let t: number | undefined;
 watch([q], () => { clearTimeout(t); t = window.setTimeout(() => { page.value = 1; load(); }, 350); });
-watch([role, status, sort], () => { page.value = 1; load(); });
+watch([chip, sort], () => { page.value = 1; selected.clear(); load(); });
 onMounted(load);
 
 async function create() {
@@ -128,6 +150,31 @@ async function bulk(action: string, extra: Record<string, any> = {}) {
   } catch (e) { toast(apiError(e), 'error'); }
 }
 function bulkRole(el: HTMLSelectElement) { const v = el.value; el.value = ''; if (v) bulk('set_role', { role: v }); }
+
+// خروجی CSV از همهٔ نتایجِ فیلتر فعلی (حداکثر ۲۰۰۰ ردیف)؛ BOM برای فارسی در Excel
+async function exportCsv() {
+  exporting.value = true;
+  try {
+    const all: AdminUserRow[] = [];
+    for (let pg = 1; pg <= 20; pg++) {
+      const r = await adminApi.users({ ...filterParams(), page: pg, page_size: 100 });
+      all.push(...r.items);
+      if (pg >= r.pages) break;
+    }
+    const ROLE: Record<string, string> = { user: 'معمولی', plus: 'پلاس', admin: 'مدیر' };
+    const ST: Record<string, string> = { active: 'فعال', blocked: 'مسدود', banned: 'بن‌شده' };
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [['نام', 'نام خانوادگی', 'شماره', 'نقش', 'وضعیت', 'گزارش‌ها', 'محاسبه‌ها', 'آخرین ورود', 'عضویت'].map(esc).join(',')];
+    for (const u of all) lines.push([u.first_name, u.last_name, u.phone_number, ROLE[u.role], ST[u.status], u.reports_count, u.calculations_count, u.last_login || '', u.created_at || ''].map(esc).join(','));
+    const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `users-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`${all.length.toLocaleString('fa-IR')} کاربر خروجی گرفته شد`);
+  } catch (e) { toast(apiError(e), 'error'); } finally { exporting.value = false; }
+}
 
 defineExpose({ reload: load });
 </script>
