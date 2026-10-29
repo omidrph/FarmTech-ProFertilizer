@@ -26,3 +26,16 @@ export function answerConfirm(v: boolean) {
   confirmState.resolve?.(v);
   confirmState.resolve = null;
 }
+
+// ===== آواتار حروف اولیه با رنگ ثابت برای هر نام =====
+const AVATAR_COLORS = ['#2563eb', '#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#f43f5e', '#14b8a6', '#6366f1'];
+export function initials(name: string): string {
+  const parts = (name || '').trim().split(/\s+/);
+  return ((parts[0]?.charAt(0) || '') + (parts[1]?.charAt(0) || '')).trim() || '؟';
+}
+export function avatarStyle(name: string): Record<string, string> {
+  let h = 0;
+  for (const ch of name || '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const c = AVATAR_COLORS[h % AVATAR_COLORS.length];
+  return { background: c + '22', color: c };
+}
