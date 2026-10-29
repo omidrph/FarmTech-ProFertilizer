@@ -1,3 +1,4 @@
+
 # backend/app/routes/auth.py
 """مسیرهای احراز هویت (Authentication) - نسخه امنیتی کامل"""
 
@@ -20,6 +21,8 @@ from app.schemas import (
 )
 import app.crud as crud
 from app.security import (
+    evaluate_account_status,
+    get_app_settings,
     create_session_token,
     delete_session,
     get_current_user,
@@ -97,6 +100,14 @@ def register(
     # مرحله ۲: بررسی وجود کاربر تکراری
     # ============================================================
     
+    # 👑 ثبت‌نام می‌تواند از پنل مدیریت بسته شود
+    reg = get_app_settings(db).get("registration") or {}
+    if reg.get("enabled") is False:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=reg.get("message") or "ثبت‌نام جدید در حال حاضر غیرفعال است."
+        )
+
     try:
         existing_user = crud.get_user_by_phone(db, user_data.phone_number)
     except Exception as e:
@@ -296,7 +307,8 @@ def login(
             )
         
         # بررسی فعال بودن حساب
-        if not user.is_active:
+        allowed, status_message = evaluate_account_status(user, db)
+        if not allowed:
             # ثبت رویداد امنیتی
             log_security_event(
                 db=db,
@@ -306,12 +318,12 @@ def login(
                 user_agent=user_agent,
                 endpoint="/auth/login",
                 method="POST",
-                details={"phone": user.phone_number, "reason": "Account inactive"},
+                details={"phone": user.phone_number, "reason": f"Account {getattr(user, 'status', 'inactive')}"},
                 severity="ERROR"
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="حساب کاربری غیرفعال است"
+                detail=status_message
             )
         
         # ورود موفق - بازنشانی تلاش‌های ناموفق

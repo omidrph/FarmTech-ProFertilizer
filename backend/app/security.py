@@ -1,10 +1,12 @@
+
 # backend/app/security.py
 """امنیت و احراز هویت - نسخه امنیتی کامل با bcrypt و مدیریت نشست پیشرفته"""
 
 import secrets
 import hashlib
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import time
 from typing import Optional, Tuple
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import APIKeyHeader
@@ -13,7 +15,7 @@ from sqlalchemy import and_
 
 from app.config import settings
 from app.database import get_db
-from app.models import User, UserSession, SecurityLog
+from app.models import User, UserSession, SecurityLog, AppSetting
 from app.security_logger import log_security_event
 
 import logging
@@ -290,6 +292,91 @@ def check_account_lock(user: User) -> Tuple[bool, Optional[str]]:
     return False, None
 
 
+
+
+# ============================================================
+# 👑 وضعیت حساب (بلاک / بن)، حالت تعمیر و دسترسی ادمین
+# ============================================================
+
+def _aware(dt: Optional[datetime]) -> Optional[datetime]:
+    """datetime را timezone-aware (UTC) می‌کند تا مقایسهٔ naive/aware خطا ندهد"""
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _remaining_text(until: datetime) -> str:
+    secs = max(int((_aware(until) - datetime.now(timezone.utc)).total_seconds()), 0)
+    days, rem = divmod(secs, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes = rem // 60
+    if days:
+        return f"{days} روز و {hours} ساعت"
+    if hours:
+        return f"{hours} ساعت و {minutes} دقیقه"
+    return f"{max(minutes, 1)} دقیقه"
+
+
+def evaluate_account_status(user: User, db: Optional[Session] = None) -> Tuple[bool, Optional[str]]:
+    """
+    آیا این کاربر مجاز به ورود/استفاده است؟  (مجاز؟، پیام فارسی)
+    - banned  ⇒ دائمی
+    - blocked ⇒ تا status_until (یا نامحدود)؛ مسدودیت موقتِ تمام‌شده خودکار برداشته می‌شود
+    """
+    st = getattr(user, "status", None) or "active"
+
+    if st == "banned":
+        reason = f" دلیل: {user.status_reason}" if user.status_reason else ""
+        return False, f"حساب شما به‌طور دائم مسدود شده است.{reason}"
+
+    if st == "blocked":
+        until = _aware(user.status_until)
+        if until and datetime.now(timezone.utc) >= until:
+            # مسدودیت موقت تمام شده ⇒ رفع خودکار
+            user.status = "active"
+            user.is_active = True
+            user.status_reason = None
+            user.status_until = None
+            user.status_changed_at = datetime.now(timezone.utc)
+            if db is not None:
+                db.commit()
+            return True, None
+        reason = f" دلیل: {user.status_reason}" if user.status_reason else ""
+        if until:
+            return False, f"حساب شما موقتاً مسدود شده است؛ {_remaining_text(until)} دیگر امکان ورود دارید.{reason}"
+        return False, f"حساب شما مسدود شده است. برای پیگیری با پشتیبانی تماس بگیرید.{reason}"
+
+    if not user.is_active:
+        return False, "حساب کاربری غیرفعال است"
+    return True, None
+
+
+_SETTINGS_TTL = 10.0
+_settings_cache: dict = {"ts": 0.0, "data": {}}
+
+
+def invalidate_settings_cache() -> None:
+    _settings_cache["ts"] = 0.0
+
+
+def get_app_settings(db: Session) -> dict:
+    """تنظیمات سیستم (با کش ۱۰ ثانیه‌ای تا هر درخواست یک کوئری اضافه نزند)"""
+    now = time.monotonic()
+    if now - _settings_cache["ts"] < _SETTINGS_TTL:
+        return _settings_cache["data"]
+    try:
+        rows = db.query(AppSetting).all()
+        _settings_cache["data"] = {r.key: r.value for r in rows}
+        _settings_cache["ts"] = now
+    except Exception as e:  # pragma: no cover
+        logger.warning(f"settings read failed: {e}")
+        db.rollback()
+    return _settings_cache["data"]
+
+
+# مسیرهایی که در حالت تعمیر هم باید برای همه کار کنند
+_MAINTENANCE_EXEMPT_SUFFIXES = ("/auth/me", "/auth/logout")
+
 # ============================================================
 # 🔐 توابع دریافت کاربر فعلی
 # ============================================================
@@ -349,10 +436,21 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    if not user.is_active:
+    allowed, status_message = evaluate_account_status(user, db)
+    if not allowed:
+        # کاربر مسدود: نشست‌هایش بی‌اعتبار شود تا دوباره با همان توکن وارد نشود
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="حساب کاربری غیرفعال است"
+            detail=status_message
+        )
+
+    # حالت تعمیر: فقط ادمین‌ها
+    maint = get_app_settings(db).get("maintenance") or {}
+    if maint.get("enabled") and user.role != "admin" \
+            and not request.url.path.endswith(_MAINTENANCE_EXEMPT_SUFFIXES):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=maint.get("message") or "سامانه در حال به‌روزرسانی است؛ لطفاً کمی بعد دوباره تلاش کنید."
         )
     
     # بررسی قفل حساب
@@ -379,6 +477,16 @@ async def get_current_active_user(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="حساب کاربری غیرفعال است"
+        )
+    return current_user
+
+
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """فقط ادمین (نقش admin)؛ برای همهٔ مسیرهای /admin"""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="دسترسی فقط برای مدیران سیستم است"
         )
     return current_user
 

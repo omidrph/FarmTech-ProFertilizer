@@ -1,3 +1,4 @@
+
 <template>
   <AuthLayout title="ورود به سهند کود" subtitle="شمارهٔ موبایل و رمز عبور خود را وارد کنید">
     <AuthAlert v-if="isDown" title="ارتباط با سرور برقرار نشد" hint="اینترنت خود را بررسی کنید و دوباره تلاش کنید." action-label="تلاش مجدد" @action="check" />
@@ -66,5 +67,10 @@ const handleLogin = async () => {
   }
 };
 
-onMounted(check);
+onMounted(() => {
+  check();
+  // پیام مسدودسازی/بن وقتی کاربر در حین استفاده از برنامه بیرون انداخته شد
+  const notice = sessionStorage.getItem('auth_notice');
+  if (notice) { authError.value = notice; sessionStorage.removeItem('auth_notice'); }
+});
 </script>

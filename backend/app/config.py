@@ -1,3 +1,4 @@
+
 # backend/app/config.py
 """تنظیمات کل برنامه و متغیرهای محیطی"""
 
@@ -29,6 +30,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("SESSION_EXPIRY_HOURS", 24)) * 60
     
+    # ===== 👑 ادمین‌های اولیه =====
+    # لیست شماره‌ها (با کاما) که در هر استارت نقش admin می‌گیرند؛ مثلاً ADMIN_PHONES=09120000000,09350000000
+    ADMIN_PHONES: str = os.getenv("ADMIN_PHONES", "")
+
     # ===== تنظیمات برنامه =====
     APP_NAME: str = "FarmTech - ProFertilizer"
     APP_VERSION: str = "0.1.0"

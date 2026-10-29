@@ -1,3 +1,4 @@
+
 # backend/app/routes/users.py
 """مسیرهای کاربران (Users)"""
 from typing import List
@@ -8,7 +9,7 @@ from app.database import get_db
 from app.models import User
 from app.schemas import UserUpdate, UserResponse
 import app.crud as crud
-from app.security import get_current_user
+from app.security import get_current_user, require_admin
 
 # ===== تنظیمات Logger =====
 logger = logging.getLogger(__name__)
@@ -25,9 +26,9 @@ def get_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_admin)  # 🔒 قبلاً هر کاربر واردشده می‌توانست لیست همهٔ کاربران را ببیند
 ):
-    """دریافت لیست کاربران"""
+    """دریافت لیست کاربران (فقط ادمین)"""
     try:
         return crud.get_users(db, skip, limit)
     except Exception as e:

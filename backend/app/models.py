@@ -1,3 +1,4 @@
+
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
@@ -24,6 +25,18 @@ class User(Base):
     phone_number = Column(String(15), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
+
+    # ===== 👑 نقش و وضعیت حساب (پنل مدیریت) =====
+    # نقش: user (معمولی، پیش‌فرض) | plus (کاربر پلاس) | admin (دسترسی کامل)
+    role = Column(String(10), default="user", server_default="user", nullable=False, index=True)
+    # وضعیت: active | blocked (موقت یا نامحدود) | banned (دائمی)
+    # is_active همیشه با status هم‌گام است (active ⇔ True)
+    status = Column(String(10), default="active", server_default="active", nullable=False, index=True)
+    status_reason = Column(Text, nullable=True)
+    status_until = Column(DateTime(timezone=True), nullable=True)   # پایان مسدودیت موقت
+    status_changed_at = Column(DateTime(timezone=True), nullable=True)
+    status_changed_by = Column(Integer, nullable=True)              # شناسهٔ ادمین (بدون FK تا با حذف ادمین مشکلی پیش نیاید)
+    admin_note = Column(Text, nullable=True)                        # یادداشت خصوصی ادمین
     
     # ===== 🔐 فیلدهای امنیتی =====
     # قفل حساب
@@ -57,6 +70,15 @@ class User(Base):
         """نام کامل کاربر"""
         return f"{self.first_name} {self.last_name}"
     
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
+
+    @property
+    def is_plus(self) -> bool:
+        """کاربر پلاس (ادمین هم همهٔ امکانات پلاس را دارد)"""
+        return self.role in ("plus", "admin")
+
     @property
     def is_locked(self) -> bool:
         """بررسی آیا حساب قفل شده است"""
@@ -449,3 +471,53 @@ class PhAdjustment(Base):
 
     def __repr__(self):
         return f"<PhAdjustment {self.id} ({self.mode}, {self.chemical_name})>"
+
+
+
+# ============================================================
+# 👑 مدل‌های پنل مدیریت
+# ============================================================
+class AuditLog(Base):
+    """لاگ همهٔ کارهای ادمین (چه کسی، چه کاری، روی چه چیزی، کی)"""
+
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, nullable=True, index=True)          # بدون FK: با حذف ادمین، تاریخچه می‌ماند
+    admin_name = Column(String(120), nullable=True)
+    action = Column(String(60), nullable=False, index=True)         # مثل user.ban
+    target_type = Column(String(30), nullable=True)                 # user | fertilizer | announcement | setting ...
+    target_id = Column(Integer, nullable=True)
+    target_label = Column(String(160), nullable=True)
+    details = Column(JSON, nullable=True)
+    ip_address = Column(String(45), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class Announcement(Base):
+    """اعلان همگانی که بالای برنامه به کاربران نشان داده می‌شود"""
+
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(150), nullable=False)
+    body = Column(Text, nullable=True)
+    level = Column(String(10), default="info", nullable=False)      # info | success | warning | danger
+    audience = Column(String(10), default="all", nullable=False)    # all | user | plus
+    is_active = Column(Boolean, default=True, nullable=False)
+    starts_at = Column(DateTime(timezone=True), nullable=True)
+    ends_at = Column(DateTime(timezone=True), nullable=True)
+    created_by = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class AppSetting(Base):
+    """تنظیمات کلید/مقدار سیستم (حالت تعمیر، باز/بسته بودن ثبت‌نام، ...)"""
+
+    __tablename__ = "app_settings"
+
+    key = Column(String(60), primary_key=True)
+    value = Column(JSON, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_by = Column(Integer, nullable=True)

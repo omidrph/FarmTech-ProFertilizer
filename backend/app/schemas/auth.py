@@ -1,3 +1,4 @@
+
 # backend/app/schemas/auth.py
 """
 طرح‌های مربوط به احراز هویت (Authentication)
@@ -60,6 +61,8 @@ class UserResponse(BaseModel):
     full_name: str
     created_at: datetime
     is_2fa_enabled: bool = False
+    # 👑 نقش: user | plus | admin
+    role: str = "user"
 
     class Config:
         from_attributes = True

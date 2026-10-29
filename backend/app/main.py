@@ -1,4 +1,5 @@
 
+
 # backend/app/main.py
 """
 نقطه ورود اصلی برنامه FastAPI
@@ -333,6 +334,21 @@ async def startup_event():
     db = SessionLocal()
     
     try:
+        # 👑 ارتقای ادمین‌های اولیه از متغیر محیطی ADMIN_PHONES (بدون نیاز به ترمینال روی سرور)
+        try:
+            phones = [p.strip() for p in (settings.ADMIN_PHONES or "").split(",") if p.strip()]
+            if phones:
+                promoted = db.query(User).filter(User.phone_number.in_(phones), User.role != "admin").all()
+                for u in promoted:
+                    u.role = "admin"
+                    u.status, u.is_active = "active", True
+                db.commit()
+                if promoted:
+                    logger.info(f"👑 {len(promoted)} ادمین از ADMIN_PHONES ارتقا یافت")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"❌ خطا در ارتقای ادمین‌های اولیه: {e}")
+
         try:
             fertilizer_count = get_system_fertilizers_count(db)
             logger.info(f"📊 تعداد کودهای سیستمی فعلی: {fertilizer_count}")
@@ -385,6 +401,3 @@ async def startup_event():
 async def shutdown_event():
     """رویداد توقف برنامه"""
     logger.info(f"👋 Shutting down {settings.APP_NAME}")
-
-
-

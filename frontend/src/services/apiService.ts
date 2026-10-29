@@ -1,4 +1,5 @@
 
+
 // frontend/src/services/apiService.ts
 import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 import type {
@@ -427,6 +428,15 @@ class ApiService {
                     if (!window.location.pathname.includes('/login') && 
                         !window.location.pathname.includes('/register') &&
                         !window.location.pathname.includes('/forgot-password')) {
+                        window.location.href = '/login';
+                    }
+                }
+                // 🚫 حساب در حین استفاده مسدود/بن شده است ⇒ خروج و نمایش پیام در صفحهٔ ورود
+                const detail = String(error.response?.data?.detail || '');
+                if (error.response?.status === 403 && detail.includes('مسدود')) {
+                    this.clearToken();
+                    sessionStorage.setItem('auth_notice', detail);
+                    if (!window.location.pathname.includes('/login')) {
                         window.location.href = '/login';
                     }
                 }

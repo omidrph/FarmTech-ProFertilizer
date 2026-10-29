@@ -1,3 +1,4 @@
+
 <template>
   <!-- 
     تغییرات اصلی برای موبایل:
@@ -57,6 +58,19 @@
           <span class="hidden sm:inline-block px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">
             v{{ version }}
           </span>
+
+          <!-- 👑 پنل مدیریت (فقط مدیران) -->
+          <router-link
+            v-if="user && user.role === 'admin'"
+            to="/admin"
+            class="flex flex-col sm:flex-row items-center gap-1 px-2 sm:px-2.5 py-1 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-colors"
+            title="پنل مدیریت"
+          >
+            <svg class="w-5 h-5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+            </svg>
+            <span class="text-[10px] sm:text-xs mt-1 sm:mt-0">مدیریت</span>
+          </router-link>
 
           <!-- دکمه خروج -->
           <button

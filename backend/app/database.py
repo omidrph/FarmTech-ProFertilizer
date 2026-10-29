@@ -1,3 +1,4 @@
+
 # backend/app/database.py
 """اتصال و مدیریت دیتابیس PostgreSQL با SSL"""
 
@@ -107,6 +108,7 @@ def create_tables():
         try:
             Base.metadata.create_all(bind=engine)
             logger.info("✅ Tables created successfully with SQLAlchemy")
+            run_light_migrations()
             return True
         except Exception as e:
             logger.warning(f"⚠️ Attempt {attempt + 1}/{max_retries} failed: {e}")
@@ -116,6 +118,35 @@ def create_tables():
                 logger.error(f"❌ Failed to create tables after {max_retries} attempts")
                 return False
     return False
+
+
+def run_light_migrations() -> None:
+    """
+    مهاجرت سبک و ایمن (idempotent) برای ستون‌های جدید جدول users.
+    create_all فقط جدول‌های «جدید» را می‌سازد و ستون جدید به جدول موجود اضافه نمی‌کند؛
+    این تابع در هر استارت اجرا می‌شود و اگر ستون‌ها از قبل باشند کاری نمی‌کند.
+    """
+    from sqlalchemy import text as _text
+    statements = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(10) NOT NULL DEFAULT 'user'",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(10) NOT NULL DEFAULT 'active'",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS status_reason TEXT",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS status_until TIMESTAMPTZ",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS status_changed_at TIMESTAMPTZ",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS status_changed_by INTEGER",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_note TEXT",
+        "CREATE INDEX IF NOT EXISTS ix_users_role ON users (role)",
+        "CREATE INDEX IF NOT EXISTS ix_users_status ON users (status)",
+        # کاربرانی که قبلاً غیرفعال شده بودند ⇒ مسدود
+        "UPDATE users SET status = 'blocked' WHERE is_active = FALSE AND status = 'active'",
+    ]
+    try:
+        with engine.begin() as conn:
+            for stmt in statements:
+                conn.execute(_text(stmt))
+        logger.info("✅ Light migrations applied (users.role/status)")
+    except Exception as e:  # pragma: no cover
+        logger.error(f"❌ Light migration failed: {e}")
 
 
 def drop_tables():

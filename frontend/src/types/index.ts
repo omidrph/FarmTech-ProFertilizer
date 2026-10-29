@@ -520,6 +520,8 @@ export interface User {
     created_at: string;
     updated_at?: string;
     full_name: string;
+    /** نقش: user | plus | admin */
+    role?: 'user' | 'plus' | 'admin';
 }
 
 

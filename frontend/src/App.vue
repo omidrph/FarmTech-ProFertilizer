@@ -1,5 +1,7 @@
+
 <template>
   <div id="app" class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200">
+    <SystemBanner />
     <router-view />
   </div>
 </template>
@@ -8,6 +10,7 @@
 import { onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/store/modules/appStore';
 import { useAuth } from '@/composables/useAuth';
+import SystemBanner from '@/components/layout/SystemBanner.vue';
 
 const appStore = useAppStore();
 const { user, logout } = useAuth();

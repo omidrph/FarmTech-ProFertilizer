@@ -1,3 +1,4 @@
+
 // src/router/index.ts
 import { createRouter, createWebHistory } from 'vue-router';
 import MainLayout from '@/views/MainLayout.vue';
@@ -5,6 +6,7 @@ import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
 import ForgotPassword from '@/views/ForgotPassword.vue';
 import TermsAndConditions from '@/views/TermsAndConditions.vue';
+const AdminView = () => import('@/views/AdminView.vue'); // 👑 بارگذاری تنبل: برای کاربران عادی دانلود نمی‌شود
 
 const router = createRouter({
   history: createWebHistory(),
@@ -35,6 +37,13 @@ const router = createRouter({
       name: 'terms',
       component: TermsAndConditions,
       meta: { requiresAuth: false }
+    },
+    // 👑 پنل مدیریت (نقش admin؛ بررسی نهایی روی سرور و داخل خود صفحه انجام می‌شود)
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/',
