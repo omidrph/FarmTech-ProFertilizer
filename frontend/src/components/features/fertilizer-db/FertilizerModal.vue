@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerModal.vue -->
 <template>
   <AppModal :open="isOpen" size="xl" :title="isEditing ? 'ویرایش کود' : 'افزودن کود'" @close="$emit('close')">
@@ -7,7 +8,7 @@
       </svg>
     </template>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 items-start">
+    <div class="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto_auto_1fr] gap-4 lg:gap-5 items-start">
       <!-- ===== مشخصات ===== -->
       <section :class="cardCls" class="lg:col-start-1">
         <div :class="stripCls(S.identity)"></div>
@@ -57,7 +58,7 @@
       </section>
 
       <!-- ===== عناصر ===== -->
-      <section :class="cardCls" class="lg:col-start-2 lg:row-start-1 lg:row-span-4">
+      <section :class="cardCls" class="lg:col-start-2 lg:row-start-1 lg:row-span-5">
         <div :class="stripCls(S.elements)"></div>
         <header class="flex items-start gap-2.5">
           <span :class="badgeCls(S.elements)"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="S.elements.icon" /></svg></span>
@@ -66,7 +67,7 @@
               <h4 :class="titleCls">عناصر</h4>
               <button type="button" @click="clearEntries" class="text-xs text-gray-400 hover:text-danger-600 transition-colors">پاک کردن</button>
             </div>
-            <p :class="descCls">مقدار را مطابق برچسب وارد کنید؛ برای تغییر فرم (مثلاً اکسید) روی نام عنصر بزنید.</p>
+            <p :class="descCls">مقدار را مطابق برچسب وارد کنید؛ برای تغییر فرم (اکسید، نمک، کلات، …) روی نام عنصر بزنید. برای ترکیب‌های دلخواه از «پیشرفته» استفاده کنید.</p>
           </div>
         </header>
 
@@ -87,7 +88,7 @@
           <div class="space-y-2">
             <div v-for="def in group.items" :key="def.key" class="relative">
               <div class="flex items-center gap-2">
-                <button type="button" @click="openMenu = openMenu === def.key ? null : def.key"
+                <button type="button" @click="toggleMenu(def, $event)"
                   class="flex-1 min-w-0 h-10 flex items-center gap-2 px-3 rounded-xl border transition-all duration-200"
                   :class="rowCls(def)">
                   <span class="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0" :class="symbolCls(def)" dir="ltr">{{ def.symbol }}</span>
@@ -105,25 +106,55 @@
                 معادل <span class="font-semibold text-emerald-700 dark:text-emerald-400">{{ pct(def).toLocaleString('fa-IR') }}٪</span> {{ def.symbol }} خالص
               </p>
 
-              <Transition name="pop">
-                <div v-if="openMenu === def.key" class="absolute z-30 inset-x-0 top-full mt-1 max-h-72 overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-xl p-1">
-                  <button v-for="fm in def.forms" :key="fm.key" type="button" @click="selectForm(def, fm.key)"
-                    class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-                    :class="entries[def.key].form === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
-                    <span class="flex items-center gap-2">
-                      <svg v-if="entries[def.key].form === fm.key" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                      <span v-else class="w-3.5"></span>
-                      {{ fm.hint }}
-                    </span>
-                    <span class="font-semibold" dir="ltr">{{ fm.label }}</span>
-                  </button>
-                </div>
-              </Transition>
-              <div v-if="openMenu === def.key" class="fixed inset-0 z-20" @click="openMenu = null"></div>
             </div>
           </div>
         </template>
+
+        <!-- دکمه‌های کلات‌ها و پیشرفته -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" @click="togglePanel('chelate')"
+            class="h-10 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            :class="panel === 'chelate' ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 shadow-sm' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-violet-300'">
+            کلات‌ها
+            <span v-if="chelateCount" class="min-w-[1.25rem] h-5 px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">{{ chelateCount.toLocaleString('fa-IR') }}</span>
+          </button>
+          <button type="button" @click="togglePanel('advanced')"
+            class="h-10 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1.5"
+            :class="panel === 'advanced' ? 'border-teal-400 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 shadow-sm' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-teal-300'">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281zM15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            پیشرفته
+          </button>
+        </div>
+        <Transition name="pop">
+          <ChelatePanel v-if="panel === 'chelate'" :entries="entries" />
+          <AdvancedBuilder v-else-if="panel === 'advanced'" :entries="entries" @applied="onAdvancedApplied" />
+        </Transition>
       </section>
+
+      <!-- منوی انتخاب فرم (خارج از کارت و با موقعیت ثابت تا هرگز بریده نشود؛ به بالا یا پایین باز می‌شود) -->
+      <Teleport to="body">
+        <template v-if="menuDef && menuStyle">
+          <div class="fixed inset-0 z-[300]" @click="closeMenu"></div>
+          <div class="fixed z-[310] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-2xl p-1.5 space-y-0.5" :style="menuStyle" dir="rtl">
+            <button v-for="fm in menuDef.forms" :key="fm.key" type="button" @click="selectForm(menuDef, fm.key)"
+              class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+              :class="entries[menuDef.key].form === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
+              <span class="flex items-center gap-2 min-w-0">
+                <svg v-if="entries[menuDef.key].form === fm.key" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                <span v-else class="w-3.5 flex-shrink-0"></span>
+                <span class="truncate">{{ fm.hint }}</span>
+              </span>
+              <span class="font-semibold flex-shrink-0" dir="ltr">{{ fm.label }}</span>
+            </button>
+            <button v-if="CHELATE_METALS.includes(menuDef.key)" type="button" @click="goChelate(menuDef)"
+              class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm border-t border-gray-100 dark:border-gray-700 mt-1 pt-2.5 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/20"
+              :class="isChelateForm(entries[menuDef.key].form) ? 'bg-violet-50 dark:bg-violet-900/20' : ''">
+              <span class="flex items-center gap-2"><span class="w-3.5 flex-shrink-0"></span>کلات (با هر درصد و هر نوع)</span>
+              <span class="text-xs" dir="ltr">Chelate →</span>
+            </button>
+          </div>
+        </template>
+      </Teleport>
 
       <!-- ===== قیمت ===== -->
       <section :class="cardCls" class="lg:col-start-1">
@@ -222,8 +253,13 @@
 
 <script setup lang="ts">
 import AppModal from '@/components/common/AppModal.vue';
-import { computed, reactive, ref, watch } from 'vue';
-import { ELEMENT_DEFS, toElementPct, labelKey, prettyFormula, type ElementDef } from '@/utils/labelForms';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import ChelatePanel from './ChelatePanel.vue';
+import AdvancedBuilder from './AdvancedBuilder.vue';
+import {
+  ELEMENT_DEFS, toElementPct, labelKey, prettyFormula, chelateAgentLabel, chelateFormKey, isChelateForm,
+  CHELATE_METALS, LEGACY_CHELATES, type ElementDef, type LabelForm
+} from '@/utils/labelForms';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -293,6 +329,52 @@ const symbolCls = (d: ElementDef) =>
 
 const isTouched = ref(false);
 const openMenu = ref<string | null>(null);
+const panel = ref<'chelate' | 'advanced' | null>(null);
+const togglePanel = (p: 'chelate' | 'advanced') => { panel.value = panel.value === p ? null : p; };
+const chelateCount = computed(() => ELEMENT_DEFS.filter((d) => entries[d.key] && isChelateForm(entries[d.key].form)).length);
+const onAdvancedApplied = (info: { formula: string | null }) => {
+  if (info.formula && !props.formData.formula) props.formData.formula = info.formula;
+  panel.value = null;
+};
+
+// ===== منوی فرم‌ها: موقعیت ثابت، چرخش به بالا اگر پایین جا نبود =====
+const menuStyle = ref<Record<string, string> | null>(null);
+const menuDef = computed(() => (openMenu.value ? ELEMENT_DEFS.find((d) => d.key === openMenu.value) || null : null));
+const closeMenu = () => { openMenu.value = null; menuStyle.value = null; anchorEl = null; };
+let anchorEl: HTMLElement | null = null;
+const placeMenu = (d: ElementDef) => {
+  if (!anchorEl || !anchorEl.isConnected) return closeMenu();
+  const r = anchorEl.getBoundingClientRect();
+  const margin = 10, gap = 6;
+  const below = window.innerHeight - r.bottom - margin;
+  const above = r.top - margin;
+  const want = Math.min(d.forms.length * 40 + (CHELATE_METALS.includes(d.key) ? 52 : 0) + 16, 380);
+  const up = below < Math.min(want, 220) && above > below;
+  const maxH = Math.max(Math.min(want, up ? above : below), 140);
+  const width = Math.min(Math.max(r.width, 260), window.innerWidth - 2 * margin);
+  const left = Math.min(Math.max(r.right - width, margin), window.innerWidth - width - margin);
+  menuStyle.value = { left: left + 'px', width: width + 'px', maxHeight: maxH + 'px', ...(up ? { bottom: window.innerHeight - r.top + gap + 'px' } : { top: r.bottom + gap + 'px' }) };
+};
+const toggleMenu = (d: ElementDef, ev: Event) => {
+  if (openMenu.value === d.key) return closeMenu();
+  anchorEl = ev.currentTarget as HTMLElement;
+  openMenu.value = d.key;
+  placeMenu(d);
+};
+const goChelate = (d: ElementDef) => {
+  if (!isChelateForm(entries[d.key].form) && !(Number(entries[d.key].value) > 0)) entries[d.key] = { form: chelateFormKey('EDTA'), value: null };
+  closeMenu();
+  panel.value = 'chelate';
+};
+// با اسکرول یا تغییر اندازه (مثلاً جمع‌شدن نوار آدرس موبایل) منو بسته نمی‌شود؛ دوباره کنار دکمه می‌نشیند
+let raf = 0;
+const onViewportChange = () => {
+  if (!openMenu.value || raf) return;
+  raf = requestAnimationFrame(() => { raf = 0; if (menuDef.value) placeMenu(menuDef.value); });
+};
+window.addEventListener('resize', onViewportChange);
+window.addEventListener('scroll', onViewportChange, true);
+onBeforeUnmount(() => { window.removeEventListener('resize', onViewportChange); window.removeEventListener('scroll', onViewportChange, true); });
 const showMore = ref(false);
 
 const groups = [
@@ -311,14 +393,23 @@ const pureFormKey = (d: ElementDef) => (d.key.startsWith('N-') ? 'N' : d.key);
 watch(() => props.isOpen, (open) => {
   if (!open) return;
   isTouched.value = false;
-  openMenu.value = null;
+  closeMenu();
+  panel.value = null;
   showMore.value = !!(props.formData.category || props.formData.description);
   resetEntries();
   const lv = props.formData.label_values || {};
   for (const d of ELEMENT_DEFS) {
     const hit = Object.keys(lv).find((k) => k.startsWith(d.key + '|'));
     if (hit) {
-      entries[d.key] = { form: hit.split('|')[1], value: Number(lv[hit]) };
+      const form = hit.split('|')[1];
+      const legacy = LEGACY_CHELATES[form];
+      if (legacy) {
+        // کلات‌های قدیمی (مثل Fe-EDTA ۱۰٪) ← فرم جدید کلات با «درصد فلز» واقعی
+        const metalPct = Number(props.formData.elements?.[d.key]) || Number(lv[hit]) * legacy.factor;
+        entries[d.key] = { form: chelateFormKey(legacy.agent), value: Math.round(metalPct * 10000) / 10000 };
+      } else {
+        entries[d.key] = { form, value: Number(lv[hit]) };
+      }
     } else if (Number(props.formData.elements?.[d.key]) > 0) {
       const v = Number(props.formData.elements[d.key]);
       entries[d.key] = { form: pureFormKey(d), value: Math.round(v * 10000) / 10000 };
@@ -326,9 +417,13 @@ watch(() => props.isOpen, (open) => {
   }
 });
 
-const currentForm = (d: ElementDef) => d.forms.find((f) => f.key === entries[d.key].form) || d.forms[0];
+const currentForm = (d: ElementDef): LabelForm => {
+  const k = entries[d.key].form;
+  if (isChelateForm(k)) return { key: k, label: `${d.symbol}-${chelateAgentLabel(k)}`, hint: 'کلات', factor: 1 };
+  return d.forms.find((f) => f.key === k) || d.forms[0];
+};
 const pct = (d: ElementDef) => toElementPct(d.key, entries[d.key].form, Number(entries[d.key].value) || 0);
-const selectForm = (d: ElementDef, key: string) => { entries[d.key].form = key; openMenu.value = null; };
+const selectForm = (d: ElementDef, key: string) => { entries[d.key].form = key; closeMenu(); };
 const totalElementsPercentage = computed(() => parseFloat(ELEMENT_DEFS.reduce((s, d) => s + pct(d), 0).toFixed(2)));
 const clearEntries = () => { if (confirm('همهٔ عناصر پاک شوند؟')) resetEntries(); };
 
