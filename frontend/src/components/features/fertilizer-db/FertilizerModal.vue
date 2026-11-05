@@ -67,7 +67,7 @@
               <h4 :class="titleCls">عناصر</h4>
               <button type="button" @click="clearEntries" class="text-xs text-gray-400 hover:text-danger-600 transition-colors">پاک کردن</button>
             </div>
-            <p :class="descCls">مقدار را مطابق برچسب وارد کنید؛ برای تغییر فرم (اکسید، نمک، کلات، …) روی نام عنصر بزنید. برای ترکیب‌های دلخواه از «پیشرفته» استفاده کنید.</p>
+            <p :class="descCls">مقدار را مطابق برچسب بنویسید. برای عوض‌کردن فرم (اکسید، نمک، کلات، …) روی نام عنصر بزنید.</p>
           </div>
         </header>
 
@@ -110,19 +110,41 @@
           </div>
         </template>
 
-        <!-- دکمه‌های کلات‌ها و پیشرفته -->
-        <div class="grid grid-cols-2 gap-2 pt-1">
-          <button type="button" @click="togglePanel('chelate')"
-            class="h-10 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1.5"
-            :class="panel === 'chelate' ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 shadow-sm' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-violet-300'">
-            کلات‌ها
-            <span v-if="chelateCount" class="min-w-[1.25rem] h-5 px-1 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">{{ chelateCount.toLocaleString('fa-IR') }}</span>
+        <!-- ابزارهای تکمیلی -->
+        <p class="flex items-center gap-2 text-[11px] font-semibold text-gray-500 dark:text-gray-400 pt-2">
+          <span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>ابزارهای تکمیلی<span class="h-px flex-1 bg-gray-200 dark:bg-gray-700"></span>
+        </p>
+        <div class="grid grid-cols-1 gap-2.5">
+          <button type="button" @click="togglePanel('chelate')" :aria-expanded="panel === 'chelate'"
+            class="group relative text-right rounded-2xl border p-3 transition-all duration-200 flex items-center gap-3 hover:-translate-y-0.5 hover:shadow-md"
+            :class="panel === 'chelate'
+              ? 'border-violet-400 dark:border-violet-600 bg-gradient-to-l from-violet-50 to-white dark:from-violet-900/25 dark:to-gray-800 shadow-md ring-2 ring-violet-500/15'
+              : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-violet-300 dark:hover:border-violet-700'">
+            <span class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-sm shadow-violet-500/30">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" /></svg>
+            </span>
+            <span class="flex-1 min-w-0">
+              <span class="flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white">کلات‌ها
+                <span v-if="chelateCount" class="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-violet-600 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">{{ chelateCount.toLocaleString('fa-IR') }}</span>
+              </span>
+              <span class="block text-[11px] leading-5 text-gray-500 dark:text-gray-400">آهن، منگنز، روی و … با هر درصد فلز</span>
+            </span>
+            <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" :class="panel === 'chelate' ? 'rotate-180 text-violet-500' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </button>
-          <button type="button" @click="togglePanel('advanced')"
-            class="h-10 rounded-xl border text-sm font-medium transition-all flex items-center justify-center gap-1.5"
-            :class="panel === 'advanced' ? 'border-teal-400 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 shadow-sm' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-teal-300'">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281zM15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            پیشرفته
+
+          <button type="button" @click="togglePanel('advanced')" :aria-expanded="panel === 'advanced'"
+            class="group relative text-right rounded-2xl border p-3 transition-all duration-200 flex items-center gap-3 hover:-translate-y-0.5 hover:shadow-md"
+            :class="panel === 'advanced'
+              ? 'border-teal-400 dark:border-teal-600 bg-gradient-to-l from-teal-50 to-white dark:from-teal-900/25 dark:to-gray-800 shadow-md ring-2 ring-teal-500/15'
+              : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-teal-300 dark:hover:border-teal-700'">
+            <span class="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-teal-500 to-emerald-500 text-white shadow-sm shadow-teal-500/30">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
+            </span>
+            <span class="flex-1 min-w-0">
+              <span class="block text-sm font-bold text-gray-900 dark:text-white">پیشرفته</span>
+              <span class="block text-[11px] leading-5 text-gray-500 dark:text-gray-400">ترکیب دلخواه از روی فرمول شیمیایی</span>
+            </span>
+            <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" :class="panel === 'advanced' ? 'rotate-180 text-teal-500' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </button>
         </div>
         <Transition name="pop">
@@ -131,29 +153,12 @@
         </Transition>
       </section>
 
-      <!-- منوی انتخاب فرم (خارج از کارت و با موقعیت ثابت تا هرگز بریده نشود؛ به بالا یا پایین باز می‌شود) -->
+      <!-- منوی انتخاب فرم (خارج از کارت تا هرگز بریده نشود؛ موبایل = برگهٔ پایین) -->
       <Teleport to="body">
-        <template v-if="menuDef && menuStyle">
-          <div class="fixed inset-0 z-[300]" @click="closeMenu"></div>
-          <div class="fixed z-[310] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-2xl p-1.5 space-y-0.5" :style="menuStyle" dir="rtl">
-            <button v-for="fm in menuDef.forms" :key="fm.key" type="button" @click="selectForm(menuDef, fm.key)"
-              class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-              :class="entries[menuDef.key].form === fm.key ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300'">
-              <span class="flex items-center gap-2 min-w-0">
-                <svg v-if="entries[menuDef.key].form === fm.key" class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
-                <span v-else class="w-3.5 flex-shrink-0"></span>
-                <span class="truncate">{{ fm.hint }}</span>
-              </span>
-              <span class="font-semibold flex-shrink-0" dir="ltr">{{ fm.label }}</span>
-            </button>
-            <button v-if="CHELATE_METALS.includes(menuDef.key)" type="button" @click="goChelate(menuDef)"
-              class="w-full flex items-center justify-between gap-3 px-3 py-2 rounded-lg text-sm border-t border-gray-100 dark:border-gray-700 mt-1 pt-2.5 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/20"
-              :class="isChelateForm(entries[menuDef.key].form) ? 'bg-violet-50 dark:bg-violet-900/20' : ''">
-              <span class="flex items-center gap-2"><span class="w-3.5 flex-shrink-0"></span>کلات (با هر درصد و هر نوع)</span>
-              <span class="text-xs" dir="ltr">Chelate →</span>
-            </button>
-          </div>
-        </template>
+        <FormMenu v-if="menuDef && menuStyle"
+          :def="menuDef" :selected-key="entries[menuDef.key].form" :can-chelate="CHELATE_METALS.includes(menuDef.key)"
+          :chelate-selected="isChelateForm(entries[menuDef.key].form)" :sheet="menuSheet" :panel-style="menuStyle" :symbol-cls="symbolCls(menuDef)"
+          @select="(k) => selectForm(menuDef!, k)" @chelate="goChelate(menuDef!)" @close="closeMenu" />
       </Teleport>
 
       <!-- ===== قیمت ===== -->
@@ -255,6 +260,7 @@
 import AppModal from '@/components/common/AppModal.vue';
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import ChelatePanel from './ChelatePanel.vue';
+import FormMenu from './FormMenu.vue';
 import AdvancedBuilder from './AdvancedBuilder.vue';
 import {
   ELEMENT_DEFS, toElementPct, labelKey, prettyFormula, chelateAgentLabel, chelateFormKey, isChelateForm,
@@ -342,16 +348,19 @@ const menuStyle = ref<Record<string, string> | null>(null);
 const menuDef = computed(() => (openMenu.value ? ELEMENT_DEFS.find((d) => d.key === openMenu.value) || null : null));
 const closeMenu = () => { openMenu.value = null; menuStyle.value = null; anchorEl = null; };
 let anchorEl: HTMLElement | null = null;
+const menuSheet = ref(false);
 const placeMenu = (d: ElementDef) => {
   if (!anchorEl || !anchorEl.isConnected) return closeMenu();
+  menuSheet.value = window.innerWidth < 640;
+  if (menuSheet.value) { menuStyle.value = {}; return; }
   const r = anchorEl.getBoundingClientRect();
   const margin = 10, gap = 6;
   const below = window.innerHeight - r.bottom - margin;
   const above = r.top - margin;
-  const want = Math.min(d.forms.length * 40 + (CHELATE_METALS.includes(d.key) ? 52 : 0) + 16, 380);
-  const up = below < Math.min(want, 220) && above > below;
+  const want = Math.min(d.forms.length * 48 + (d.forms.length > 7 ? 52 : 0) + (CHELATE_METALS.includes(d.key) ? 68 : 0) + 80, 460);
+  const up = below < Math.min(want, 330) && above > below;
   const maxH = Math.max(Math.min(want, up ? above : below), 140);
-  const width = Math.min(Math.max(r.width, 260), window.innerWidth - 2 * margin);
+  const width = Math.min(Math.max(r.width, 340), window.innerWidth - 2 * margin);
   const left = Math.min(Math.max(r.right - width, margin), window.innerWidth - width - margin);
   menuStyle.value = { left: left + 'px', width: width + 'px', maxHeight: maxH + 'px', ...(up ? { bottom: window.innerHeight - r.top + gap + 'px' } : { top: r.bottom + gap + 'px' }) };
 };

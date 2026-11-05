@@ -3,85 +3,158 @@
   حالت «پیشرفته»: هر ترکیب و هر تعداد جزء را آزادانه بنویسید؛ برنامه خودش عنصرهای اصلی را بیرون می‌کشد.
   هر ردیف = «فرمول شیمیایی» + «درصد وزنیِ آن جزء در محصول»
   مثال‌ها:  KNO3 ۵۰٪  +  Ca(NO3)2·4H2O ۳۰٪   |   K2O ۲۰٪ (فرم اکسیدی)   |   (NH4)2SO4 ۱۰۰٪
-  نتیجه (درصد عنصر خالص) با یک دکمه در جدول عناصر ثبت می‌شود.
 -->
 <template>
-  <div class="rounded-xl border border-teal-200 dark:border-teal-800/50 bg-teal-50/50 dark:bg-teal-900/10 p-3 space-y-3">
-    <div>
-      <p class="text-sm font-semibold text-teal-800 dark:text-teal-300">حالت پیشرفته — ساخت ترکیب دلخواه</p>
-      <p class="text-[11px] leading-5 text-gray-600 dark:text-gray-400 mt-0.5">
-        فرمول هر جزء را بنویسید و بگویید چند درصد از محصول است؛ هر تعداد ردیف مجاز است. پرانتز، آب تبلور (<span dir="ltr">·4H₂O</span>)، اکسیدها (<span dir="ltr">P2O5، K2O</span>) و یون‌ها (<span dir="ltr">NO3⁻</span>) پشتیبانی می‌شوند.
-      </p>
-    </div>
+  <div class="rounded-2xl border border-teal-200 dark:border-teal-800/50 bg-gradient-to-b from-teal-50/80 to-white dark:from-teal-900/15 dark:to-gray-800/40 p-3.5 space-y-3.5 shadow-sm">
+    <!-- سربرگ -->
+    <header class="flex items-start gap-3">
+      <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 text-white flex items-center justify-center flex-shrink-0 shadow-sm shadow-teal-500/30">
+        <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" /></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <h5 class="text-sm font-bold text-teal-900 dark:text-teal-200">ساخت ترکیب دلخواه</h5>
+        <p class="text-[12px] leading-5 text-gray-600 dark:text-gray-400">فرمول هر جزء و سهم آن از محصول را بنویسید؛ عنصرهای اصلی خودکار محاسبه می‌شوند. تعداد ردیف‌ها محدود نیست.</p>
+      </div>
+      <button type="button" @click="showHelp = !showHelp" class="flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors"
+        :class="showHelp ? 'bg-teal-600 border-teal-600 text-white' : 'border-teal-200 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30'">راهنما</button>
+    </header>
+
+    <!-- راهنما + نمونه‌ها -->
+    <Transition name="ab">
+      <div v-if="showHelp" class="rounded-xl bg-white/80 dark:bg-gray-800/60 border border-teal-100 dark:border-teal-800/40 p-3 space-y-2.5 text-[12px] leading-6 text-gray-600 dark:text-gray-300">
+        <ul class="list-disc pr-4 space-y-0.5">
+          <li>پرانتز و آب تبلور: <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">Ca(NO3)2·4H2O</code> (به‌جای «·» می‌توانید «.» بزنید)</li>
+          <li>فرم اکسیدی برچسب: <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">K2O</code> و <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">P2O5</code> (برنامه به عنصر خالص تبدیل می‌کند)</li>
+          <li>نماد عناصر با حرف بزرگ شروع شود: <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">KNO3</code> نه <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">kno3</code></li>
+          <li>کلات‌ها فرمول عنصری ندارند؛ از دکمهٔ «کلات‌ها» استفاده کنید.</li>
+        </ul>
+        <div class="flex flex-wrap gap-1.5 pt-0.5">
+          <span class="text-[11px] text-gray-500 py-1">نمونه‌های آماده:</span>
+          <button v-for="ex in EXAMPLES" :key="ex.t" type="button" @click="loadExample(ex)"
+            class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 hover:bg-teal-100 transition-colors">{{ ex.t }}</button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- ردیف‌ها -->
-    <div class="space-y-2">
-      <div v-for="(r, i) in rows" :key="r.id" class="rounded-xl bg-white dark:bg-gray-800 border p-2.5 space-y-1.5"
-        :class="states[i].error ? 'border-danger-300 dark:border-danger-700' : 'border-gray-200 dark:border-gray-700'">
+    <TransitionGroup name="ab" tag="div" class="space-y-2.5">
+      <article v-for="(r, i) in rows" :key="r.id" class="rounded-2xl bg-white dark:bg-gray-800 border p-3 space-y-2 shadow-sm transition-colors"
+        :class="states[i].error ? 'border-danger-300 dark:border-danger-700/70' : states[i].analysis ? 'border-teal-200 dark:border-teal-800/50' : 'border-gray-200 dark:border-gray-700'">
+        <!-- خط ۱: شماره + فرمول + حذف -->
         <div class="flex items-center gap-2">
-          <span class="w-6 text-center text-[11px] text-gray-400 tabular-nums">{{ (i + 1).toLocaleString('fa-IR') }}</span>
-          <input v-model="r.formula" dir="ltr" placeholder="مثلاً Ca(NO3)2·4H2O" spellcheck="false"
-            class="flex-1 min-w-0 h-9 px-2.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono" />
-          <div class="flex items-center gap-1 flex-shrink-0">
-            <input v-model.number="r.amount" type="number" min="0" max="100" step="0.01" dir="ltr" placeholder="۰"
-              class="w-20 h-9 px-2 text-sm text-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-semibold" />
-            <span class="text-xs text-gray-500">٪</span>
+          <span class="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 text-[11px] font-bold text-gray-500 dark:text-gray-300 flex items-center justify-center flex-shrink-0 tabular-nums">{{ (i + 1).toLocaleString('fa-IR') }}</span>
+          <div class="relative flex-1 min-w-0">
+            <input v-model="r.formula" dir="ltr" placeholder="Ca(NO3)2·4H2O" spellcheck="false" autocomplete="off" aria-label="فرمول شیمیایی"
+              class="w-full h-11 pl-3 pr-9 text-[15px] rounded-xl border-2 bg-gray-50 dark:bg-gray-700/60 text-gray-900 dark:text-gray-100 font-mono outline-none transition-colors placeholder-gray-300 dark:placeholder-gray-500"
+              :class="states[i].error ? 'border-danger-300 focus:border-danger-500' : states[i].analysis ? 'border-teal-300 dark:border-teal-700 focus:border-teal-500' : 'border-gray-200 dark:border-gray-600 focus:border-teal-400'" />
+            <span class="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <svg v-if="states[i].analysis" class="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>
+              <svg v-else-if="states[i].error" class="w-5 h-5 text-danger-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" /></svg>
+            </span>
           </div>
-          <button type="button" @click="rows.splice(i, 1)" class="p-1.5 rounded-lg text-gray-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20" title="حذف ردیف">
+          <button type="button" @click="rows.splice(i, 1)" class="p-2 rounded-xl text-gray-400 hover:text-danger-600 hover:bg-danger-50 dark:hover:bg-danger-900/20 transition-colors" title="حذف ردیف" aria-label="حذف ردیف">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <!-- وضعیت تحلیل -->
-        <p v-if="states[i].error" class="pr-8 text-[11px] text-danger-600 dark:text-danger-400">{{ states[i].error }}</p>
-        <div v-else-if="states[i].analysis" class="pr-8 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
-          <span>جرم مولی <b class="tabular-nums text-gray-700 dark:text-gray-200">{{ states[i].analysis.mass.toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}</b></span>
-          <span v-for="(v, k) in states[i].analysis.elements" :key="k" class="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 tabular-nums">{{ symbol(String(k)) }} <span dir="ltr">{{ (v * 100).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}٪</span></span>
-          <label v-if="states[i].analysis.genericN" class="flex items-center gap-1.5">
-            نیتروژن غیرنیترات/آمونیوم را ثبت کن به‌عنوان
-            <select v-model="r.genericN" class="h-6 px-1 text-[11px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+
+        <!-- خط ۲: سهم از محصول -->
+        <div class="flex items-center gap-2 pr-9">
+          <span class="text-[12px] text-gray-500 dark:text-gray-400 flex-shrink-0">سهم از محصول</span>
+          <label class="flex items-center h-10 rounded-xl border-2 bg-white dark:bg-gray-700 overflow-hidden focus-within:border-teal-500 transition-colors"
+            :class="Number(r.amount) > 0 ? 'border-teal-300 dark:border-teal-700' : 'border-gray-200 dark:border-gray-600'">
+            <input v-model.number="r.amount" type="number" min="0" max="100" step="0.01" dir="ltr" placeholder="۰" aria-label="درصد از محصول"
+              class="w-20 h-full px-2 text-center text-lg font-extrabold bg-transparent text-gray-900 dark:text-white outline-none tabular-nums" />
+            <span class="h-full px-2.5 flex items-center text-xs font-bold bg-gray-50 dark:bg-gray-600/60 text-gray-500 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">٪</span>
+          </label>
+        </div>
+
+        <!-- نتیجهٔ همین ردیف -->
+        <p v-if="states[i].error" class="pr-9 text-[12px] text-danger-600 dark:text-danger-400 flex items-start gap-1.5">{{ states[i].error }}</p>
+        <div v-else-if="states[i].analysis" class="pr-9 flex flex-wrap items-center gap-1.5">
+          <span class="text-[11px] text-gray-400 ml-1">جرم مولی <b class="tabular-nums text-gray-600 dark:text-gray-300">{{ states[i].analysis.mass.toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}</b></span>
+          <span v-for="(v, k) in states[i].analysis.elements" :key="k" class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full text-[11px] font-medium tabular-nums" :class="chipCls(String(k))">
+            <b class="px-1.5 rounded-full bg-white/70 dark:bg-black/20">{{ symbol(String(k)) }}</b><span dir="ltr">{{ (v * 100).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}٪</span>
+          </span>
+          <span v-for="(v, k) in states[i].analysis.untracked" :key="'u' + k" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400" title="این عنصر در محاسبات برنامه دنبال نمی‌شود">
+            <span dir="ltr">{{ k }} {{ (v * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 }) }}٪</span> · ثبت نمی‌شود
+          </span>
+          <label v-if="states[i].analysis.genericN" class="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 w-full pt-1">
+            نیتروژن غیرنیترات/آمونیوم (مثل اوره) ثبت شود به‌عنوان
+            <select v-model="r.genericN" class="h-7 px-1.5 text-[11px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100">
               <option value="N-NH4">آمونیومی</option><option value="N-NO3">نیتراتی</option>
             </select>
           </label>
-          <span v-for="(v, k) in states[i].analysis.untracked" :key="'u' + k" class="text-amber-600 dark:text-amber-400"><span dir="ltr">{{ k }} {{ (v * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 }) }}٪</span> (در محاسبات دنبال نمی‌شود)</span>
         </div>
-      </div>
-    </div>
+      </article>
+    </TransitionGroup>
 
     <!-- افزودن -->
-    <div class="flex flex-wrap items-center gap-2">
-      <button type="button" @click="addRow()" class="h-9 px-3 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-700">+ ردیف خالی</button>
-      <select v-model="quick" @change="addQuick" class="h-9 px-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-        <option value="">افزودن سریع از ترکیب‌های رایج…</option>
-        <optgroup v-for="g in QUICK" :key="g.title" :label="g.title">
-          <option v-for="c in g.items" :key="c.f" :value="c.f">{{ c.n }} — {{ c.f }}</option>
-        </optgroup>
-      </select>
+    <div class="space-y-2">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button type="button" @click="addRow()" class="inline-flex items-center gap-1 h-8 px-3 rounded-full text-xs font-semibold bg-teal-600 text-white hover:bg-teal-700 shadow-sm transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>ردیف جدید
+        </button>
+        <span class="text-[11px] text-gray-400 mx-1">یا ترکیب رایج:</span>
+        <button v-for="c in POPULAR" :key="c.f" type="button" @click="addRow(c.f)" :title="c.n"
+          class="h-8 px-2.5 rounded-full text-[11px] font-mono border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-teal-400 hover:text-teal-700 transition-colors" dir="ltr">{{ c.f }}</button>
+        <select v-model="quick" @change="addQuick" aria-label="همهٔ ترکیب‌های رایج"
+          class="h-8 px-2 text-[11px] rounded-full border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+          <option value="">همهٔ ترکیب‌ها…</option>
+          <optgroup v-for="g in QUICK" :key="g.title" :label="g.title">
+            <option v-for="c in g.items" :key="c.f" :value="c.f">{{ c.n }} — {{ c.f }}</option>
+          </optgroup>
+        </select>
+      </div>
     </div>
 
     <!-- نتیجه -->
-    <div v-if="hasResult" class="rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 space-y-2">
-      <div class="flex items-center justify-between gap-2 flex-wrap">
-        <p class="text-xs font-semibold text-gray-800 dark:text-gray-100">عنصرهای استخراج‌شده (درصد عنصر خالص در محصول)</p>
-        <p class="text-[11px] tabular-nums" :class="amountSum > 100.0001 ? 'text-danger-600 font-semibold' : 'text-gray-500 dark:text-gray-400'">
-          مجموع اجزا: {{ amountSum.toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}٪ از محصول
-          <template v-if="amountSum <= 100.0001 && amountSum > 0"> · باقی‌مانده (حامل/ناخالصی): {{ (100 - amountSum).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}٪</template>
-        </p>
-      </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-        <div v-for="e in resultList" :key="e.key" class="flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/50">
-          <span class="text-xs text-gray-700 dark:text-gray-200">{{ e.name }}</span>
-          <b class="text-sm tabular-nums text-emerald-700 dark:text-emerald-300" dir="ltr">{{ e.pct.toLocaleString('fa-IR', { maximumFractionDigits: 4 }) }}%</b>
+    <Transition name="ab">
+      <div v-if="hasResult" class="rounded-2xl bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-800/50 overflow-hidden shadow-sm">
+        <div class="px-3.5 py-2.5 bg-gradient-to-l from-emerald-50 to-white dark:from-emerald-900/20 dark:to-gray-800 border-b border-emerald-100 dark:border-emerald-800/40 flex items-center justify-between gap-2">
+          <p class="text-sm font-bold text-emerald-900 dark:text-emerald-200">عنصرهای استخراج‌شده</p>
+          <span class="text-[11px] text-emerald-700/80 dark:text-emerald-300/80">درصد عنصر خالص در محصول</span>
+        </div>
+
+        <div class="p-3.5 space-y-3">
+          <!-- ترازوی جرم: مجموع اجزا -->
+          <div>
+            <div class="flex items-center justify-between text-[11px] mb-1">
+              <span class="text-gray-500 dark:text-gray-400">مجموع اجزا از محصول</span>
+              <b class="tabular-nums" :class="amountSum > 100.0001 ? 'text-danger-600' : 'text-gray-800 dark:text-gray-100'">{{ amountSum.toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}٪</b>
+            </div>
+            <div class="h-2.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500" :class="amountSum > 100.0001 ? 'bg-danger-500' : 'bg-gradient-to-l from-teal-400 to-emerald-500'" :style="{ width: Math.min(amountSum, 100) + '%' }"></div>
+            </div>
+            <p class="text-[11px] mt-1" :class="amountSum > 100.0001 ? 'text-danger-600 dark:text-danger-400 font-medium' : 'text-gray-400'">
+              <template v-if="amountSum > 100.0001">مجموع اجزا از ۱۰۰٪ بیشتر است؛ مقدارها را بررسی کنید.</template>
+              <template v-else>باقی‌مانده (حامل/ناخالصی): {{ (100 - amountSum).toLocaleString('fa-IR', { maximumFractionDigits: 2 }) }}٪</template>
+            </p>
+          </div>
+
+          <!-- کاشی‌های عنصر -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div v-for="e in resultList" :key="e.key" class="rounded-xl border p-2.5" :class="tileCls(e.key)">
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[11px] text-gray-600 dark:text-gray-300 truncate">{{ e.name }}</span>
+                <span class="text-[10px] font-bold px-1.5 rounded-md bg-white/70 dark:bg-black/20" dir="ltr">{{ e.symbol }}</span>
+              </div>
+              <p class="mt-1 text-xl font-extrabold tabular-nums text-gray-900 dark:text-white" dir="ltr">{{ e.pct.toLocaleString('fa-IR', { maximumFractionDigits: 4 }) }}<span class="text-xs font-semibold text-gray-400 mr-0.5">٪</span></p>
+              <div class="mt-1.5 h-1 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden"><div class="h-full rounded-full bg-current opacity-60" :style="{ width: Math.min((e.pct / maxPct) * 100, 100) + '%' }"></div></div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 pt-0.5">
+            <button type="button" :disabled="!canApply" @click="apply"
+              class="flex-1 min-w-[12rem] h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-l from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-600/20 transition-all active:scale-[.99] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+              اعمال روی جدول عناصر
+            </button>
+            <button type="button" @click="rows.splice(0); addRow()" class="h-11 px-4 rounded-xl text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">پاک کردن</button>
+          </div>
+          <p class="text-[11px] text-gray-400 leading-5">با اعمال، مقدار فعلی جدول با این نتیجه جایگزین می‌شود و بعداً می‌توانید دستی ویرایش کنید.</p>
         </div>
       </div>
-      <p v-if="amountSum > 100.0001" class="text-[11px] text-danger-600 dark:text-danger-400">مجموع اجزا از ۱۰۰٪ بیشتر است؛ مقدارها را بررسی کنید.</p>
-      <div class="flex flex-wrap items-center gap-2 pt-1">
-        <button type="button" :disabled="!canApply" @click="apply" class="h-9 px-4 rounded-lg text-sm font-semibold bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed">
-          اعمال روی جدول عناصر
-        </button>
-        <button type="button" @click="rows.splice(0)" class="h-9 px-3 rounded-lg text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">پاک کردن ردیف‌ها</button>
-      </div>
-      <p class="text-[11px] text-gray-500 dark:text-gray-400 leading-5">با اعمال، مقدار فعلی جدول عناصر جایگزین می‌شود (به‌صورت عنصر خالص) و می‌توانید بعداً دستی ویرایش کنید.</p>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -97,6 +170,20 @@ interface Row { id: number; formula: string; amount: number | null; genericN: 'N
 let seq = 0;
 const rows = reactive<Row[]>([]);
 const quick = ref('');
+const showHelp = ref(false);
+const POPULAR = [
+  { f: 'KNO3', n: 'نیترات پتاسیم' }, { f: 'Ca(NO3)2·4H2O', n: 'نیترات کلسیم ۴آبه' }, { f: 'KH2PO4', n: 'مونوپتاسیم فسفات' },
+  { f: 'MgSO4·7H2O', n: 'سولفات منیزیم' }, { f: 'K2SO4', n: 'سولفات پتاسیم' }, { f: 'H3BO3', n: 'اسید بوریک' }
+];
+const EXAMPLES = [
+  { t: 'مخلوط دو نمک', rows: [['KNO3', 50], ['Ca(NO3)2·4H2O', 30]] },
+  { t: 'فرم اکسیدی NPK', rows: [['P2O5', 20], ['K2O', 20]] },
+  { t: 'کود ۱۰۰٪ خالص', rows: [['(NH4)2SO4', 100]] }
+] as { t: string; rows: [string, number][] }[];
+const loadExample = (ex: { rows: [string, number][] }) => {
+  rows.splice(0);
+  for (const [f, a] of ex.rows) { rows.push({ id: ++seq, formula: f, amount: a, genericN: 'N-NH4' }); }
+};
 
 const QUICK = [
   { title: 'نیتروژن', items: [
@@ -124,6 +211,7 @@ const states = computed(() =>
     catch (e) { return { analysis: null, error: e instanceof FormulaError ? e.message : 'فرمول معتبر نیست' }; }
   })
 );
+const symbol = (k: string) => (k === 'N-NO3' ? 'N نیترات' : k === 'N-NH4' ? 'N آمونیوم' : getElementDef(k)?.symbol || k);
 const amountSum = computed(() => rows.reduce((s, r, i) => s + (states.value[i].analysis ? Number(r.amount) || 0 : 0), 0));
 const totals = computed<Record<string, number>>(() => {
   const t: Record<string, number> = {};
@@ -137,11 +225,18 @@ const totals = computed<Record<string, number>>(() => {
 });
 const resultList = computed(() =>
   ELEMENT_DEFS.filter((d) => (totals.value[d.key] || 0) > 0.00005)
-    .map((d) => ({ key: d.key, name: d.name, pct: Math.round(totals.value[d.key] * 10000) / 10000 }))
+    .map((d) => ({ key: d.key, name: d.name, symbol: symbol(d.key), pct: Math.round(totals.value[d.key] * 10000) / 10000 }))
 );
+const maxPct = computed(() => Math.max(0.0001, ...resultList.value.map((e) => e.pct)));
+const isMicro = (k: string) => ['Fe', 'Mn', 'Zn', 'B', 'Cu', 'Mo', 'Si'].includes(k);
+const chipCls = (k: string) => k.startsWith('N')
+  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/25 dark:text-emerald-300'
+  : isMicro(k) ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/25 dark:text-amber-300' : 'bg-blue-50 text-blue-700 dark:bg-blue-900/25 dark:text-blue-300';
+const tileCls = (k: string) => k.startsWith('N')
+  ? 'bg-emerald-50/70 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800/50 text-emerald-600'
+  : isMicro(k) ? 'bg-amber-50/70 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800/50 text-amber-600' : 'bg-blue-50/70 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800/50 text-blue-600';
 const hasResult = computed(() => resultList.value.length > 0);
 const canApply = computed(() => hasResult.value && amountSum.value <= 100.0001 && resultList.value.every((e) => e.pct <= 100));
-const symbol = (k: string) => (k === 'N-NO3' ? 'N نیترات' : k === 'N-NH4' ? 'N آمونیوم' : getElementDef(k)?.symbol || k);
 
 const apply = () => {
   const filled = ELEMENT_DEFS.some((d) => Number(props.entries[d.key]?.value) > 0);
@@ -163,4 +258,7 @@ input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 input:focus, select:focus { outline: none; }
+.ab-enter-active, .ab-leave-active { transition: all .2s ease; }
+.ab-enter-from { opacity: 0; transform: translateY(-6px) scale(.985); }
+.ab-leave-to { opacity: 0; transform: translateX(14px); }
 </style>
