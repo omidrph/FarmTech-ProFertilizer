@@ -1,26 +1,52 @@
+
 <template>
   <AppModal :open="true" :title="d ? d.full_name : 'کاربر'" :subtitle="d?.phone_number" size="lg" @close="$emit('close')">
     <div v-if="!d" class="py-10 text-center text-sm text-gray-500">{{ error || 'در حال بارگذاری…' }}</div>
-    <div v-else class="space-y-5">
+    <div v-else class="space-y-4">
+      <!-- سربرگ -->
+      <div class="rounded-2xl p-4 bg-gradient-to-l from-primary-50 to-violet-50 dark:from-primary-900/20 dark:to-violet-900/20 border border-primary-100 dark:border-primary-900/40 flex flex-wrap items-center gap-3">
+        <span class="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold flex-shrink-0" :style="avatarStyle(d.full_name)">{{ initials(d.full_name) }}</span>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-gray-900 dark:text-white truncate">{{ d.full_name }}</p>
+          <p class="text-xs text-gray-500 tabular-nums" dir="ltr">{{ d.phone_number }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button class="ad-btn !border-violet-300 !text-violet-700 dark:!text-violet-300" :disabled="busy || isSelf || d.role === 'admin' || d.status !== 'active'" title="وارد حساب این کاربر می‌شوید و با دید خودش کار می‌کنید" @click="impersonate">🎭 ورود به‌جای کاربر</button>
+          <button class="ad-btn" :disabled="busy" @click="makeCode">📱 کد بازیابی رمز</button>
+        </div>
+      </div>
+      <div v-if="codeInfo" class="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 p-3 text-sm">
+        کد بازیابی برای <b dir="ltr">{{ codeInfo.phone_number }}</b> ({{ codeInfo.expires_in_minutes }} دقیقه اعتبار):
+        <div class="mt-1.5 flex items-center gap-2 flex-wrap">
+          <code class="px-3 py-1 rounded-lg bg-white dark:bg-gray-800 font-mono text-lg tracking-widest select-all" dir="ltr">{{ codeInfo.code }}</code>
+          <button class="ad-btn ad-btn-sm" @click="copyText(codeInfo.code)">کپی</button>
+          <span v-if="codeInfo.sms_sent" class="text-xs text-emerald-600">پیامک هم ارسال شد</span>
+        </div>
+        <p class="text-[11px] text-gray-500 mt-1.5">کاربر در صفحهٔ «فراموشی رمز» با همین کد رمز جدید می‌گذارد (یا از «تعیین رمز دلخواه» استفاده کنید).</p>
+      </div>
+      <div class="flex gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-900/50 w-fit">
+        <button v-for="t in mtabs" :key="t.k" class="px-3 py-1.5 rounded-lg text-xs font-medium transition" :class="mtab === t.k ? 'bg-white dark:bg-gray-700 shadow text-primary-700 dark:text-primary-300' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'" @click="mtab = t.k">{{ t.l }}</button>
+      </div>
+
       <!-- خلاصه -->
-      <div class="flex flex-wrap items-center gap-2">
+      <div v-show="mtab === 'info'" class="flex flex-wrap items-center gap-2">
         <AdminBadges :role="d.role" :status="d.status" />
         <span v-if="d.is_2fa_enabled" class="ad-chip bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">۲FA فعال</span>
         <span v-if="d.locked_until" class="ad-chip bg-orange-100 text-orange-700">قفل موقت ورود</span>
       </div>
-      <div v-if="d.status !== 'active'" class="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 p-3 text-sm text-orange-800 dark:text-orange-200">
+      <div v-if="d.status !== 'active' && mtab === 'info'" class="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20 p-3 text-sm text-orange-800 dark:text-orange-200">
         <b>{{ d.status === 'banned' ? 'بن دائم' : 'مسدود' }}</b>
         <span v-if="d.status_until"> تا {{ faDate(d.status_until) }}</span>
         <span v-if="d.status_reason"> — دلیل: {{ d.status_reason }}</span>
       </div>
 
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+      <div v-show="mtab === 'info'" class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
         <div v-for="c in countCards" :key="c.l" class="rounded-xl bg-gray-50 dark:bg-gray-900/40 p-2.5">
           <p class="text-lg font-bold tabular-nums text-gray-900 dark:text-white">{{ faN(c.v) }}</p>
           <p class="text-[10px] text-gray-500">{{ c.l }}</p>
         </div>
       </div>
-      <dl class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-gray-600 dark:text-gray-300">
+      <dl v-show="mtab === 'info'" class="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 text-xs text-gray-600 dark:text-gray-300">
         <div class="flex justify-between"><dt>عضویت</dt><dd>{{ faDate(d.created_at) }}</dd></div>
         <div class="flex justify-between"><dt>آخرین ورود</dt><dd>{{ faDate(d.last_login) }}</dd></div>
         <div class="flex justify-between"><dt>آخرین IP</dt><dd dir="ltr">{{ d.last_ip || '—' }}</dd></div>
@@ -28,7 +54,7 @@
       </dl>
 
       <!-- ویرایش -->
-      <section>
+      <section v-show="mtab === 'info'" class="rounded-2xl border border-gray-200 dark:border-gray-700 p-3.5">
         <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-2">ویرایش اطلاعات</h4>
         <div class="grid sm:grid-cols-3 gap-2.5">
           <div><label class="ad-label">نام</label><input v-model="form.first_name" class="ad-input" /></div>
@@ -41,7 +67,7 @@
       </section>
 
       <!-- نقش -->
-      <section>
+      <section v-show="mtab === 'info'" class="rounded-2xl border border-gray-200 dark:border-gray-700 p-3.5">
         <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-2">نقش کاربر</h4>
         <div class="flex flex-wrap gap-2">
           <button v-for="r in roles" :key="r" class="ad-btn" :class="d.role === r ? '!border-primary-500 !text-primary-700 dark:!text-primary-300 bg-primary-50 dark:bg-primary-900/20' : ''" :disabled="busy || d.role === r" @click="changeRole(r)">
@@ -51,7 +77,7 @@
       </section>
 
       <!-- وضعیت حساب -->
-      <section>
+      <section v-show="mtab === 'security'" class="rounded-2xl border border-gray-200 dark:border-gray-700 p-3.5">
         <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-2">وضعیت حساب</h4>
         <div v-if="d.status !== 'active'" class="mb-2"><button class="ad-btn-primary" :disabled="busy" @click="restore">رفع مسدودیت / بن</button></div>
         <div v-else class="space-y-2.5">
@@ -73,7 +99,7 @@
       </section>
 
       <!-- امنیت -->
-      <section>
+      <section v-show="mtab === 'security'" class="rounded-2xl border border-gray-200 dark:border-gray-700 p-3.5">
         <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-2">امنیت</h4>
         <div class="flex flex-wrap gap-2">
           <button class="ad-btn" :disabled="busy" @click="resetPassword(false)">ریست رمز (تصادفی)</button>
@@ -96,7 +122,7 @@
       </section>
 
       <!-- فعالیت‌ها -->
-      <section class="grid sm:grid-cols-2 gap-3">
+      <section v-show="mtab === 'activity'" class="grid sm:grid-cols-2 gap-3">
         <div>
           <h4 class="text-sm font-bold text-gray-900 dark:text-white mb-2">رویدادهای امنیتی اخیر</h4>
           <p v-if="!d.recent_security.length" class="text-xs text-gray-400">موردی نیست.</p>
@@ -117,7 +143,7 @@
       </section>
 
       <!-- حذف -->
-      <section class="rounded-xl border border-rose-200 dark:border-rose-900 p-3">
+      <section v-show="mtab === 'activity'" class="rounded-xl border border-rose-200 dark:border-rose-900 p-3">
         <h4 class="text-sm font-bold text-rose-700 dark:text-rose-400 mb-1">حذف حساب</h4>
         <p class="text-xs text-gray-500 mb-2">با حذف، گزارش‌ها، کودها و همهٔ داده‌های این کاربر برای همیشه پاک می‌شود. اگر فقط می‌خواهید دسترسی را ببندید، «مسدود/بن» را بزنید.</p>
         <button class="ad-btn-danger" :disabled="busy || isSelf" @click="remove">حذف دائمی کاربر</button>
@@ -131,7 +157,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import AppModal from '@/components/common/AppModal.vue';
 import AdminBadges from './AdminBadges.vue';
 import { adminApi, apiError, faDate, faN, ROLE_LABEL, type AdminUserDetail, type Role } from '@/services/adminApi';
-import { confirmDialog, toast } from './adminUi';
+import { avatarStyle, confirmDialog, initials, toast } from './adminUi';
 
 const props = defineProps<{ userId: number; selfId?: number }>();
 const emit = defineEmits<{ (e: 'close'): void; (e: 'changed'): void }>();
@@ -142,6 +168,9 @@ const error = ref('');
 const busy = ref(false);
 const form = reactive({ first_name: '', last_name: '', phone_number: '', admin_note: '' });
 const blockForm = reactive<{ reason: string; hours: number | null }>({ reason: '', hours: 24 });
+const mtab = ref<'info' | 'security' | 'activity'>('info');
+const mtabs = [{ k: 'info', l: 'اطلاعات و نقش' }, { k: 'security', l: 'امنیت و رمز' }, { k: 'activity', l: 'فعالیت و حذف' }] as const;
+const codeInfo = ref<null | { code: string; phone_number: string; sms_sent: boolean; expires_in_minutes: number }>(null);
 const newPassword = ref('');
 const customPw = ref<string | null>(null);
 
@@ -199,6 +228,19 @@ async function submitCustomPw() {
   await run(() => adminApi.resetPassword(props.userId, customPw.value || ''), 'رمز تغییر کرد');
   customPw.value = null;
 }
+async function makeCode() {
+  busy.value = true;
+  try { codeInfo.value = await adminApi.makeResetCode(props.userId, false); toast('کد بازیابی ساخته شد'); }
+  catch (e) { toast(apiError(e), 'error'); } finally { busy.value = false; }
+}
+async function impersonate() {
+  if (!d.value) return;
+  if (!(await confirmDialog({ title: `ورود به‌جای «${d.value.full_name}»`, message: 'وارد حساب این کاربر می‌شوید و همهٔ کارها به نام او ثبت می‌شود. با دکمهٔ «بازگشت به مدیر» در بالای صفحه به حساب خودتان برمی‌گردید. این کار در لاگ مدیریتی ثبت می‌شود.', confirmText: 'وارد شو' }))) return;
+  busy.value = true;
+  try { await adminApi.impersonate(props.userId); window.location.href = '/'; }
+  catch (e) { toast(apiError(e), 'error'); busy.value = false; }
+}
+async function copyText(t: string) { try { await navigator.clipboard.writeText(t); toast('کپی شد'); } catch { toast('کپی ناموفق بود', 'error'); } }
 async function copyPw() {
   try { await navigator.clipboard.writeText(newPassword.value); toast('کپی شد'); } catch { toast('کپی ناموفق بود', 'error'); }
 }

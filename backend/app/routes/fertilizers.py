@@ -1,3 +1,4 @@
+
 # backend/app/routes/fertilizers.py
 """مسیرهای کودها (Fertilizers)"""
 
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 import logging
 
 from app.database import get_db
+from app.permissions import require_perm
 from app.models import User, Fertilizer
 from app.schemas import FertilizerCreate, FertilizerUpdate, FertilizerResponse
 import app.crud as crud
@@ -175,7 +177,7 @@ def check_system_copy_status(
 def create_fertilizer(
     fertilizer_data: FertilizerCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_perm("manual_fertilizer"))
 ):
     """ایجاد کود شخصی جدید"""
     try:

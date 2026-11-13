@@ -1,3 +1,4 @@
+
 <template>
   <div class="space-y-3">
     <div class="flex flex-wrap items-center gap-1.5">
@@ -15,7 +16,7 @@
           <select v-model="sec.event_type" class="ad-input"><option value="">همه</option><option v-for="t in eventTypes" :key="t" :value="t">{{ t }}</option></select></div>
         <div class="w-36"><label class="ad-label">شدت</label>
           <select v-model="sec.severity" class="ad-input"><option value="">همه</option><option>INFO</option><option>WARNING</option><option>ERROR</option><option>CRITICAL</option></select></div>
-        <div class="w-36"><label class="ad-label">شناسهٔ کاربر</label><input v-model="sec.user_id" class="ad-input" dir="ltr" inputmode="numeric" /></div>
+        <div class="w-36"><label class="ad-label">شناسهٔ کاربر (ID)</label><input v-model="sec.user_id" class="ad-input" dir="ltr" inputmode="numeric" /></div>
         <div class="flex-1 min-w-[10rem]"><label class="ad-label">IP یا مسیر</label><input v-model="sec.q" class="ad-input" dir="ltr" /></div>
       </div>
       <div class="ad-card overflow-hidden">
@@ -27,7 +28,10 @@
               <td class="ad-td text-xs text-gray-500">{{ faDate(l.created_at) }}</td>
               <td class="ad-td text-xs font-medium" dir="ltr">{{ l.event_type }}</td>
               <td class="ad-td"><span class="ad-chip" :class="sevCls(l.severity)">{{ l.severity }}</span></td>
-              <td class="ad-td text-xs tabular-nums">{{ l.user_id ?? '—' }}</td>
+              <td class="ad-td text-xs">
+                <template v-if="l.user_id"><p class="font-semibold text-gray-800 dark:text-gray-100">{{ l.user_name || 'کاربر حذف‌شده' }}</p><p class="text-[10px] text-gray-400 tabular-nums" dir="ltr">{{ l.user_phone || '#' + l.user_id }}</p></template>
+                <span v-else class="text-gray-400">—</span>
+              </td>
               <td class="ad-td text-xs" dir="ltr">{{ l.ip || '—' }}</td>
               <td class="ad-td text-xs text-gray-500" dir="ltr">{{ l.method }} {{ l.endpoint }}</td>
             </tr>

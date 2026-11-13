@@ -1,4 +1,13 @@
+
 // ابزارهای مشترک نمودارهای پنل مدیریت (SVG خالص، بدون کتابخانه)
+
+/**
+ * جهت محور زمان در همهٔ نمودارهای ادمین:
+ * true  = قدیمی‌ترین سمت چپ، جدیدترین سمت راست (استاندارد نمودارها، محور عددی سمت چپ)
+ * false = برعکس (قدیمی‌ترین سمت راست)
+ * اگر جهت باز هم برعکس به نظر رسید، فقط همین مقدار را عوض کنید.
+ */
+export const CHART_TIME_LTR = true;
 
 export const faNum = (v: number, digits = 0): string =>
   isFinite(v) ? v.toLocaleString('fa-IR', { minimumFractionDigits: digits, maximumFractionDigits: digits }) : '—';

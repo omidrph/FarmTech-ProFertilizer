@@ -1,3 +1,4 @@
+
 <!-- frontend/src/views/AdminView.vue -->
 <!-- پنل مدیریت: هم‌سبک هدر و زیرمنوی خود برنامه؛ فقط نقش admin (راه‌نگهبان روتر + بررسی سمت سرور) -->
 <template>
@@ -46,6 +47,7 @@
             :class="tab === t.k ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'">
             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" :d="t.icon" /></svg>
             <span>{{ t.l }}</span>
+            <span v-if="badge(t.k)" class="min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-rose-500 text-white text-[10px] leading-[1.1rem] text-center tabular-nums">{{ badge(t.k).toLocaleString('fa-IR') }}</span>
             <span v-if="tab === t.k" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full"></span>
           </button>
         </div>
@@ -60,6 +62,9 @@
         <AdminFertilizers v-else-if="tab === 'fertilizers'" key="f" />
         <AdminCalculations v-else-if="tab === 'calculations'" key="c" />
         <AdminLogs v-else-if="tab === 'logs'" key="l" />
+        <AdminOrders v-else-if="tab === 'orders'" key="o" @waiting="(n: number) => (waitingOrders = n)" />
+        <AdminResets v-else-if="tab === 'resets'" key="r" @pending="(n: number) => (pendingResets = n)" />
+        <AdminPermissions v-else-if="tab === 'permissions'" key="p" />
         <AdminAnnouncements v-else-if="tab === 'announcements'" key="a" />
         <AdminSettings v-else-if="tab === 'settings'" key="s" />
       </Transition>
@@ -102,6 +107,10 @@ import AdminCalculations from '@/components/admin/AdminCalculations.vue';
 import AdminLogs from '@/components/admin/AdminLogs.vue';
 import AdminAnnouncements from '@/components/admin/AdminAnnouncements.vue';
 import AdminSettings from '@/components/admin/AdminSettings.vue';
+import AdminOrders from '@/components/admin/AdminOrders.vue';
+import AdminResets from '@/components/admin/AdminResets.vue';
+import AdminPermissions from '@/components/admin/AdminPermissions.vue';
+import { adminApi } from '@/services/adminApi';
 import { answerConfirm, confirmState, toasts } from '@/components/admin/adminUi';
 import '@/components/admin/admin.css';
 
@@ -111,6 +120,9 @@ const tabs = [
   { k: 'fertilizers', l: 'کودهای سیستمی', icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5' },
   { k: 'calculations', l: 'محاسبه‌ها', icon: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z' },
   { k: 'logs', l: 'لاگ‌ها', icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z' },
+  { k: 'orders', l: 'سفارش‌ها و فروشگاه', icon: 'M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
+  { k: 'resets', l: 'بازیابی رمز', icon: 'M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z' },
+  { k: 'permissions', l: 'دسترسی‌ها', icon: 'M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z' },
   { k: 'announcements', l: 'اعلان‌ها', icon: 'M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46' },
   { k: 'settings', l: 'تنظیمات و سلامت', icon: 'M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281zM15 12a3 3 0 11-6 0 3 3 0 016 0z' }
 ];
@@ -124,6 +136,9 @@ const usersKey = ref(0);
 const initialQuery = ref('');
 const searchText = ref('');
 const searchEl = ref<HTMLInputElement | null>(null);
+const waitingOrders = ref(0);
+const pendingResets = ref(0);
+const badge = (k: string) => (k === 'orders' ? waitingOrders.value : k === 'resets' ? pendingResets.value : 0);
 const dark = ref(document.documentElement.classList.contains('dark'));
 
 const go = (k: string) => { tab.value = k; pendingUser.value = null; initialQuery.value = ''; router.replace({ query: { tab: k } }); };
@@ -150,6 +165,8 @@ onMounted(async () => {
     const r = await axios.get((import.meta.env.VITE_API_URL || '/api/v1') + '/auth/me', { headers: { Authorization: `Bearer ${token}` }, withCredentials: true });
     if (r.data.role !== 'admin') { denied.value = true; setTimeout(() => router.replace('/'), 1200); return; }
     me.value = r.data;
+    adminApi.ordersSummary().then((x) => (waitingOrders.value = x.waiting_review)).catch(() => {});
+    adminApi.resetRequests({ state: 'pending', page_size: 1 }).then((x) => (pendingResets.value = x.pending)).catch(() => {});
   } catch { router.replace('/login'); }
 });
 onUnmounted(() => window.removeEventListener('keydown', onKey));

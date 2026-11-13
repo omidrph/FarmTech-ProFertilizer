@@ -1,4 +1,5 @@
 
+
 # backend/app/models.py
 """همه مدل‌های دیتابیس (SQLAlchemy) - نسخه امنیتی کامل"""
 
@@ -265,6 +266,11 @@ class Fertilizer(Base):
     description = Column(Text, nullable=True)
     is_system_default = Column(Boolean, default=False)
     source_system_id = Column(Integer, nullable=True)
+    # 🛒 فروشگاه (فقط برای کودهای سیستمی)
+    shop_enabled = Column(Boolean, default=True, server_default=text("true"), nullable=False)
+    shop_price = Column(Float, nullable=True)            # قیمت فروش؛ خالی = همان price_per_kg
+    shop_stock = Column(Float, nullable=True)            # موجودی؛ خالی = نامحدود
+    shop_min_qty = Column(Float, nullable=True)          # حداقل مقدار سفارش
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -504,6 +510,10 @@ class Announcement(Base):
     body = Column(Text, nullable=True)
     level = Column(String(10), default="info", nullable=False)      # info | success | warning | danger
     audience = Column(String(10), default="all", nullable=False)    # all | user | plus
+    style = Column(String(12), default="bar", server_default="bar", nullable=False)  # bar|card|toast|modal|ticker|corner|ribbon
+    dismissible = Column(Boolean, default=True, server_default=text("true"), nullable=False)
+    link_url = Column(String(300), nullable=True)
+    link_label = Column(String(60), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     starts_at = Column(DateTime(timezone=True), nullable=True)
     ends_at = Column(DateTime(timezone=True), nullable=True)
@@ -521,3 +531,44 @@ class AppSetting(Base):
     value = Column(JSON, nullable=True)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     updated_by = Column(Integer, nullable=True)
+
+
+# ============================================================
+# 🛒 سبد خرید و سفارش‌های فروشگاه
+# ============================================================
+class ShopCart(Base):
+    """سبد خرید ذخیره‌شدهٔ هر کاربر (یک سبد برای هر کاربر)"""
+    __tablename__ = "shop_carts"
+
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    items = Column(JSON, nullable=False, default=list)      # [{fertilizer_id, qty}]
+    note = Column(Text, nullable=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ShopOrder(Base):
+    """سفارش فروشگاه؛ پرداخت فعلاً کارت‌به‌کارت با ارسال عکس رسید"""
+    __tablename__ = "shop_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(16), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_name = Column(String(120), nullable=True)
+    phone_number = Column(String(15), nullable=True)
+    # awaiting_payment | awaiting_review | approved | processing | shipped | completed | rejected | cancelled
+    status = Column(String(20), default="awaiting_payment", nullable=False, index=True)
+    items = Column(JSON, nullable=False, default=list)      # [{fertilizer_id,name,formula,unit,qty,unit_price,line_total}]
+    subtotal = Column(Float, default=0.0)
+    shipping = Column(Float, default=0.0)
+    total = Column(Float, default=0.0)
+    customer_note = Column(Text, nullable=True)
+    address = Column(JSON, nullable=True)                   # {receiver, phone, province, city, address, postal_code}
+    receipt_image = Column(Text, nullable=True)             # data URL
+    receipt_info = Column(JSON, nullable=True)              # {last4, paid_amount, paid_at, note}
+    receipt_at = Column(DateTime(timezone=True), nullable=True)
+    admin_note = Column(Text, nullable=True)
+    reject_reason = Column(Text, nullable=True)
+    tracking_code = Column(String(60), nullable=True)
+    handled_by = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

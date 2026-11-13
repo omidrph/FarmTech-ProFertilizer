@@ -1,3 +1,4 @@
+
 <template>
   <div class="space-y-4">
     <!-- بنر خوش‌آمد -->
@@ -15,10 +16,27 @@
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button class="hero-btn" @click="$emit('go', 'users')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>کاربران</button>
+          <button class="hero-btn" @click="$emit('go', 'orders')">🛒 سفارش‌ها</button>
           <button class="hero-btn" @click="$emit('go', 'announcements')">اعلان جدید</button>
           <button class="hero-btn" @click="$emit('go', 'settings')">حالت تعمیر</button>
         </div>
       </div>
+    </section>
+
+    <!-- نیازمند توجه -->
+    <section class="grid sm:grid-cols-3 gap-3">
+      <button class="ad-card ad-hover p-4 flex items-center gap-3 text-right" @click="$emit('go', 'orders')">
+        <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg flex-shrink-0">🧾</span>
+        <span class="min-w-0"><b class="block text-lg tabular-nums" :class="shop.waiting_review ? 'text-amber-600' : 'text-gray-900 dark:text-white'">{{ faNum(shop.waiting_review) }}</b><span class="text-[11px] text-gray-500">رسید در صف بررسی</span></span>
+      </button>
+      <button class="ad-card ad-hover p-4 flex items-center gap-3 text-right" @click="$emit('go', 'resets')">
+        <span class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-lg flex-shrink-0">🔑</span>
+        <span class="min-w-0"><b class="block text-lg tabular-nums" :class="resetPending ? 'text-sky-600' : 'text-gray-900 dark:text-white'">{{ faNum(resetPending) }}</b><span class="text-[11px] text-gray-500">درخواست فعال بازیابی رمز</span></span>
+      </button>
+      <button class="ad-card ad-hover p-4 flex items-center gap-3 text-right" @click="$emit('go', 'orders')">
+        <span class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg flex-shrink-0">💰</span>
+        <span class="min-w-0"><b class="block text-lg tabular-nums text-gray-900 dark:text-white">{{ faNum(shop.revenue) }}</b><span class="text-[11px] text-gray-500">فروش تأییدشده فروشگاه ({{ faNum(shop.total) }} سفارش)</span></span>
+      </button>
     </section>
 
     <!-- بازهٔ زمانی -->
@@ -139,6 +157,13 @@ import { adminApi, apiError, faDate } from '@/services/adminApi';
 import { faDay, faNum, faShort, PALETTE } from './charts/chartUtils';
 import { avatarStyle, initials } from './adminUi';
 import { toast } from './adminUi';
+
+const shop = ref({ revenue: 0, waiting_review: 0, total: 0 });
+const resetPending = ref(0);
+onMounted(() => {
+  adminApi.ordersSummary().then((x) => (shop.value = x)).catch(() => {});
+  adminApi.resetRequests({ state: 'pending', page_size: 1 }).then((x) => (resetPending.value = x.pending)).catch(() => {});
+});
 
 const props = defineProps<{ name?: string }>();
 defineEmits<{ (e: 'open-user', id: number): void; (e: 'go', tab: string): void }>();

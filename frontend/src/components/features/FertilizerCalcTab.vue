@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/FertilizerCalcTab.vue -->
 <!--
   ============================================================
@@ -141,6 +142,18 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {{ isExporting ? 'در حال آماده‌سازی...' : 'خروجی PDF' }}
+          </button>
+
+          <!-- 🛒 سبد خرید: کودهای سیستمی همین نتیجه را به سبد خرید اضافه می‌کند -->
+          <button
+            v-if="can('shop')"
+            type="button"
+            @click="handleAddToCart"
+            :disabled="!hasOptimizationResult || cartBusy"
+            class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white rounded-lg bg-gradient-to-l from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 ring-1 ring-violet-400/40 shadow-md shadow-violet-600/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            {{ cartBusy ? 'در حال افزودن...' : 'سبد خرید' }}
           </button>
         </template>
       </div>
@@ -355,6 +368,8 @@ import { useWaterStore } from '@/store/modules/waterStore';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useCalculations } from '@/composables/useCalculations';
 import { usePdfExport } from '@/composables/usePdfExport';
+import { usePermissions } from '@/composables/usePermissions';
+import { useShopStore } from '@/store/modules/shopStore';
 import { apiService } from '@/services/apiService';
 import type { PhActiveSummary } from '@/services/apiService';
 
@@ -702,6 +717,35 @@ const handleWeightEdit = async (payload: { fertilizerId: string; weight: number 
 const handleSetEc = async (ec: number) => {
   const r = await calcStore.scaleToTargetEc(ec);
   showToast(r.ok ? `EC روی ${ec.toLocaleString('fa-IR')} تنظیم و مقدار کودها متناسب شد` : (r.message || 'تنظیم EC انجام نشد'), r.ok ? 'success' : 'error');
+};
+
+const shopStore = useShopStore();
+const { can } = usePermissions();
+const cartBusy = ref(false);
+
+// مقدار هر کود نتیجه (گرم برای کل حجم مخزن) → مقدار خرید؛ فقط کودهای سیستمی (یا کپی آن‌ها) قابل خریدند
+const handleAddToCart = async () => {
+  const result: any = calcStore.optimizationResult;
+  if (!result) return showToast('ابتدا محاسبه را انجام دهید', 'error');
+  const bySystem = new Map<number, number>();
+  const skipped: string[] = [];
+  for (const [fid, grams] of Object.entries(result.weights || {}) as [string, number][]) {
+    if (!(Number(grams) > 0)) continue;
+    const f: any = props.fertilizers.find((x: any) => String(x.id) === String(fid));
+    const sysId = f ? (f.isSystemDefault ? Number(f.id) : Number(f.sourceSystemId || 0)) : 0;
+    if (!f || !sysId) { skipped.push(f?.name || fid); continue; }
+    const kg = Number(grams) / 1000;
+    const liters = f.priceUnit === 'l' && Number(f.densityGMl) > 0 ? kg / Number(f.densityGMl) : null;
+    const qty = Math.max(Math.round((liters ?? kg) * 100) / 100, 0.01);
+    bySystem.set(sysId, Math.round(((bySystem.get(sysId) || 0) + qty) * 100) / 100);
+  }
+  if (!bySystem.size) return showToast('هیچ‌کدام از کودهای این نتیجه در فروشگاه موجود نیست', 'error');
+  cartBusy.value = true;
+  const ok = await shopStore.addMany([...bySystem].map(([fertilizer_id, qty]) => ({ fertilizer_id, qty })));
+  cartBusy.value = false;
+  if (!ok) return showToast(shopStore.error || 'افزودن به سبد ناموفق بود', 'error');
+  showToast(skipped.length ? `به سبد اضافه شد (کودهای شخصی ${skipped.join('، ')} قابل خرید نیستند)` : 'کودهای این نتیجه به سبد خرید اضافه شد', 'success');
+  shopStore.open('cart');
 };
 
 const handleExportPdf = async () => {

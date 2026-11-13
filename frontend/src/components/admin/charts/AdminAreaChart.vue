@@ -1,4 +1,5 @@
-<!-- نمودار ناحیه‌ای/خطی نرم با تولتیپ، شبکه و راهنما؛ زمان از راست به چپ (مناسب فارسی) -->
+
+<!-- نمودار ناحیه‌ای/خطی نرم با تولتیپ، شبکه و راهنما؛ جهت زمان در chartUtils.CHART_TIME_LTR -->
 <template>
   <div ref="wrap" class="relative w-full select-none" :style="{ height: height + 'px' }">
     <svg v-if="w > 0" :width="w" :height="height" class="block overflow-visible"
@@ -58,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
-import { faNum, faShort, niceScale, smoothPath, type Pt } from './chartUtils';
+import { CHART_TIME_LTR, faNum, faShort, niceScale, smoothPath, type Pt } from './chartUtils';
 
 export interface AreaSeries { key: string; name: string; color: string; values: number[]; area?: boolean; dashed?: boolean }
 const props = withDefaults(defineProps<{ labels: string[]; series: AreaSeries[]; height?: number }>(), { height: 240 });
@@ -84,8 +85,11 @@ const visibleMax = computed(() => Math.max(1, ...props.series.filter((s) => !hid
 const scale = computed(() => niceScale(visibleMax.value, 4));
 const innerW = computed(() => Math.max(w.value - padL - padR, 1));
 const innerH = computed(() => props.height - padT - padB);
-// زمان از راست به چپ: نقطهٔ اول سمت راست است
-const xAt = (i: number) => w.value - padR - (n.value <= 1 ? innerW.value / 2 : (i / (n.value - 1)) * innerW.value);
+// جهت زمان از CHART_TIME_LTR می‌آید (پیش‌فرض: قدیمی‌ترین سمت چپ)
+const xAt = (i: number) => {
+  const off = n.value <= 1 ? innerW.value / 2 : (i / (n.value - 1)) * innerW.value;
+  return CHART_TIME_LTR ? padL + off : w.value - padR - off;
+};
 const yAt = (v: number) => padT + innerH.value - (v / scale.value.max) * innerH.value;
 
 const yTicks = computed(() => Array.from({ length: 5 }, (_, i) => { const v = (scale.value.max / 4) * i; return { v, y: yAt(v) }; }));
@@ -104,7 +108,7 @@ const areaPath = (s: AreaSeries) => {
 function indexFromX(clientX: number) {
   const rect = wrap.value!.getBoundingClientRect();
   const x = clientX - rect.left;
-  const frac = (w.value - padR - x) / innerW.value;
+  const frac = CHART_TIME_LTR ? (x - padL) / innerW.value : (w.value - padR - x) / innerW.value;
   return Math.min(Math.max(Math.round(frac * (n.value - 1)), 0), n.value - 1);
 }
 const onMove = (e: MouseEvent) => { if (n.value) hover.value = indexFromX(e.clientX); };

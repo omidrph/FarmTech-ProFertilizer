@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/layout/AppHeader.vue -->
 <template>
   <header class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-50 transition-colors duration-200">
@@ -89,6 +90,7 @@
             <span class="relative z-10 flex items-center gap-1.5">
               <span v-html="tab.icon" class="w-4 h-4 flex-shrink-0"></span>
               <span class="hidden xl:inline">{{ tab.label }}</span>
+            <span v-if="tab.id === 'shop' && shopStore.count" class="min-w-[1.05rem] h-[1.05rem] px-1 rounded-full bg-violet-600 text-white text-[10px] leading-[1.05rem] text-center">{{ shopStore.count.toLocaleString('fa-IR') }}</span>
             </span>
             <span v-if="currentActiveTab === tab.id" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary-600 dark:bg-primary-400 rounded-full transition-all duration-300"></span>
           </button>
@@ -155,7 +157,7 @@
 
         <button v-for="tab in navTabs" :key="tab.id" @click="setActiveTab(tab.id); mobileMenuOpen = false" class="flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm" :class="currentActiveTab === tab.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'">
           <span v-html="tab.icon"></span>
-          <span>{{ tab.label }}</span>
+          <span>{{ tab.label }}</span><span v-if="tab.id === 'shop' && shopStore.count" class="mr-1 px-1.5 rounded-full bg-violet-600 text-white text-[10px]">{{ shopStore.count.toLocaleString('fa-IR') }}</span>
         </button>
 
         <button @click="toggleTheme" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 transition-colors text-sm">
@@ -290,6 +292,10 @@
 </template>
 
 <script setup lang="ts">
+import { usePermissions } from '@/composables/usePermissions';
+import { useShopStore } from '@/store/modules/shopStore';
+const { can } = usePermissions();
+const shopStore = useShopStore();
 import AppModal from '@/components/common/AppModal.vue';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useReportStore } from '@/store/modules/reportStore';
@@ -355,13 +361,18 @@ const getReportStatusClass = computed(() => {
 });
 
 // ===== Navigation Tabs =====
-const navTabs = [
+const navTabsAll = [
   {
     id: 'home',
     label: 'صفحه اصلی',
     icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
     </svg>`
+  },
+  {
+    id: 'shop',
+    label: 'فروشگاه',
+    icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>`
   },
   {
     id: 'education',
@@ -385,6 +396,8 @@ const navTabs = [
     </svg>`
   }
 ];
+
+const navTabs = computed(() => navTabsAll.filter((t) => t.id !== 'shop' || can('shop')));
 
 // ===== Methods =====
 const setActiveTab = (tabId: string) => {

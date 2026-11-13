@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/calc/ResultKpiBar.vue -->
 <!--
   نوار خلاصه نتیجه. «دقت رسیدن به هدف» چون ذاتاً یک درصد است، به‌شکل
@@ -50,31 +51,25 @@
       </div>
     </article>
 
-    <!-- EC نهایی: قابل ویرایش + نوار محدودهٔ مطلوب -->
-    <article class="col-span-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3.5">
-      <div class="flex items-center justify-between gap-2">
-        <p class="text-[11px] text-gray-500 dark:text-gray-400">EC نهایی</p>
-        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full" :class="ecPill.cls">{{ ecPill.text }}</span>
-      </div>
-      <div class="mt-1.5 flex items-center gap-2">
-        <label class="flex items-baseline gap-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/40 px-3 py-1.5 focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20 transition">
+    <!-- EC نهایی: فقط عدد قابل ویرایش (بدون نمودار و بدون برچسب مطلوب/نامطلوب) -->
+    <article class="col-span-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 flex items-center gap-3">
+      <span class="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] text-gray-500 dark:text-gray-400">EC نهایی محلول</p>
+        <label class="mt-0.5 inline-flex items-baseline gap-1.5 cursor-text">
           <input
             type="text" inputmode="decimal" dir="ltr"
             v-model="ecDraft"
             @keyup.enter="commitEc"
             @blur="commitEc"
-            class="w-16 text-xl font-bold tabular-nums bg-transparent outline-none text-gray-900 dark:text-white"
+            aria-label="EC نهایی (قابل ویرایش)"
+            class="w-20 text-2xl font-bold tabular-nums bg-transparent border-b border-dashed border-gray-300 dark:border-gray-600 focus:border-primary-500 outline-none text-gray-900 dark:text-white"
           />
-          <span class="text-[11px] text-gray-400">dS/m</span>
-          <svg class="w-3.5 h-3.5 text-gray-400 self-center" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+          <span class="text-xs text-gray-400">dS/m</span>
         </label>
-      </div>
-      <div class="mt-3">
-        <div class="relative h-2 rounded-full bg-gray-100 dark:bg-gray-700">
-          <div class="absolute inset-y-0 rounded-full bg-primary-200 dark:bg-primary-800/60" :style="{ right: (0.8 / EC_MAX) * 100 + '%', width: ((2.5 - 0.8) / EC_MAX) * 100 + '%' }"></div>
-          <div class="absolute top-1/2 w-3.5 h-3.5 -translate-y-1/2 translate-x-1/2 rounded-full border-2 border-white dark:border-gray-800 shadow" :class="ecPill.dot" :style="{ right: ecPos + '%' }"></div>
-        </div>
-        <div class="mt-1 flex justify-between text-[9px] text-gray-400 tabular-nums"><span>۰</span><span>محدودهٔ مطلوب ۰٫۸ تا ۲٫۵</span><span>۴</span></div>
+        <p class="text-[10px] text-gray-400 mt-0.5">برای تغییر EC، عدد را ویرایش و Enter بزنید</p>
       </div>
     </article>
 
@@ -149,17 +144,6 @@ const OUTER_CIRC = 2 * Math.PI * 26;
 const errorCards = computed(() => {
   const g = computeGroupErrors(props.targetValues || {}, props.result.concentrations || {});
   return [g.macro, g.micro];
-});
-
-const EC_MAX = 4;
-const ecNum = computed(() => Number(props.result.ec) || 0);
-const ecPos = computed(() => Math.min(Math.max(ecNum.value / EC_MAX, 0), 1) * 100);
-const ecPill = computed(() => {
-  const st = props.result.ec_status || '';
-  const v = ecNum.value;
-  if (st.includes('مطلوب') || (!st && v >= 0.8 && v <= 2.5)) return { text: st || 'مطلوب', cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', dot: 'bg-emerald-500' };
-  if (st.includes('بسیار') || st.includes('بحرانی')) return { text: st, cls: 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300', dot: 'bg-rose-500' };
-  return { text: st || (v < 0.8 ? 'کم' : 'بالا'), cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', dot: 'bg-amber-500' };
 });
 
 const statusColor = (status?: string): string => {

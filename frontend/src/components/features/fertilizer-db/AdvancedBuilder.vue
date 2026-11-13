@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/fertilizer-db/AdvancedBuilder.vue -->
 <!--
   حالت «پیشرفته»: هر ترکیب و هر تعداد جزء را آزادانه بنویسید؛ برنامه خودش عنصرهای اصلی را بیرون می‌کشد.
@@ -13,7 +14,7 @@
       </span>
       <div class="min-w-0 flex-1">
         <h5 class="text-sm font-bold text-teal-900 dark:text-teal-200">ساخت ترکیب دلخواه</h5>
-        <p class="text-[12px] leading-5 text-gray-600 dark:text-gray-400">فرمول هر جزء و سهم آن از محصول را بنویسید؛ عنصرهای اصلی خودکار محاسبه می‌شوند. تعداد ردیف‌ها محدود نیست.</p>
+        <p class="text-[12px] leading-5 text-gray-600 dark:text-gray-400">برای هر ماده فرمولش را بنویسید و بگویید چند درصد وزن محصول است؛ برنامه درصد هر عنصر را حساب می‌کند. اگر مقدار یک عنصر را خودتان می‌دانید، همان را مستقیم وارد کنید.</p>
       </div>
       <button type="button" @click="showHelp = !showHelp" class="flex-shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors"
         :class="showHelp ? 'bg-teal-600 border-teal-600 text-white' : 'border-teal-200 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30'">راهنما</button>
@@ -22,6 +23,12 @@
     <!-- راهنما + نمونه‌ها -->
     <Transition name="ab">
       <div v-if="showHelp" class="rounded-xl bg-white/80 dark:bg-gray-800/60 border border-teal-100 dark:border-teal-800/40 p-3 space-y-2.5 text-[12px] leading-6 text-gray-600 dark:text-gray-300">
+        <div class="rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-800/40 p-2.5 text-[12px] leading-6">
+          <b class="text-teal-800 dark:text-teal-200">«سهم از محصول» یعنی چه؟</b>
+          هر ردیف یک «ماده» است و سهم آن یعنی <b>چند درصد از وزن کل محصول</b> را همان ماده تشکیل می‌دهد. مثلاً کودی که نصف آن نیترات پتاسیم و ۳۰٪ آن نیترات کلسیم است:
+          <span dir="ltr" class="font-mono">KNO3 = 50٪</span> و <span dir="ltr" class="font-mono">Ca(NO3)2·4H2O = 30٪</span> (۲۰٪ باقی‌مانده حامل/ناخالصی است). اگر کل محصول فقط یک ماده است، ۱۰۰ بگذارید.
+          اگر درصد خودِ عنصر را از روی برچسب می‌دانید (مثلاً «۱۰٪ آهن»)، به‌جای سهم از «تنظیم دقیق عنصرها» یا «افزودن عنصر مستقیم» استفاده کنید.
+        </div>
         <ul class="list-disc pr-4 space-y-0.5">
           <li>پرانتز و آب تبلور: <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">Ca(NO3)2·4H2O</code> (به‌جای «·» می‌توانید «.» بزنید)</li>
           <li>فرم اکسیدی برچسب: <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">K2O</code> و <code dir="ltr" class="px-1 rounded bg-gray-100 dark:bg-gray-700">P2O5</code> (برنامه به عنصر خالص تبدیل می‌کند)</li>
@@ -59,7 +66,7 @@
 
         <!-- خط ۲: سهم از محصول -->
         <div class="flex items-center gap-2 pr-9">
-          <span class="text-[12px] text-gray-500 dark:text-gray-400 flex-shrink-0">سهم از محصول</span>
+          <span class="text-[12px] text-gray-500 dark:text-gray-400 flex-shrink-0" title="چند درصد از وزن کل محصول، همین ماده است (۱۰۰ = کل محصول فقط همین ماده)">سهم این ماده از وزن محصول</span>
           <label class="flex items-center h-10 rounded-xl border-2 bg-white dark:bg-gray-700 overflow-hidden focus-within:border-teal-500 transition-colors"
             :class="Number(r.amount) > 0 ? 'border-teal-300 dark:border-teal-700' : 'border-gray-200 dark:border-gray-600'">
             <input v-model.number="r.amount" type="number" min="0" max="100" step="0.01" dir="ltr" placeholder="۰" aria-label="درصد از محصول"
@@ -84,6 +91,21 @@
               <option value="N-NH4">آمونیومی</option><option value="N-NO3">نیتراتی</option>
             </select>
           </label>
+          <div class="w-full pt-1">
+            <button type="button" class="text-[11px] font-medium text-teal-700 dark:text-teal-300 hover:underline" @click="r.showCustom = !r.showCustom">{{ r.showCustom ? 'بستن تنظیم دقیق' : '✎ تنظیم دقیق مقدار عنصرها' }}</button>
+            <span v-if="hasCustom(r)" class="mr-2 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">مقدار دستی فعال</span>
+            <div v-if="r.showCustom" class="mt-1.5 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 p-2.5 space-y-2">
+              <p class="text-[11px] leading-5 text-gray-500 dark:text-gray-400">درصد هر عنصر را <b>در کل محصول</b> بنویسید تا جای مقدار محاسبه‌شده بنشیند (خالی = همان محاسبهٔ خودکار).</p>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <label v-for="(v, k) in states[i].analysis.elements" :key="'c' + k" class="flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-300">
+                  <span class="w-14 truncate font-semibold">{{ symbol(String(k)) }}</span>
+                  <input v-model.number="r.custom[String(k)]" type="number" min="0" max="100" step="0.01" dir="ltr" :placeholder="(Number(r.amount) > 0 ? Number(r.amount) * v : v * 100).toLocaleString('fa-IR', { maximumFractionDigits: 3 })"
+                    class="w-full h-8 px-2 text-center text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 tabular-nums" />
+                </label>
+              </div>
+              <button v-if="hasCustom(r)" type="button" class="text-[11px] text-rose-600 hover:underline" @click="clearCustom(r)">پاک‌کردن مقدارهای دستی</button>
+            </div>
+          </div>
         </div>
       </article>
     </TransitionGroup>
@@ -105,6 +127,19 @@
           </optgroup>
         </select>
       </div>
+    </div>
+
+    <!-- عنصر مستقیم -->
+    <div class="rounded-2xl bg-white dark:bg-gray-800 border border-dashed border-teal-300 dark:border-teal-700 p-3 space-y-2">
+      <p class="text-[12px] font-semibold text-teal-800 dark:text-teal-200">افزودن عنصر مستقیم <span class="font-normal text-gray-500">— اگر مقدار عنصری را از روی برچسب می‌دانید (مثلاً ۲٪ آهن)</span></p>
+      <div v-for="x in extras" :key="x.id" class="flex items-center gap-2">
+        <select v-model="x.key" class="h-9 px-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 flex-1 min-w-0">
+          <option v-for="d in ELEMENT_DEFS" :key="d.key" :value="d.key">{{ d.name }} ({{ symbol(d.key) }})</option>
+        </select>
+        <label class="flex items-center h-9 rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden bg-white dark:bg-gray-700"><input v-model.number="x.pct" type="number" min="0" max="100" step="0.01" dir="ltr" class="w-20 h-full px-2 text-center text-sm bg-transparent outline-none tabular-nums" placeholder="۰" /><span class="px-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-600/60 h-full flex items-center">٪ از محصول</span></label>
+        <button type="button" class="p-1.5 text-gray-400 hover:text-danger-600" aria-label="حذف" @click="extras.splice(extras.indexOf(x), 1)">✕</button>
+      </div>
+      <button type="button" class="h-8 px-3 rounded-full text-xs font-semibold border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/20" @click="extras.push({ id: ++seq, key: 'Fe', pct: null })">+ عنصر مستقیم</button>
     </div>
 
     <!-- نتیجه -->
@@ -143,13 +178,29 @@
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2 pt-0.5">
+          <!-- غلظت در محلول (ابزارک مستقل) -->
+          <div v-if="standalone" class="rounded-xl bg-sky-50/70 dark:bg-sky-900/15 border border-sky-200 dark:border-sky-800/50 p-3 space-y-2.5">
+            <p class="text-[12px] font-semibold text-sky-900 dark:text-sky-200">این کود در محلول چقدر می‌شود؟</p>
+            <div class="grid grid-cols-2 gap-2.5">
+              <label class="text-[11px] text-gray-600 dark:text-gray-300">مقدار کود (گرم)<input v-model.number="dissolveG" type="number" min="0" dir="ltr" class="mt-1 w-full h-9 px-2 text-center text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 tabular-nums" /></label>
+              <label class="text-[11px] text-gray-600 dark:text-gray-300">حجم آب (لیتر)<input v-model.number="dissolveL" type="number" min="0" dir="ltr" class="mt-1 w-full h-9 px-2 text-center text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 tabular-nums" /></label>
+            </div>
+            <div v-if="ppmList.length" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <div v-for="e in ppmList" :key="e.key" class="rounded-lg bg-white dark:bg-gray-800 border border-sky-100 dark:border-sky-900/40 px-2.5 py-1.5 flex items-center justify-between gap-2">
+                <span class="text-[11px] text-gray-600 dark:text-gray-300">{{ e.symbol }}</span>
+                <b class="text-sm tabular-nums" dir="ltr">{{ e.ppm.toLocaleString('fa-IR', { maximumFractionDigits: 1 }) }} <span class="text-[10px] font-normal text-gray-400">ppm</span></b>
+              </div>
+            </div>
+            <p v-else class="text-[11px] text-gray-400">مقدار کود و حجم آب را بنویسید تا غلظت هر عنصر (میلی‌گرم در لیتر) نمایش داده شود.</p>
+          </div>
+
+          <div v-if="!standalone" class="flex flex-wrap items-center gap-2 pt-0.5">
             <button type="button" :disabled="!canApply" @click="apply"
               class="flex-1 min-w-[12rem] h-11 rounded-xl text-sm font-bold text-white bg-gradient-to-l from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-600/20 transition-all active:scale-[.99] disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
               اعمال روی جدول عناصر
             </button>
-            <button type="button" @click="rows.splice(0); addRow()" class="h-11 px-4 rounded-xl text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">پاک کردن</button>
+            <button type="button" @click="rows.splice(0); extras.splice(0); addRow()" class="h-11 px-4 rounded-xl text-sm text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">پاک کردن</button>
           </div>
           <p class="text-[11px] text-gray-400 leading-5">با اعمال، مقدار فعلی جدول با این نتیجه جایگزین می‌شود و بعداً می‌توانید دستی ویرایش کنید.</p>
         </div>
@@ -163,12 +214,17 @@ import { computed, reactive, ref } from 'vue';
 import { analyse, FormulaError, parseFormula, type Analysis } from '@/utils/chemFormula';
 import { ELEMENT_DEFS, getElementDef, prettyFormula } from '@/utils/labelForms';
 
-const props = defineProps<{ entries: Record<string, { form: string; value: number | null }> }>();
+const props = defineProps<{ entries?: Record<string, { form: string; value: number | null }>; standalone?: boolean }>();
 const emit = defineEmits<{ (e: 'applied', info: { formula: string | null }): void }>();
 
-interface Row { id: number; formula: string; amount: number | null; genericN: 'N-NH4' | 'N-NO3' }
+interface Row { id: number; formula: string; amount: number | null; genericN: 'N-NH4' | 'N-NO3'; custom: Record<string, number | null | ''>; showCustom: boolean }
+interface Extra { id: number; key: string; pct: number | null }
 let seq = 0;
 const rows = reactive<Row[]>([]);
+const extras = reactive<Extra[]>([]);
+const mkRow = (formula = '', amount: number | null = null): Row => ({ id: ++seq, formula, amount, genericN: 'N-NH4', custom: {}, showCustom: false });
+const hasCustom = (r: Row) => Object.values(r.custom).some((v) => v !== null && v !== '' && Number.isFinite(Number(v)));
+const clearCustom = (r: Row) => { r.custom = {}; };
 const quick = ref('');
 const showHelp = ref(false);
 const POPULAR = [
@@ -182,7 +238,8 @@ const EXAMPLES = [
 ] as { t: string; rows: [string, number][] }[];
 const loadExample = (ex: { rows: [string, number][] }) => {
   rows.splice(0);
-  for (const [f, a] of ex.rows) { rows.push({ id: ++seq, formula: f, amount: a, genericN: 'N-NH4' }); }
+  for (const [f, a] of ex.rows) { rows.push(mkRow(f, a)); }
+  extras.splice(0);
 };
 
 const QUICK = [
@@ -199,7 +256,7 @@ const QUICK = [
     { n: 'سولفات مس ۵آبه', f: 'CuSO4·5H2O' }, { n: 'اسید بوریک', f: 'H3BO3' }, { n: 'سولوبور', f: 'Na2B8O13·4H2O' }, { n: 'مولیبدات سدیم ۲آبه', f: 'Na2MoO4·2H2O' }] },
 ];
 
-const addRow = (formula = '') => { rows.push({ id: ++seq, formula, amount: null, genericN: 'N-NH4' }); };
+const addRow = (formula = '') => { rows.push(mkRow(formula)); };
 const addQuick = () => { if (quick.value) addRow(quick.value); quick.value = ''; };
 addRow();
 
@@ -218,9 +275,14 @@ const totals = computed<Record<string, number>>(() => {
   rows.forEach((r, i) => {
     const a = states.value[i].analysis;
     const amt = Number(r.amount) || 0;
-    if (!a || !(amt > 0)) return;
-    for (const [k, frac] of Object.entries(a.elements)) t[k] = (t[k] || 0) + amt * frac;
+    if (!a) return;
+    for (const [k, frac] of Object.entries(a.elements)) {
+      const manual = r.custom[k];
+      if (manual !== null && manual !== undefined && manual !== '' && Number.isFinite(Number(manual))) t[k] = (t[k] || 0) + Number(manual);   // مقدار دستی کاربر
+      else if (amt > 0) t[k] = (t[k] || 0) + amt * frac;                                                                                       // محاسبهٔ خودکار
+    }
   });
+  for (const x of extras) if (Number(x.pct) > 0) t[x.key] = (t[x.key] || 0) + Number(x.pct);
   return t;
 });
 const resultList = computed(() =>
@@ -235,16 +297,25 @@ const chipCls = (k: string) => k.startsWith('N')
 const tileCls = (k: string) => k.startsWith('N')
   ? 'bg-emerald-50/70 dark:bg-emerald-900/15 border-emerald-200 dark:border-emerald-800/50 text-emerald-600'
   : isMicro(k) ? 'bg-amber-50/70 dark:bg-amber-900/15 border-amber-200 dark:border-amber-800/50 text-amber-600' : 'bg-blue-50/70 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800/50 text-blue-600';
+const dissolveG = ref<number | null>(null);
+const dissolveL = ref<number | null>(null);
+const ppmList = computed(() => {
+  const g = Number(dissolveG.value), l = Number(dissolveL.value);
+  if (!(g > 0 && l > 0)) return [];
+  return resultList.value.map((e) => ({ key: e.key, symbol: e.symbol, ppm: (e.pct / 100) * (g * 1000) / l }));
+});
 const hasResult = computed(() => resultList.value.length > 0);
 const canApply = computed(() => hasResult.value && amountSum.value <= 100.0001 && resultList.value.every((e) => e.pct <= 100));
 
 const apply = () => {
-  const filled = ELEMENT_DEFS.some((d) => Number(props.entries[d.key]?.value) > 0);
+  if (!props.entries) return;
+  const entries = props.entries;
+  const filled = ELEMENT_DEFS.some((d) => Number(entries[d.key]?.value) > 0);
   if (filled && !confirm('مقدار فعلی جدول عناصر با نتیجهٔ این ترکیب جایگزین شود؟')) return;
-  for (const d of ELEMENT_DEFS) props.entries[d.key] = { form: d.key.startsWith('N-') ? 'N' : d.key, value: null };
+  for (const d of ELEMENT_DEFS) entries[d.key] = { form: d.key.startsWith('N-') ? 'N' : d.key, value: null };
   for (const e of resultList.value) {
     const d = getElementDef(e.key)!;
-    props.entries[e.key] = { form: d.key.startsWith('N-') ? 'N' : d.key, value: e.pct };
+    entries[e.key] = { form: d.key.startsWith('N-') ? 'N' : d.key, value: e.pct };
   }
   // اگر فقط یک جزء با ۱۰۰٪ بود، فرمول همان جزء را برای فیلد «فرمول» پیشنهاد بده
   const used = rows.filter((r, i) => states.value[i].analysis && Number(r.amount) > 0);

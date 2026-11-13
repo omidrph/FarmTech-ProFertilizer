@@ -1,6 +1,7 @@
+
 <!-- ستون‌های عمودی ساده (توزیع هفتگی) با تولتیپ -->
 <template>
-  <div class="flex items-end gap-2 h-36">
+  <div class="flex items-end gap-2 h-36" dir="ltr">
     <div v-for="(it, i) in items" :key="i" class="flex-1 flex flex-col items-center justify-end h-full group relative">
       <span class="text-[10px] tabular-nums text-gray-500 dark:text-gray-400 mb-1 opacity-0 group-hover:opacity-100 transition">{{ faNum(it.count) }}</span>
       <div class="w-full max-w-[2.2rem] rounded-t-lg transition-all duration-700"

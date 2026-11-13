@@ -1,4 +1,5 @@
 
+
 # backend/app/database.py
 """اتصال و مدیریت دیتابیس PostgreSQL با SSL"""
 
@@ -135,6 +136,14 @@ def run_light_migrations() -> None:
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS status_changed_at TIMESTAMPTZ",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS status_changed_by INTEGER",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_note TEXT",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS style VARCHAR(12) NOT NULL DEFAULT 'bar'",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS dismissible BOOLEAN NOT NULL DEFAULT TRUE",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS link_url VARCHAR(300)",
+        "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS link_label VARCHAR(60)",
+        "ALTER TABLE fertilizers ADD COLUMN IF NOT EXISTS shop_enabled BOOLEAN NOT NULL DEFAULT TRUE",
+        "ALTER TABLE fertilizers ADD COLUMN IF NOT EXISTS shop_price DOUBLE PRECISION",
+        "ALTER TABLE fertilizers ADD COLUMN IF NOT EXISTS shop_stock DOUBLE PRECISION",
+        "ALTER TABLE fertilizers ADD COLUMN IF NOT EXISTS shop_min_qty DOUBLE PRECISION",
         "CREATE INDEX IF NOT EXISTS ix_users_role ON users (role)",
         "CREATE INDEX IF NOT EXISTS ix_users_status ON users (status)",
         # کاربرانی که قبلاً غیرفعال شده بودند ⇒ مسدود

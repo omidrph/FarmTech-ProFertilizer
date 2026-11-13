@@ -1,7 +1,8 @@
+
 <!-- نوار گرمایی ساعت‌های شبانه‌روز (یا هر فهرست برچسب‌دار) -->
 <template>
   <div>
-    <div class="grid gap-1" :style="{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }">
+    <div class="grid gap-1" dir="ltr" :style="{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }">
       <div v-for="(it, i) in items" :key="i" class="relative group">
         <div class="aspect-[1/2.4] sm:aspect-[1/2] rounded-md transition-transform group-hover:scale-110"
           :style="{ background: it.count ? color : 'transparent', opacity: it.count ? 0.15 + 0.85 * (it.count / max) : 1 }"

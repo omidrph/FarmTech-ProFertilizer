@@ -1,6 +1,12 @@
+
 <!-- frontend/src/views/MainLayout.vue -->
 <template>
   <div class="min-h-screen bg-gray-100 dark:bg-gray-950 transition-colors duration-200 flex flex-col">
+    <!-- نوار «ورود به‌جای کاربر» (فقط برای مدیر) -->
+    <div v-if="impersonating" class="bg-violet-700 text-white text-sm px-4 py-2 flex flex-wrap items-center justify-center gap-3 z-[70]">
+      <span>🎭 به‌جای کاربر وارد شده‌اید؛ همهٔ کارها به نام او ثبت می‌شود.</span>
+      <button class="px-3 py-1 rounded-lg bg-white text-violet-700 font-semibold text-xs hover:bg-violet-50" @click="stopImp">بازگشت به مدیر</button>
+    </div>
     
     <!-- Header -->
     <AppHeader 
@@ -134,7 +140,7 @@
         </div>
 
         <!-- Interpretation Sub Tab -->
-        <div v-else-if="activeSubTab === 'interpretation'">
+        <div v-else-if="activeSubTab === 'interpretation' && can('interpretation')">
           <InterpretationTab />
         </div>
 
@@ -155,6 +161,11 @@
         <div v-else-if="activeSubTab === 'widgets'">
           <WidgetsTab />
         </div>
+      </div>
+
+      <!-- Shop Tab -->
+      <div v-else-if="activeTab === 'shop' && can('shop')">
+        <ShopTab />
       </div>
 
       <!-- Education Tab -->
@@ -234,7 +245,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useReportStore } from '@/store/modules/reportStore';
 import { useTargetStore } from '@/store/modules/targetStore';
 import { useWaterStore } from '@/store/modules/waterStore';
@@ -264,6 +275,9 @@ import EducationFAQ from '@/components/features/EducationFAQ.vue';
 import EducationVideos from '@/components/features/EducationVideos.vue';
 import ContactUs from '@/components/features/ContactUs.vue';
 import AboutUs from '@/components/features/AboutUs.vue';
+import ShopTab from '@/components/features/ShopTab.vue';
+import { usePermissions } from '@/composables/usePermissions';
+import { useShopStore } from '@/store/modules/shopStore';
 
 // ===== Stores =====
 const reportStore = useReportStore();
@@ -272,6 +286,10 @@ const waterStore = useWaterStore();
 const fertilizerStore = useFertilizerStore();
 const calcStore = useCalcStore();
 const appStore = useAppStore();
+const shopStore = useShopStore();
+const { can, load: loadPermissions, impersonating, stopImpersonation } = usePermissions();
+const stopImp = async () => { if (await stopImpersonation()) window.location.href = '/admin?tab=users'; };
+watch(() => shopStore.openRequest, () => { activeTab.value = 'shop'; });
 const { isLoading, error: apiError, checkConnection, clearError } = useApi();
 
 // ===== State =====
@@ -292,7 +310,7 @@ const targetTabKey = ref(0);
 // ============================================================
 // Navigation Tabs - کاملاً هماهنگ با هدر اصلی (استایل یکسان)
 // ============================================================
-const subTabs = [
+const subTabsAll = [
   {
     id: 'home',
     label: 'خانه',
@@ -334,6 +352,13 @@ const subTabs = [
     icon: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>`
   }
 ];
+
+const subTabs = computed(() => subTabsAll.filter((t) => {
+  if (t.id === 'interpretation') return can('interpretation');
+  if (t.id === 'ph') return can('ph_calculator');
+  if (t.id === 'widgets') return can('widgets');
+  return true;
+}));
 
 const educationSubTabs = [
   {
@@ -548,6 +573,8 @@ onMounted(async () => {
   updateHeaderHeight();
   window.addEventListener('resize', updateHeaderHeight);
   window.addEventListener('open-profile-modal', openProfileModalHandler);
+  loadPermissions();
+  shopStore.loadCart();
   await loadData();
   await reportStore.loadReports();
 });

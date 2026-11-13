@@ -1,5 +1,6 @@
 
 
+
 # backend/app/routes/calculations/optimization.py
 """
 مسیر بهینه‌سازی خودکار فرمول کود
@@ -32,6 +33,7 @@ from app.core.optimizer.result_processor import validate_optimization_result
 from app.core.ph_calculator import load_active_for_cycle, merge_into_water, apply_ph_cost
 from app.core.optimizer.fixed_amounts import apply_fixed_amounts, FixedAmountError
 from app.core.reservoir.precipitation_guard import build_precipitation_alerts
+from app.core.advisories import build_advisories
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +281,16 @@ def optimize_fertilizers_endpoint(
         # حذف موارد تکراری با حفظ ترتیب
         result['warnings'] = list(dict.fromkeys(result.get('warnings', [])))
 
+        # 📋 مرجع واحد هشدارها (همهٔ مسیرهای بالا را یکپارچه و بدون تکرار می‌کند)
+        advisories = build_advisories(
+            concentrations=concentrations,
+            ph=ph_result.get('ph'),
+            fertilizers=fertilizers,
+            precipitation_alerts=precipitation_alerts,
+            legacy_warnings=result.get('warnings', []),
+        )
+        result['advisories'] = advisories
+
         # ============================================================
         # 🆕 ذخیره کامل وضعیت صفحه محاسبه کود در دیتابیس
         # ============================================================
@@ -343,7 +355,8 @@ def optimize_fertilizers_endpoint(
                         'ph_adjustment': ph_summary,
                         'fixed_fertilizers': result.get('fixed_fertilizers'),
                         'stock_info': stock_info,
-                        'precipitation_alerts': precipitation_alerts
+                        'precipitation_alerts': precipitation_alerts,
+                        'advisories': advisories
                     }
 
                     from app.schemas import CalculationUpdate, CalculationCreate
@@ -397,6 +410,7 @@ def optimize_fertilizers_endpoint(
             ph_adjustment=ph_summary,
             fixed_fertilizers=result.get('fixed_fertilizers'),
             precipitation_alerts=precipitation_alerts,
+            advisories=advisories,
             stock_info=stock_info
         )
         

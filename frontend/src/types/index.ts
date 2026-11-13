@@ -1,6 +1,7 @@
 
 
 
+
 // frontend/src/types/index.ts
 
 // ============================================================
@@ -359,6 +360,7 @@ export interface OptimizationResponse {
         price_per_kg?: number;
     } | null;
     precipitation_alerts?: PrecipitationAlert[] | null;
+    advisories?: Advisory[] | null;
     stock_info?: {
         tank_volume: number;
         stock_volume?: number;
@@ -534,5 +536,18 @@ export interface PrecipitationAlert {
     title: string;
     detail: string;
     solution: string;
+    elements?: string[];
+}
+
+/** مرجع واحد هشدارها و نکته‌ها (از بک‌اند؛ بدون تکرار) */
+export interface Advisory {
+    id: string;
+    severity: 'danger' | 'warn' | 'info';
+    category: 'precipitation' | 'nutrient' | 'selection' | 'plant_ec' | 'general' | string;
+    title: string;
+    detail: string;
+    solution: string;
+    scope?: 'stock' | 'final' | 'water' | null;
+    tank?: string | null;
     elements?: string[];
 }

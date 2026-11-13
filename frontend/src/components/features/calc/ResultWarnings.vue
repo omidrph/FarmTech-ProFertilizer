@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/calc/ResultWarnings.vue -->
 <!--
   ============================================================
@@ -39,11 +40,11 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
             <p class="text-sm font-semibold" :class="SEV[item.severity].title">{{ item.title }}</p>
-            <span class="text-[10px] px-1.5 py-0.5 rounded-full" :class="SEV[item.severity].chip">{{ SCOPE[item.scope] }}</span>
+            <span v-if="item.scope && SCOPE[item.scope as keyof typeof SCOPE]" class="text-[10px] px-1.5 py-0.5 rounded-full" :class="SEV[item.severity].chip">{{ SCOPE[item.scope as keyof typeof SCOPE] }}</span>
             <span class="text-[10px] px-1.5 py-0.5 rounded-full" :class="SEV[item.severity].chip">{{ SEV[item.severity].label }}</span>
           </div>
-          <p class="text-xs mt-1 leading-5" :class="SEV[item.severity].text">{{ item.detail }}</p>
-          <p class="text-xs mt-1 leading-5 font-medium" :class="SEV[item.severity].text">راه‌حل: {{ item.solution }}</p>
+          <p v-if="item.detail" class="text-xs mt-1 leading-5" :class="SEV[item.severity].text">{{ item.detail }}</p>
+          <p v-if="item.solution" class="text-xs mt-1 leading-5 font-medium" :class="SEV[item.severity].text">راه‌حل: {{ item.solution }}</p>
         </div>
       </div>
     </div>
@@ -138,7 +139,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { cleanNote, isCoveredElsewhere, isGenericNote } from '@/utils/resultNotes';
-import type { PrecipitationAlert } from '@/types';
+import type { Advisory, PrecipitationAlert } from '@/types';
 
 const SEV = {
   danger: { label: 'خطر', box: 'border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20', icon: 'text-rose-600 dark:text-rose-400', title: 'text-rose-700 dark:text-rose-400', text: 'text-rose-700/90 dark:text-rose-300', chip: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' },
@@ -154,7 +155,7 @@ const props = defineProps<{
   accuracy: number;
   unusedCount: number;
   badElementsCount: number;
-  alerts?: PrecipitationAlert[];
+  alerts?: Array<PrecipitationAlert | Advisory>;
 }>();
 
 defineEmits<{

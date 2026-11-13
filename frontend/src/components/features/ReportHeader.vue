@@ -1,3 +1,4 @@
+
 <!-- frontend/src/components/features/ReportHeader.vue -->
 <!--
   باکس کامل گزارش (فقط در تب «خانه» نمایش داده می‌شود و تنها جای ویرایش مشخصات گزارش است)
@@ -36,7 +37,19 @@
       </div>
       <div>
         <label class="field-label">نام گیاه <span class="text-danger-500">*</span></label>
-        <input type="text" :value="plantName" @input="updatePlantName($event)" placeholder="مثلاً گوجه‌فرنگی" class="field-input" />
+        <input type="text" :value="plantName" @input="updatePlantName($event)" placeholder="انتخاب از لیست یا تایپ دستی" class="field-input" list="plant-suggestions" autocomplete="off" />
+          <datalist id="plant-suggestions"><option v-for="p in PLANTS" :key="p" :value="p" /></datalist>
+          <!-- انتخاب سریع: روی هر گیاه بزنید؛ برای گیاه دیگر در کادر بالا تایپ کنید -->
+          <div class="flex flex-wrap gap-1.5 mt-2" role="group" aria-label="انتخاب سریع گیاه">
+            <button v-for="p in QUICK_PLANTS" :key="p" type="button" @click="emit('update:plantName', p)"
+              class="px-2.5 py-1 rounded-full text-xs border transition-colors"
+              :class="plantName.trim() === p ? 'bg-primary-600 border-primary-600 text-white' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400 hover:text-primary-700 dark:hover:text-primary-300'">{{ p }}</button>
+            <button type="button" @click="showAllPlants = !showAllPlants" class="px-2.5 py-1 rounded-full text-xs border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary-600">{{ showAllPlants ? 'کمتر' : 'گیاهان بیشتر…' }}</button>
+          </div>
+          <div v-if="showAllPlants" class="flex flex-wrap gap-1.5 mt-1.5 max-h-40 overflow-y-auto p-2 rounded-xl bg-gray-50 dark:bg-gray-700/40">
+            <button v-for="p in MORE_PLANTS" :key="p" type="button" @click="emit('update:plantName', p); showAllPlants = false"
+              class="px-2.5 py-1 rounded-full text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400 hover:text-primary-700">{{ p }}</button>
+          </div>
       </div>
       <div>
         <label class="field-label">مرحله رشد <span class="text-danger-500">*</span></label>
@@ -74,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import { computed } from 'vue';
 import { seasonFromDate } from '@/utils/reportSeason';
 
@@ -107,6 +121,10 @@ const isComplete = computed(() =>
 );
 
 const updateReportName = (event: Event) => emit('update:reportName', (event.target as HTMLInputElement).value);
+const QUICK_PLANTS = ['گوجه‌فرنگی', 'خیار', 'فلفل دلمه‌ای', 'توت‌فرنگی', 'بادمجان', 'کاهو', 'ریحان', 'گل رز'];
+const MORE_PLANTS = ['خیار گلخانه‌ای', 'کدو', 'خربزه', 'هندوانه', 'طالبی', 'فلفل تند', 'اسفناج', 'جعفری', 'نعناع', 'کرفس', 'کلم', 'سبزی‌خوردن', 'ژربرا', 'میخک', 'داودی', 'لیلیوم', 'گل شاخه‌بریده', 'تمشک', 'انگور', 'سیب‌زمینی', 'نهال و گیاه زینتی'];
+const PLANTS = [...QUICK_PLANTS, ...MORE_PLANTS];
+const showAllPlants = ref(false);
 const updatePlantName = (event: Event) => emit('update:plantName', (event.target as HTMLInputElement).value);
 const updateGreenhouse = (event: Event) => emit('update:greenhouseName', (event.target as HTMLInputElement).value);
 const updateGrowthStage = (event: Event) => emit('update:growthStage', (event.target as HTMLSelectElement).value);

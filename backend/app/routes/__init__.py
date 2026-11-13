@@ -1,4 +1,5 @@
 
+
 # backend/app/routes/__init__.py
 """
 ماژول مسیرهای API
@@ -16,6 +17,8 @@ from .water_templates import water_templates_router
 from .ph_calculator import ph_calculator_router
 from .admin import router as admin_router
 from .system import system_router
+from .shop import shop_router
+from .admin_extra import router as admin_extra_router, public_router as admin_extra_public_router
 
 # ایجاد router اصلی
 router = APIRouter()
@@ -30,6 +33,9 @@ router.include_router(calculations_router)  # بدون تغییر
 router.include_router(recipes_router)
 router.include_router(water_templates_router)
 router.include_router(admin_router)  # 👑 پنل مدیریت (فقط admin)
+router.include_router(admin_extra_router)  # 👑 دسترسی‌ها/سفارش‌ها/ورود به‌جای کاربر
+router.include_router(admin_extra_public_router)
+router.include_router(shop_router)  # 🛒 فروشگاه
 router.include_router(system_router)  # وضعیت عمومی سیستم/اعلان‌ها
 router.include_router(ph_calculator_router)  # 🆕 ماشین‌حساب pH (خارج از چرخه‌ی رسمی محاسبه)
 

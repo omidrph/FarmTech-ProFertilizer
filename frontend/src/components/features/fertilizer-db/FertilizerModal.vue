@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerModal.vue -->
 <template>
   <AppModal :open="isOpen" size="xl" :title="isEditing ? 'ویرایش کود' : 'افزودن کود'" @close="$emit('close')">
@@ -131,8 +132,9 @@
             </span>
             <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" :class="panel === 'chelate' ? 'rotate-180 text-violet-500' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </button>
+          <Transition name="pop"><ChelatePanel v-if="panel === 'chelate'" :entries="entries" /></Transition>
 
-          <button type="button" @click="togglePanel('advanced')" :aria-expanded="panel === 'advanced'"
+          <button v-if="can('advanced_fertilizer')" type="button" @click="togglePanel('advanced')" :aria-expanded="panel === 'advanced'"
             class="group relative text-right rounded-2xl border p-3 transition-all duration-200 flex items-center gap-3 hover:-translate-y-0.5 hover:shadow-md"
             :class="panel === 'advanced'
               ? 'border-teal-400 dark:border-teal-600 bg-gradient-to-l from-teal-50 to-white dark:from-teal-900/25 dark:to-gray-800 shadow-md ring-2 ring-teal-500/15'
@@ -146,11 +148,8 @@
             </span>
             <svg class="w-4 h-4 text-gray-400 transition-transform duration-200 flex-shrink-0" :class="panel === 'advanced' ? 'rotate-180 text-teal-500' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
           </button>
+          <Transition name="pop"><AdvancedBuilder v-if="can('advanced_fertilizer') && panel === 'advanced'" :entries="entries" @applied="onAdvancedApplied" /></Transition>
         </div>
-        <Transition name="pop">
-          <ChelatePanel v-if="panel === 'chelate'" :entries="entries" />
-          <AdvancedBuilder v-else-if="panel === 'advanced'" :entries="entries" @applied="onAdvancedApplied" />
-        </Transition>
       </section>
 
       <!-- منوی انتخاب فرم (خارج از کارت تا هرگز بریده نشود؛ موبایل = برگهٔ پایین) -->
@@ -261,6 +260,7 @@ import AppModal from '@/components/common/AppModal.vue';
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import ChelatePanel from './ChelatePanel.vue';
 import FormMenu from './FormMenu.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import AdvancedBuilder from './AdvancedBuilder.vue';
 import {
   ELEMENT_DEFS, toElementPct, labelKey, prettyFormula, chelateAgentLabel, chelateFormKey, isChelateForm,
@@ -333,6 +333,7 @@ const symbolCls = (d: ElementDef) =>
     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
     : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
 
+const { can } = usePermissions();
 const isTouched = ref(false);
 const openMenu = ref<string | null>(null);
 const panel = ref<'chelate' | 'advanced' | null>(null);
@@ -351,15 +352,16 @@ let anchorEl: HTMLElement | null = null;
 const menuSheet = ref(false);
 const placeMenu = (d: ElementDef) => {
   if (!anchorEl || !anchorEl.isConnected) return closeMenu();
-  menuSheet.value = window.innerWidth < 640;
+  menuSheet.value = window.innerWidth < 420;
   if (menuSheet.value) { menuStyle.value = {}; return; }
-  const r = anchorEl.getBoundingClientRect();
-  const margin = 10, gap = 6;
+  let r = anchorEl.getBoundingClientRect();
+  const margin = 10, gap = 4;
+  // منو همیشه دقیقاً زیر دکمه باز می‌شود؛ اگر جای کافی پایین نیست، صفحه کمی اسکرول می‌شود تا دکمه بالاتر بیاید
+  if (window.innerHeight - r.bottom < 260) { anchorEl.scrollIntoView({ block: 'start', behavior: 'auto' }); r = anchorEl.getBoundingClientRect(); }
   const below = window.innerHeight - r.bottom - margin;
-  const above = r.top - margin;
   const want = Math.min(d.forms.length * 48 + (d.forms.length > 7 ? 52 : 0) + (CHELATE_METALS.includes(d.key) ? 68 : 0) + 80, 460);
-  const up = below < Math.min(want, 330) && above > below;
-  const maxH = Math.max(Math.min(want, up ? above : below), 140);
+  const up = false;
+  const maxH = Math.max(Math.min(want, below), 180);
   const width = Math.min(Math.max(r.width, 340), window.innerWidth - 2 * margin);
   const left = Math.min(Math.max(r.right - width, margin), window.innerWidth - width - margin);
   menuStyle.value = { left: left + 'px', width: width + 'px', maxHeight: maxH + 'px', ...(up ? { bottom: window.innerHeight - r.top + gap + 'px' } : { top: r.bottom + gap + 'px' }) };

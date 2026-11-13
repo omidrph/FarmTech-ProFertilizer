@@ -1,3 +1,4 @@
+
 // frontend/src/services/adminApi.ts
 // کلاینت API پنل مدیریت (همهٔ مسیرها زیر /admin و فقط برای نقش admin)
 import axios, { type AxiosInstance } from 'axios';
@@ -75,6 +76,27 @@ class AdminApi {
   createAnnouncement = (b: any) => this.post<any>('/announcements', b);
   updateAnnouncement = (id: number, b: any) => this.put<any>(`/announcements/${id}`, b);
   deleteAnnouncement = (id: number) => this.del(`/announcements/${id}`);
+
+  // ===== دسترسی نقش‌ها =====
+  permissions = () => this.get<{ definitions: { key: string; label: string; hint: string }[]; matrix: Record<string, Record<string, boolean>>; defaults: Record<string, Record<string, boolean>> }>('/permissions');
+  savePermissions = (matrix: Record<string, Record<string, boolean>>) => this.put<any>('/permissions', { matrix });
+
+  // ===== کدهای فراموشی رمز =====
+  resetRequests = (p: Record<string, any>) => this.get<Paged<any> & { pending: number }>('/reset-requests', p);
+  makeResetCode = (id: number, send_sms = false) => this.post<{ code: string; phone_number: string; sms_sent: boolean; expires_in_minutes: number }>(`/users/${id}/reset-code`, { send_sms });
+  expireReset = (rid: number) => this.post(`/reset-requests/${rid}/expire`);
+
+  // ===== ورود به‌جای کاربر =====
+  impersonate = (id: number) => this.post<{ ok: boolean; user: { id: number; full_name: string } }>(`/users/${id}/impersonate`);
+
+  // ===== فروشگاه و سفارش‌ها =====
+  shopSettings = () => this.get<any>('/shop/settings');
+  saveShopSettings = (b: any) => this.put<any>('/shop/settings', b);
+  fertilizerShop = (id: number, b: any) => this.put<any>(`/fertilizers/${id}/shop`, b);
+  orders = (p: Record<string, any>) => this.get<Paged<any> & { counts: Record<string, number>; statuses: Record<string, string> }>('/orders', p);
+  order = (id: number) => this.get<any>(`/orders/${id}`);
+  updateOrder = (id: number, b: any) => this.put<any>(`/orders/${id}`, b);
+  ordersSummary = () => this.get<{ revenue: number; waiting_review: number; total: number }>('/orders-stats/summary');
 
   settings = () => this.get<any>('/settings');
   updateSettings = (b: any) => this.put<any>('/settings', b);

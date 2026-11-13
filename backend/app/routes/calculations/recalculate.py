@@ -1,5 +1,6 @@
 
 
+
 # backend/app/routes/calculations/recalculate.py
 """
 مسیر محاسبه مجدد نتیجه پس از ویرایش دستی وزن یک کود
@@ -46,6 +47,7 @@ from app.core import (
 from app.core.optimizer.matrix_builder import prepare_fertilizer_data, calculate_full_solution_concentrations
 from app.core.ph_calculator import load_active_for_cycle, merge_into_water, apply_ph_cost
 from app.core.reservoir.precipitation_guard import build_precipitation_alerts
+from app.core.advisories import build_advisories
 
 logger = logging.getLogger(__name__)
 
@@ -334,6 +336,9 @@ def recalculate_manual_weights(
             ec_status=ec_result['status_label'],
             ph_adjustment=ph_summary,
             precipitation_alerts=precipitation_alerts,
+            advisories=build_advisories(
+                concentrations=full_concentrations, ph=prelim_ph_result.get('ph'), fertilizers=fertilizers,
+                precipitation_alerts=precipitation_alerts, legacy_warnings=warnings),
             stock_info={
                 'tank_volume': tank_volume,
                 'manual_edit': True

@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/HomeTab.vue -->
 <template>
   <div class="space-y-3 sm:space-y-4">
@@ -417,22 +418,25 @@ const attentionItems = computed(() => {
   if (ec.value > 3.5) items.push({ kind: 'danger', title: 'EC بسیار بالا', text: `EC برابر ${ecText.value} dS/m است؛ خطر شوری.`, hint: 'غلظت کودها را کم کنید یا از آب با کیفیت‌تر استفاده کنید.' });
   else if (ec.value > 0 && ec.value < 0.8) items.push({ kind: 'warn', title: 'EC پایین', text: `EC برابر ${ecText.value} dS/m است.`, hint: 'غلظت کودها را متناسب با نیاز گیاه افزایش دهید.' });
 
-  // ۵) هشدارهای بک‌اند (رسوب، سازگاری و ...) — تکراری‌ها حذف می‌شوند
-  const seen = new Set<string>();
-  for (const w of (result.value?.warnings || []) as string[]) {
-    const t = cleanNote(w);
-    if (t.length < 4) continue;
-    const isPrecip = /رسوب/.test(t);
-    if (!isPrecip && (isCoveredElsewhere(t) || isGenericNote(t))) continue;
-    const key = t.slice(0, 50);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    if (isPrecip) {
-      // «خطر رسوب: Ca3(PO4)2» → عنوان؛ جملهٔ بلند → فقط متن
-      const short = t.length < 60 && /[:：]/.test(t);
-      items.push({ kind: 'danger', title: short ? t : 'خطر رسوب', text: short ? undefined : (t.length > 170 ? t.slice(0, 167) + '…' : t) });
-    } else {
-      items.push({ kind: /خطر/.test(t) ? 'danger' : 'info', title: 'نکته', text: t.length > 170 ? t.slice(0, 167) + '…' : t });
+  // ۵) هشدارها و نکته‌های بک‌اند: فقط از «مرجع واحد» (advisories)؛ هر مسئله فقط یک‌بار و با عنوان و راه‌حل جدا
+  const adv = (result.value as any)?.advisories as Array<{ id: string; severity: string; title: string; detail?: string; solution?: string }> | null | undefined;
+  if (adv) {
+    for (const a of adv) {
+      const kind: AttnKind = a.severity === 'danger' ? 'danger' : a.severity === 'warn' ? 'warn' : 'info';
+      const detail = (a.detail || '').trim();
+      items.push({ kind, title: a.title, text: detail ? (detail.length > 190 ? detail.slice(0, 187) + '…' : detail) : undefined, hint: a.solution || undefined });
+    }
+  } else {
+    // نتیجه‌های قدیمی ذخیره‌شده که هنوز advisories ندارند: با همان فیلترهای قبلی
+    const seen = new Set<string>();
+    for (const w of (result.value?.warnings || []) as string[]) {
+      const t = cleanNote(w);
+      if (t.length < 4 || isCoveredElsewhere(t) || isGenericNote(t)) continue;
+      const key = t.slice(0, 50);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const precip = /^خطر رسوب\s*[:：]/.test(t);
+      items.push({ kind: precip || /خطر/.test(t) ? 'danger' : 'info', title: precip ? t : 'نکته', text: precip ? undefined : (t.length > 170 ? t.slice(0, 167) + '…' : t) });
     }
   }
 

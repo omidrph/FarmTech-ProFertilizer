@@ -1,5 +1,6 @@
 
 
+
 <!-- frontend/src/components/features/fertilizer-db/FertilizerStatsAndTable.vue -->
 <template>
   <div>
@@ -55,7 +56,7 @@
         </button>
 
         <!-- افزودن -->
-        <button
+        <button v-if="canAdd"
           type="button"
           @click="$emit('open-modal')"
           class="h-9 px-3.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors"
@@ -64,9 +65,11 @@
           <span>افزودن<span class="hidden sm:inline"> کود</span></span>
         </button>
 
+        <slot name="toolbar-extra" />
+
         <!-- پاک کردن همهٔ کودها -->
         <button
-          v-if="userFertilizers.length > 0"
+          v-if="userFertilizers.length > 0 && !adminMode"
           type="button"
           @click="clearTable"
           class="h-9 w-9 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-400 hover:text-rose-600 hover:border-rose-300 dark:hover:border-rose-800 flex items-center justify-center flex-shrink-0 transition-colors"
@@ -239,6 +242,7 @@
                   <!-- عملیات -->
                   <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-1">
+                      <slot name="row-extra" :fertilizer="fertilizer" />
                       <button
                         @click="$emit('edit-fertilizer', fertilizer)"
                         class="p-1.5 rounded-lg text-primary-600 hover:text-primary-800 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
@@ -333,6 +337,7 @@
             </div>
 
             <div class="flex items-center gap-1 flex-shrink-0">
+              <slot name="row-extra" :fertilizer="fertilizer" />
               <button
                 @click="$emit('edit-fertilizer', fertilizer)"
                 class="p-1.5 rounded-lg text-primary-600 hover:text-primary-800 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors"
@@ -440,7 +445,7 @@
           پاک کردن فیلترها
         </button>
 
-        <button
+        <button v-if="canAdd"
           v-else
           @click="$emit('open-modal')"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center gap-2"
@@ -607,6 +612,7 @@
 </template>
 
 <script setup lang="ts">
+import { usePermissions } from '@/composables/usePermissions';
 import { matchesElementQuery } from '@/utils/labelForms';
 import AppModal from '@/components/common/AppModal.vue';
 import { ref, computed } from 'vue';
@@ -627,6 +633,8 @@ const props = defineProps<{
   systemFertilizers: any[];
   isLoading: boolean;
   activeFilter: string | null;
+  /** حالت مدیر: دکمهٔ پاک‌کردن همه حذف می‌شود و اسلات‌های اضافه (فروشگاه و...) فعال‌اند */
+  adminMode?: boolean;
 }>();
 
 // ============================================================
@@ -644,6 +652,8 @@ const emit = defineEmits<{
 // ============================================================
 // State - فیلترها
 // ============================================================
+const { can } = usePermissions();
+const canAdd = computed(() => !!props.adminMode || can('manual_fertilizer'));
 const searchQuery = ref('');
 const filterForm = ref<'all' | 'powder' | 'crystal' | 'liquid' | 'granular'>('all');
 const priceMin = ref<number | null>(null);

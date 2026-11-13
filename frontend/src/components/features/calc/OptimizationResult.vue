@@ -1,4 +1,5 @@
 
+
 <!-- frontend/src/components/features/calc/OptimizationResult.vue -->
 <!--
   نمایش نتیجه بهینه‌سازی (بازطراحی‌شده)
@@ -167,8 +168,10 @@ const badElementsCount = computed(() => {
   }).length;
 });
 
-const warnings = computed(() => result.value?.warnings || []);
-const suggestions = computed(() => result.value?.suggestions || []);
+const advisories = computed(() => result.value?.advisories ?? null);
+// وقتی مرجع واحد هشدارها (advisories) هست، رشته‌های قدیمی دوباره نمایش داده نمی‌شوند
+const warnings = computed(() => (advisories.value ? [] : result.value?.warnings || []));
+const suggestions = computed(() => (advisories.value ? [] : result.value?.suggestions || []));
 
 // 🆕 دقت واقعی از میانگین target_achievement (نه residual_error خام)
 const accuracy = computed(() => {
@@ -178,7 +181,7 @@ const accuracy = computed(() => {
   return Math.max(0, Math.min(100, sum / values.length));
 });
 
-const alerts = computed(() => result.value?.precipitation_alerts || []);
+const alerts = computed(() => (advisories.value ?? result.value?.precipitation_alerts ?? []) as any[]);
 
 const warningsTone = computed<'neutral' | 'warning' | 'danger'>(() => {
   const hasPrecipitation =
@@ -197,7 +200,7 @@ const warningsBadge = computed(() => {
 });
 
 const warningsSubtitle = computed(() => {
-  if (warningsTone.value === 'danger') return `${alerts.value.filter((a) => a.severity === 'danger').length || ''} خطر رسوب شیمیایی شناسایی شد`.trim();
+  if (warningsTone.value === 'danger') return `${alerts.value.filter((a) => a.severity === 'danger').length || ''} مورد خطر شناسایی شد`.trim();
   if (warningsTone.value === 'warning') return 'چند نکته برای بهبود ترکیب وجود دارد';
   return 'مشکلی در ترکیب یافت نشد';
 });

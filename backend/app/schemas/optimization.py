@@ -1,5 +1,6 @@
 
 
+
 # backend/app/schemas/optimization.py
 """
 طرح‌های مربوط به بهینه‌سازی (Optimization)
@@ -125,6 +126,10 @@ class OptimizationResponse(BaseModel):
     precipitation_alerts: Optional[List[Dict[str, Any]]] = Field(
         None,
         description="🆕 هشدارهای ساختاریافتهٔ رسوب (استوک/محلول نهایی/آب): severity, scope, tank, title, detail, solution"
+    )
+    advisories: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="📋 مرجع واحد هشدارها و نکته‌ها (بدون تکرار): id, severity, category, title, detail, solution, scope, tank, elements"
     )
     stock_info: Optional[Dict[str, Any]] = Field(
         None,

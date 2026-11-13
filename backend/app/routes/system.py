@@ -1,3 +1,4 @@
+
 # backend/app/routes/system.py
 """
 مسیرهای عمومی وضعیت سیستم (بدون نیاز به ورود)
@@ -41,13 +42,26 @@ async def system_status(db: Session = Depends(get_db), user: Optional[User] = De
                 or_(Announcement.starts_at == None, Announcement.starts_at <= now),  # noqa: E711
                 or_(Announcement.ends_at == None, Announcement.ends_at >= now))      # noqa: E711
         .order_by(Announcement.created_at.desc())
-        .limit(5)
+        .limit(8)
         .all()
     )
     return {
         "maintenance": {"enabled": bool(maint.get("enabled")), "message": maint.get("message") or ""},
         "registration": {"enabled": reg.get("enabled") is not False, "message": reg.get("message") or ""},
         "announcements": [
-            {"id": a.id, "title": a.title, "body": a.body, "level": a.level} for a in anns
+            {"id": a.id, "title": a.title, "body": a.body, "level": a.level, "style": a.style or "bar",
+             "dismissible": a.dismissible is not False, "link_url": a.link_url, "link_label": a.link_label}
+            for a in anns
         ],
+    }
+
+
+@system_router.get("/context")
+async def system_context(request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """دسترسی‌های نقش کاربر + وضعیت «ورود به‌جای کاربر» (برای نمایش/مخفی کردن تب‌ها در فرانت)"""
+    from app.permissions import user_permissions
+    return {
+        "role": user.role,
+        "permissions": user_permissions(db, user),
+        "impersonating": bool(request.cookies.get("admin_backup_token")),
     }

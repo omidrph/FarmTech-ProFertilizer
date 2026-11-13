@@ -1,3 +1,4 @@
+
 <!-- خط کوچک روند برای کارت‌های شاخص -->
 <template>
   <svg :width="width" :height="height" :viewBox="`0 0 ${width} ${height}`" class="block overflow-visible">
@@ -10,15 +11,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { smoothPath, type Pt } from './chartUtils';
+import { CHART_TIME_LTR, smoothPath, type Pt } from './chartUtils';
 const props = withDefaults(defineProps<{ values: number[]; color?: string; width?: number; height?: number }>(), { color: '#2563eb', width: 96, height: 34 });
 const uid = 'sp' + Math.random().toString(36).slice(2, 7);
-// زمان از راست به چپ؛ نقطهٔ آخر (جدیدترین) سمت چپ
+// جهت زمان از CHART_TIME_LTR
 const pts = computed<Pt[]>(() => {
   const v = props.values, n = v.length;
   if (n < 2) return [];
   const max = Math.max(...v), min = Math.min(...v), span = max - min || 1;
-  return v.map((val, i) => ({ x: props.width - 3 - (i / (n - 1)) * (props.width - 6), y: 4 + (props.height - 8) * (1 - (val - min) / span) }));
+  return v.map((val, i) => ({ x: CHART_TIME_LTR ? 3 + (i / (n - 1)) * (props.width - 6) : props.width - 3 - (i / (n - 1)) * (props.width - 6), y: 4 + (props.height - 8) * (1 - (val - min) / span) }));
 });
 const line = computed(() => smoothPath(pts.value, 2, props.height - 2));
 const area = computed(() => (pts.value.length ? `${line.value} L${pts.value[pts.value.length - 1].x},${props.height} L${pts.value[0].x},${props.height} Z` : ''));

@@ -1,3 +1,4 @@
+
 # backend/app/routes/admin.py
 """
 👑 پنل مدیریت — API مدیران (نقش admin)
@@ -616,6 +617,8 @@ def _fert_row(f: Fertilizer) -> dict:
         "ph_params": f.ph_params, "label_values": f.label_values, "density_g_ml": f.density_g_ml,
         "price_unit": f.price_unit, "description": f.description,
         "updated_at": _iso(f.updated_at), "created_at": _iso(f.created_at),
+        "shop_enabled": bool(f.shop_enabled), "shop_price": f.shop_price, "shop_stock": f.shop_stock,
+        "shop_min_qty": f.shop_min_qty,
     }
 
 
@@ -769,9 +772,13 @@ def security_logs(
     if q:
         query = query.filter(or_(SecurityLog.ip_address.ilike(f"%{q}%"), SecurityLog.endpoint.ilike(f"%{q}%")))
     total, logs = _page(query.order_by(SecurityLog.created_at.desc()), page, page_size)
+    uids = {l.user_id for l in logs if l.user_id}
+    names = {u.id: (u.full_name, u.phone_number) for u in db.query(User).filter(User.id.in_(uids or [0])).all()}
     types = [t for (t,) in db.query(SecurityLog.event_type).distinct().order_by(SecurityLog.event_type).all()]
     return {**_paged([{
-        "id": l.id, "event_type": l.event_type, "severity": l.severity, "user_id": l.user_id, "ip": l.ip_address,
+        "id": l.id, "event_type": l.event_type, "severity": l.severity, "user_id": l.user_id,
+        "user_name": (names.get(l.user_id) or (None, None))[0], "user_phone": (names.get(l.user_id) or (None, None))[1],
+        "ip": l.ip_address,
         "endpoint": l.endpoint, "method": l.method, "details": l.details, "error": l.error_message,
         "created_at": _iso(l.created_at)} for l in logs], total, page, page_size), "event_types": types}
 
@@ -801,6 +808,10 @@ class AnnouncementBody(BaseModel):
     body: Optional[str] = Field(None, max_length=2000)
     level: str = Field("info", pattern="^(info|success|warning|danger)$")
     audience: str = Field("all", pattern="^(all|user|plus)$")
+    style: str = Field("bar", pattern="^(bar|card|toast|modal|ticker|corner|ribbon)$")
+    dismissible: bool = True
+    link_url: Optional[str] = Field(None, max_length=300)
+    link_label: Optional[str] = Field(None, max_length=60)
     is_active: bool = True
     starts_at: Optional[datetime] = None
     ends_at: Optional[datetime] = None
@@ -808,6 +819,7 @@ class AnnouncementBody(BaseModel):
 
 def _ann_row(a: Announcement) -> dict:
     return {"id": a.id, "title": a.title, "body": a.body, "level": a.level, "audience": a.audience,
+            "style": a.style, "dismissible": a.dismissible, "link_url": a.link_url, "link_label": a.link_label,
             "is_active": a.is_active, "starts_at": _iso(a.starts_at), "ends_at": _iso(a.ends_at),
             "created_at": _iso(a.created_at)}
 
