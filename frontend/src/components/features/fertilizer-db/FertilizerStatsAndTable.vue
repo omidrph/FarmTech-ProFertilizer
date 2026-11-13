@@ -1,6 +1,3 @@
-
-
-
 <!-- frontend/src/components/features/fertilizer-db/FertilizerStatsAndTable.vue -->
 <template>
   <div>
@@ -445,8 +442,7 @@
           پاک کردن فیلترها
         </button>
 
-        <button v-if="canAdd"
-          v-else
+        <button v-else-if="canAdd"
           @click="$emit('open-modal')"
           class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors inline-flex items-center gap-2"
         >
