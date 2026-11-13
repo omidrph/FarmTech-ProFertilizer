@@ -1,4 +1,3 @@
-
 <!-- frontend/src/components/features/ReportHeader.vue -->
 <!--
   باکس کامل گزارش (فقط در تب «خانه» نمایش داده می‌شود و تنها جای ویرایش مشخصات گزارش است)
@@ -35,22 +34,51 @@
         <label class="field-label">نام گزارش <span class="text-danger-500">*</span></label>
         <input type="text" :value="reportName" @input="updateReportName($event)" placeholder="نام گزارش" class="field-input" />
       </div>
-      <div>
+
+      <div class="relative">
         <label class="field-label">نام گیاه <span class="text-danger-500">*</span></label>
-        <input type="text" :value="plantName" @input="updatePlantName($event)" placeholder="انتخاب از لیست یا تایپ دستی" class="field-input" list="plant-suggestions" autocomplete="off" />
-          <datalist id="plant-suggestions"><option v-for="p in PLANTS" :key="p" :value="p" /></datalist>
-          <!-- انتخاب سریع: روی هر گیاه بزنید؛ برای گیاه دیگر در کادر بالا تایپ کنید -->
-          <div class="flex flex-wrap gap-1.5 mt-2" role="group" aria-label="انتخاب سریع گیاه">
-            <button v-for="p in QUICK_PLANTS" :key="p" type="button" @click="emit('update:plantName', p)"
+        <div class="flex items-center gap-2">
+          <input
+            type="text"
+            :value="plantName"
+            @input="updatePlantName($event)"
+            placeholder="انتخاب از لیست یا تایپ دستی"
+            class="field-input"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            @click="showPlantsPanel = !showPlantsPanel"
+            class="flex-shrink-0 w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:border-primary-400 hover:text-primary-600"
+            :aria-expanded="showPlantsPanel"
+            aria-label="نمایش لیست گیاهان گلخانه‌ای"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- پنل بازشو گیاهان گلخانه‌ای (حداکثر ۸ پیشنهاد) -->
+        <div
+          v-if="showPlantsPanel"
+          class="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto p-2 rounded-xl bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow-lg"
+        >
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="p in PLANTS"
+              :key="p"
+              type="button"
+              @click="selectPlant(p)"
               class="px-2.5 py-1 rounded-full text-xs border transition-colors"
-              :class="plantName.trim() === p ? 'bg-primary-600 border-primary-600 text-white' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400 hover:text-primary-700 dark:hover:text-primary-300'">{{ p }}</button>
-            <button type="button" @click="showAllPlants = !showAllPlants" class="px-2.5 py-1 rounded-full text-xs border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary-600">{{ showAllPlants ? 'کمتر' : 'گیاهان بیشتر…' }}</button>
+              :class="plantName.trim() === p
+                ? 'bg-primary-600 border-primary-600 text-white'
+                : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400 hover:text-primary-700 dark:hover:text-primary-300'"
+            >{{ p }}</button>
           </div>
-          <div v-if="showAllPlants" class="flex flex-wrap gap-1.5 mt-1.5 max-h-40 overflow-y-auto p-2 rounded-xl bg-gray-50 dark:bg-gray-700/40">
-            <button v-for="p in MORE_PLANTS" :key="p" type="button" @click="emit('update:plantName', p); showAllPlants = false"
-              class="px-2.5 py-1 rounded-full text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-primary-400 hover:text-primary-700">{{ p }}</button>
-          </div>
+        </div>
       </div>
+
       <div>
         <label class="field-label">مرحله رشد <span class="text-danger-500">*</span></label>
         <select :value="growthStage" @change="updateGrowthStage($event)" class="field-input">
@@ -87,9 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { computed } from 'vue';
-import { seasonFromDate } from '@/utils/reportSeason';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 
 interface Props {
   reportName: string;
@@ -121,18 +147,41 @@ const isComplete = computed(() =>
 );
 
 const updateReportName = (event: Event) => emit('update:reportName', (event.target as HTMLInputElement).value);
-const QUICK_PLANTS = ['گوجه‌فرنگی', 'خیار', 'فلفل دلمه‌ای', 'توت‌فرنگی', 'بادمجان', 'کاهو', 'ریحان', 'گل رز'];
-const MORE_PLANTS = ['خیار گلخانه‌ای', 'کدو', 'خربزه', 'هندوانه', 'طالبی', 'فلفل تند', 'اسفناج', 'جعفری', 'نعناع', 'کرفس', 'کلم', 'سبزی‌خوردن', 'ژربرا', 'میخک', 'داودی', 'لیلیوم', 'گل شاخه‌بریده', 'تمشک', 'انگور', 'سیب‌زمینی', 'نهال و گیاه زینتی'];
-const PLANTS = [...QUICK_PLANTS, ...MORE_PLANTS];
-const showAllPlants = ref(false);
 const updatePlantName = (event: Event) => emit('update:plantName', (event.target as HTMLInputElement).value);
 const updateGreenhouse = (event: Event) => emit('update:greenhouseName', (event.target as HTMLInputElement).value);
 const updateGrowthStage = (event: Event) => emit('update:growthStage', (event.target as HTMLSelectElement).value);
 const updateReportDate = (event: Event) => emit('update:reportDate', (event.target as HTMLInputElement).value);
 const emitSave = () => emit('save');
 
-// فصل محاسبه می‌شود (برای استفاده‌ی منطقی/آینده) اما در قالب نمایش داده نمی‌شود.
-const derivedSeason = computed(() => seasonFromDate(props.reportDate));
+// فقط گیاهان گلخانه‌ای — حداکثر ۸ پیشنهاد
+const PLANTS = [
+  'گوجه‌ فرنگی',
+  'خیار',
+  'فلفل دلمه‌ای',
+  'توت‌ فرنگی',
+  'بادمجان',
+  'کاهو',
+  'ریحان',
+] as const;
+
+const showPlantsPanel = ref(false);
+const plantWrapper = ref<HTMLElement | null>(null);
+
+const selectPlant = (p: string) => {
+  emit('update:plantName', p);
+  showPlantsPanel.value = false;
+};
+
+// بستن پنل با کلیک بیرون
+const handleClickOutside = (e: MouseEvent) => {
+  if (!showPlantsPanel.value) return;
+  if (plantWrapper.value && !plantWrapper.value.contains(e.target as Node)) {
+    showPlantsPanel.value = false;
+  }
+};
+
+onMounted(() => document.addEventListener('click', handleClickOutside));
+onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside));
 </script>
 
 <style scoped>
